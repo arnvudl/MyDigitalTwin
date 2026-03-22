@@ -1,0 +1,1283 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MyDigitalTwin — Messages</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;1,9..40,300&family=DM+Mono:wght@400;500&display=swap');
+
+        :root {
+            --bg: #0f0f11;
+            --bg2: #17171a;
+            --bg3: #1e1e22;
+            --border: rgba(255, 255, 255, 0.07);
+            --border2: rgba(255, 255, 255, 0.13);
+            --text: #e8e6e1;
+            --text2: #8a887f;
+            --text3: #5a5854;
+            --accent: #7c6ef5;
+            --accent2: #a394f7;
+            --me-bg: #2a2460;
+            --me-text: #c8c0ff;
+            --them-bg: #1e1e24;
+            --ig: #e1306c;
+            --tw: #1d9bf0;
+            --tt: #69c9d0;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: 'DM Sans', sans-serif;
+            background: var(--bg);
+            color: var(--text);
+            height: 100vh;
+            display: flex;
+            overflow: hidden;
+        }
+
+        /* ── Platform rail ── */
+        #rail {
+            width: 52px;
+            background: #0a0a0c;
+            border-right: 1px solid var(--border);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 12px 0;
+            gap: 6px;
+            flex-shrink: 0;
+        }
+
+        .rail-btn {
+            width: 36px;
+            height: 36px;
+            border-radius: 10px;
+            border: 1.5px solid var(--border);
+            background: var(--bg3);
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 16px;
+            transition: all .15s;
+            position: relative;
+        }
+
+        .rail-btn:hover {
+            border-color: var(--border2);
+            transform: scale(1.06);
+        }
+
+        .rail-btn.active-ig {
+            border-color: var(--ig);
+            background: rgba(225, 48, 108, .15);
+        }
+
+        .rail-btn.active-tw {
+            border-color: var(--tw);
+            background: rgba(29, 155, 240, .15);
+        }
+
+        .rail-btn.active-tt {
+            border-color: var(--tt);
+            background: rgba(105, 201, 208, .12);
+        }
+
+        .rail-count {
+            position: absolute;
+            top: -4px;
+            right: -4px;
+            background: var(--accent);
+            color: #fff;
+            font-size: 9px;
+            font-family: 'DM Mono', monospace;
+            padding: 1px 4px;
+            border-radius: 8px;
+            display: none;
+        }
+
+        .rail-count.vis {
+            display: block;
+        }
+
+        /* ── Sidebar ── */
+        #sidebar {
+            width: 258px;
+            min-width: 258px;
+            background: var(--bg2);
+            border-right: 1px solid var(--border);
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        #sb-head {
+            padding: 15px 13px 11px;
+            border-bottom: 1px solid var(--border);
+        }
+
+        #sb-head h1 {
+            font-size: 11px;
+            font-weight: 500;
+            color: var(--accent2);
+            letter-spacing: .08em;
+            text-transform: uppercase;
+        }
+
+        #sb-count {
+            font-size: 10px;
+            color: var(--text3);
+            margin-top: 2px;
+        }
+
+        #sb-search {
+            margin: 9px;
+            padding: 7px 11px;
+            background: var(--bg3);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            color: var(--text);
+            font-family: inherit;
+            font-size: 12px;
+            outline: none;
+            width: calc(100% - 18px);
+            transition: border-color .2s;
+        }
+
+        #sb-search:focus {
+            border-color: var(--accent);
+        }
+
+        #sb-search::placeholder {
+            color: var(--text3);
+        }
+
+        #conv-list {
+            flex: 1;
+            overflow-y: auto;
+            scrollbar-width: thin;
+            scrollbar-color: var(--border2) transparent;
+        }
+
+        .ci {
+            padding: 9px 13px;
+            cursor: pointer;
+            border-bottom: 1px solid var(--border);
+            display: flex;
+            align-items: center;
+            gap: 9px;
+            transition: background .12s;
+        }
+
+        .ci:hover {
+            background: var(--bg3);
+        }
+
+        .ci.active {
+            background: rgba(124, 110, 245, .12);
+            border-left: 2px solid var(--accent);
+        }
+
+        .ci-av {
+            width: 33px;
+            height: 33px;
+            border-radius: 50%;
+            background: var(--bg3);
+            border: 1.5px solid var(--border2);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 12px;
+            font-weight: 500;
+            color: var(--accent2);
+            flex-shrink: 0;
+        }
+
+        .ci-av.grp {
+            border-radius: 9px;
+        }
+
+        .ci-av.ig {
+            border-color: var(--ig);
+        }
+
+        .ci-av.tw {
+            border-color: var(--tw);
+        }
+
+        .ci-av.tt {
+            border-color: var(--tt);
+        }
+
+        .ci-info {
+            flex: 1;
+            min-width: 0;
+        }
+
+        .ci-name {
+            font-size: 12px;
+            font-weight: 500;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .ci-sub {
+            font-size: 10px;
+            color: var(--text3);
+            margin-top: 1px;
+        }
+
+        .ci-date {
+            font-size: 9px;
+            font-family: 'DM Mono', monospace;
+            color: var(--text3);
+            background: var(--bg3);
+            padding: 2px 5px;
+            border-radius: 5px;
+            flex-shrink: 0;
+        }
+
+        /* ── Main ── */
+        #main {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            position: relative;
+        }
+
+        /* Drop zone */
+        #dz {
+            position: absolute;
+            inset: 0;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 13px;
+            background: var(--bg);
+        }
+
+        #dz.hide {
+            display: none;
+        }
+
+        .dz-tabs {
+            display: flex;
+            gap: 7px;
+        }
+
+        .dz-tab {
+            padding: 5px 13px;
+            border-radius: 18px;
+            font-size: 12px;
+            font-weight: 500;
+            border: 1px solid var(--border2);
+            background: var(--bg3);
+            color: var(--text2);
+            cursor: pointer;
+            transition: all .15s;
+        }
+
+        .dz-tab:hover {
+            border-color: var(--accent);
+            color: var(--text);
+        }
+
+        .dz-tab.on {
+            background: var(--accent);
+            border-color: var(--accent);
+            color: #fff;
+        }
+
+        .dz-icon {
+            width: 62px;
+            height: 62px;
+            border: 2px dashed var(--border2);
+            border-radius: 16px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 24px;
+            transition: all .2s;
+        }
+
+        #dz.drag .dz-icon {
+            border-color: var(--accent);
+            transform: scale(1.06);
+        }
+
+        #dz h2 {
+            font-size: 15px;
+            font-weight: 400;
+            color: var(--text2);
+        }
+
+        #dz p {
+            font-size: 12px;
+            color: var(--text3);
+            text-align: center;
+            line-height: 1.75;
+        }
+
+        .kbd {
+            font-family: 'DM Mono', monospace;
+            font-size: 11px;
+            color: var(--text3);
+            background: var(--bg3);
+            border: 1px solid var(--border);
+            padding: 1px 6px;
+            border-radius: 4px;
+        }
+
+        .btn-open {
+            padding: 9px 22px;
+            background: var(--accent);
+            color: #fff;
+            border: none;
+            border-radius: 9px;
+            font-family: inherit;
+            font-size: 13px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: background .2s, transform .1s;
+        }
+
+        .btn-open:hover {
+            background: var(--accent2);
+        }
+
+        .btn-open:active {
+            transform: scale(.97);
+        }
+
+        #fi {
+            display: none;
+        }
+
+        /* Chat header */
+        #ch {
+            padding: 12px 20px;
+            border-bottom: 1px solid var(--border);
+            background: var(--bg2);
+            display: flex;
+            align-items: center;
+            gap: 11px;
+        }
+
+        .ch-av {
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
+            background: var(--me-bg);
+            border: 1px solid var(--accent);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 14px;
+            font-weight: 500;
+            color: var(--accent2);
+        }
+
+        #ch-title {
+            font-size: 14px;
+            font-weight: 500;
+        }
+
+        #ch-sub {
+            font-size: 10px;
+            color: var(--text3);
+            margin-top: 1px;
+        }
+
+        #ch-stats {
+            margin-left: auto;
+            display: flex;
+            gap: 10px;
+        }
+
+        .sp {
+            font-size: 10px;
+            font-family: 'DM Mono', monospace;
+            color: var(--text3);
+            background: var(--bg3);
+            padding: 3px 8px;
+            border-radius: 16px;
+            border: 1px solid var(--border);
+        }
+
+        .sp b {
+            color: var(--accent2);
+            font-weight: 500;
+        }
+
+        /* Messages */
+        #mc {
+            flex: 1;
+            overflow-y: auto;
+            padding: 14px 20px;
+            display: flex;
+            flex-direction: column;
+            gap: 2px;
+            scrollbar-width: thin;
+            scrollbar-color: var(--border2) transparent;
+        }
+
+        .dsep {
+            text-align: center;
+            margin: 13px 0 7px;
+            font-size: 10px;
+            color: var(--text3);
+            font-family: 'DM Mono', monospace;
+            letter-spacing: .05em;
+            position: relative;
+        }
+
+        .dsep::before, .dsep::after {
+            content: '';
+            position: absolute;
+            top: 50%;
+            height: 1px;
+            background: var(--border);
+            width: calc(50% - 60px);
+        }
+
+        .dsep::before {
+            left: 0;
+        }
+
+        .dsep::after {
+            right: 0;
+        }
+
+        .mr {
+            display: flex;
+            align-items: flex-end;
+            gap: 6px;
+        }
+
+        .mr.me {
+            flex-direction: row-reverse;
+        }
+
+        .sname {
+            font-size: 10px;
+            color: var(--text3);
+            padding: 0 10px;
+            margin-bottom: 1px;
+        }
+
+        .mr.me .sname {
+            text-align: right;
+        }
+
+        .bbl {
+            max-width: 62%;
+            padding: 7px 12px;
+            border-radius: 15px;
+            font-size: 13px;
+            line-height: 1.55;
+            word-break: break-word;
+        }
+
+        .mr.me .bbl {
+            background: var(--me-bg);
+            color: var(--me-text);
+            border-bottom-right-radius: 4px;
+        }
+
+        .mr.them .bbl {
+            background: var(--them-bg);
+            color: var(--text);
+            border-bottom-left-radius: 4px;
+            border: 1px solid var(--border);
+        }
+
+        .mr.me.cont .bbl {
+            border-top-right-radius: 4px;
+        }
+
+        .mr.them.cont .bbl {
+            border-top-left-radius: 4px;
+        }
+
+        .mt {
+            font-size: 9px;
+            color: var(--text3);
+            font-family: 'DM Mono', monospace;
+            padding: 0 10px;
+            margin-top: 1px;
+            opacity: 0;
+            transition: opacity .2s;
+        }
+
+        .mr:hover .mt {
+            opacity: 1;
+        }
+
+        .mr.me .mt {
+            text-align: right;
+        }
+
+        /* Media */
+        .m-img {
+            max-width: 230px;
+            border-radius: 12px;
+            overflow: hidden;
+            border: 1px solid var(--border2);
+        }
+
+        .m-img img {
+            width: 100%;
+            display: block;
+            cursor: zoom-in;
+            border-radius: 12px;
+            transition: opacity .2s;
+        }
+
+        .m-img img:hover {
+            opacity: .88;
+        }
+
+        .m-vid {
+            max-width: 270px;
+            border-radius: 12px;
+            overflow: hidden;
+            border: 1px solid var(--border2);
+        }
+
+        .m-vid video {
+            width: 100%;
+            display: block;
+        }
+
+        .m-aud {
+            background: var(--bg3);
+            border: 1px solid var(--border2);
+            border-radius: 18px;
+            padding: 7px 11px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            min-width: 175px;
+        }
+
+        .m-aud audio {
+            flex: 1;
+            height: 26px;
+        }
+
+        /* TikTok card */
+        .tt-card {
+            max-width: 220px;
+            background: var(--bg3);
+            border: 1px solid var(--border2);
+            border-radius: 12px;
+            overflow: hidden;
+            cursor: pointer;
+            transition: border-color .15s;
+        }
+
+        .tt-card:hover {
+            border-color: var(--tt);
+        }
+
+        .tt-thumb {
+            width: 100%;
+            aspect-ratio: 9/16;
+            max-height: 200px;
+            background: #111;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 28px;
+            position: relative;
+            background-size: cover;
+            background-position: center;
+        }
+
+        .tt-play {
+            position: absolute;
+            inset: 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: rgba(0, 0, 0, .28);
+        }
+
+        .tt-play::after {
+            content: '';
+            width: 0;
+            height: 0;
+            border-style: solid;
+            border-width: 13px 0 13px 22px;
+            border-color: transparent transparent transparent rgba(255, 255, 255, .9);
+            margin-left: 3px;
+        }
+
+        .tt-lbl {
+            padding: 7px 9px;
+            font-size: 10px;
+            color: var(--text3);
+            font-family: 'DM Mono', monospace;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        /* Link card */
+        .lk-card {
+            max-width: 240px;
+            background: var(--bg3);
+            border: 1px solid var(--border2);
+            border-radius: 10px;
+            padding: 9px 11px;
+            cursor: pointer;
+            transition: border-color .15s;
+            text-decoration: none;
+            display: block;
+        }
+
+        .lk-card:hover {
+            border-color: var(--accent2);
+        }
+
+        .lk-dom {
+            font-size: 10px;
+            color: var(--text3);
+            margin-bottom: 3px;
+        }
+
+        .lk-title {
+            font-size: 12px;
+            color: var(--text);
+            line-height: 1.4;
+        }
+
+        .unsent {
+            font-style: italic;
+            color: var(--text3);
+            font-size: 12px;
+        }
+
+        .react-bar {
+            font-size: 13px;
+            margin-top: 2px;
+            padding: 0 3px;
+        }
+
+        .mr.me .react-bar {
+            text-align: right;
+        }
+
+        /* Lightbox */
+        #lb {
+            display: none;
+            position: fixed;
+            inset: 0;
+            background: rgba(0, 0, 0, .92);
+            z-index: 999;
+            align-items: center;
+            justify-content: center;
+            cursor: zoom-out;
+        }
+
+        #lb.open {
+            display: flex;
+        }
+
+        #lb img {
+            max-width: 90vw;
+            max-height: 90vh;
+            border-radius: 8px;
+        }
+
+        ::-webkit-scrollbar {
+            width: 4px;
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: var(--border2);
+            border-radius: 2px;
+        }
+    </style>
+</head>
+<body>
+
+<!-- Rail -->
+<div id="rail">
+    <div class="rail-btn" id="rb-ig" onclick="switchPlat('ig')" title="Instagram">📸<span class="rail-count"
+                                                                                         id="rc-ig"></span></div>
+    <div class="rail-btn" id="rb-tw" onclick="switchPlat('tw')" title="Twitter/X">🐦<span class="rail-count"
+                                                                                         id="rc-tw"></span></div>
+    <div class="rail-btn" id="rb-tt" onclick="switchPlat('tt')" title="TikTok">🎵<span class="rail-count"
+                                                                                      id="rc-tt"></span></div>
+</div>
+
+<!-- Sidebar -->
+<div id="sidebar">
+    <div id="sb-head"><h1>MyDigitalTwin</h1>
+        <p id="sb-count">Aucune conversation</p></div>
+    <input id="sb-search" placeholder="Rechercher…" oninput="renderSidebar(this.value)">
+    <div id="conv-list"></div>
+</div>
+
+<!-- Main -->
+<div id="main">
+    <!-- Drop zone -->
+    <div id="dz">
+        <div class="dz-tabs">
+            <div class="dz-tab on" data-dp="ig" onclick="setDrop('ig')">📸 Instagram</div>
+            <div class="dz-tab" data-dp="tw" onclick="setDrop('tw')">🐦 Twitter</div>
+            <div class="dz-tab" data-dp="tt" onclick="setDrop('tt')">🎵 TikTok</div>
+        </div>
+        <div class="dz-icon" id="dz-icon">💬</div>
+        <h2 id="dz-title">Tes messages Instagram</h2>
+        <p id="dz-hint">Glisse le dossier <span class="kbd">inbox/</span> ici<br>ou sélectionne les fichiers <span
+                class="kbd">message_*.json</span></p>
+        <button class="btn-open" onclick="document.getElementById('fi').click()">Ouvrir des fichiers</button>
+        <input id="fi" type="file" multiple accept=".json,.js" onchange="loadFiles(this.files)">
+        <p style="margin-top:4px;font-size:10px;color:var(--text3)">100 % local — rien n'est envoyé</p>
+    </div>
+
+    <!-- Chat header -->
+    <div id="ch" style="display:none">
+        <div class="ch-av" id="ch-av">?</div>
+        <div>
+            <div id="ch-title">—</div>
+            <div id="ch-sub">—</div>
+        </div>
+        <div id="ch-stats"></div>
+    </div>
+
+    <!-- Messages -->
+    <div id="mc" style="display:none"></div>
+</div>
+
+<!-- Lightbox -->
+<div id="lb" onclick="this.classList.remove('open')"><img id="lb-img" src="" alt=""></div>
+
+<script>
+    // ── State ──
+    const convs = {ig: {}, tw: {}, tt: {}};
+    let plat = 'ig', dropPlat = 'ig', activeCid = null;
+    let myNameIg = null, myIdTw = null, myNameTt = null;
+
+    // ── Utils ──
+    const fix = s => {
+        if (!s) return '';
+        try {
+            return decodeURIComponent(escape(s));
+        } catch {
+            return s;
+        }
+    };
+    const esc = s => s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/\n/g, '<br>');
+    const ini = n => (n || '?').trim().split(/\s+/).map(w => w[0]).join('').toUpperCase().slice(0, 2);
+    const domain = url => {
+        try {
+            return new URL(url).hostname.replace('www.', '');
+        } catch {
+            return url.slice(0, 30);
+        }
+    };
+    const isTT = u => /tiktok|tiktokv/i.test(u);
+    const isImg = u => /\.(jpg|jpeg|png|gif|webp)(\?|$)/i.test(u);
+    const isVid = u => /\.(mp4|mov|webm)(\?|$)/i.test(u);
+    const ttId = u => {
+        const m = u.match(/video\/(\d+)/);
+        return m ? m[1] : null;
+    };
+
+    function fmtTime(d) {
+        return d.toLocaleTimeString('fr-BE', {hour: '2-digit', minute: '2-digit'});
+    }
+
+    function fmtDate(d) {
+        return d.toLocaleDateString('fr-BE', {weekday: 'long', day: 'numeric', month: 'long', year: 'numeric'});
+    }
+
+    function fmtShort(d) {
+        return d ? d.toLocaleDateString('fr-BE', {day: 'numeric', month: 'short'}) : '';
+    }
+
+    function extractTs(msg, p) {
+        if (p === 'ig') return msg.timestamp_ms || 0;
+        if (p === 'tw') {
+            const m = msg.messageCreate || msg;
+            return new Date(m.createdAt || 0).getTime();
+        }
+        if (p === 'tt') return new Date(msg.Date || 0).getTime();
+        return 0;
+    }
+
+    // ── Drop zone config ──
+    const DZ = {
+        ig: {
+            icon: '📸',
+            title: 'Tes messages Instagram',
+            hint: 'Glisse le dossier <span class="kbd">inbox/</span> ici<br>ou sélectionne les fichiers <span class="kbd">message_*.json</span>'
+        },
+        tw: {
+            icon: '🐦',
+            title: 'Tes DMs Twitter/X',
+            hint: 'Sélectionne <span class="kbd">direct-messages.js</span><br>ou <span class="kbd">direct-messages-group.js</span>'
+        },
+        tt: {icon: '🎵', title: 'Tes DMs TikTok', hint: 'Sélectionne <span class="kbd">user_data_tiktok.json</span>'},
+    };
+
+    function setDrop(p) {
+        dropPlat = p;
+        document.querySelectorAll('.dz-tab').forEach(t => t.classList.toggle('on', t.dataset.dp === p));
+        const c = DZ[p];
+        document.getElementById('dz-icon').textContent = c.icon;
+        document.getElementById('dz-title').textContent = c.title;
+        document.getElementById('dz-hint').innerHTML = c.hint;
+    }
+
+    // Drag & drop
+    const dz = document.getElementById('dz');
+    dz.addEventListener('dragover', e => {
+        e.preventDefault();
+        dz.classList.add('drag');
+    });
+    dz.addEventListener('dragleave', () => dz.classList.remove('drag'));
+    dz.addEventListener('drop', e => {
+        e.preventDefault();
+        dz.classList.remove('drag');
+        loadFiles(e.dataTransfer.files);
+    });
+
+    // ── Platform switch ──
+    function switchPlat(p) {
+        plat = p;
+        activeCid = null;
+        document.querySelectorAll('.rail-btn').forEach(b => b.className = 'rail-btn');
+        document.getElementById(`rb-${p}`).classList.add(`active-${p}`);
+        document.getElementById('ch').style.display = 'none';
+        document.getElementById('mc').style.display = 'none';
+        const hasC = Object.keys(convs[p]).length > 0;
+        document.getElementById('dz').classList.toggle('hide', hasC);
+        if (!hasC) setDrop(p);
+        renderSidebar();
+    }
+
+    function updCount(p) {
+        const n = Object.keys(convs[p]).length;
+        const el = document.getElementById(`rc-${p}`);
+        el.textContent = n > 99 ? '99+' : n;
+        el.classList.toggle('vis', n > 0);
+    }
+
+    // ── File loading ──
+    async function loadFiles(files) {
+        for (const f of files) {
+            const nm = f.name.toLowerCase();
+            if (!nm.endsWith('.json') && !nm.endsWith('.js')) continue;
+            const txt = await f.text();
+            if (nm.includes('direct-message') || nm.includes('message-event')) await parseTW(txt);
+            else if (nm.includes('tiktok') || nm === 'user_data_tiktok.json') await parseTT(txt);
+            else await parseIG(txt, f);
+        }
+        ['ig', 'tw', 'tt'].forEach(updCount);
+        document.getElementById('dz').classList.add('hide');
+        renderSidebar();
+    }
+
+    // ── Instagram ──
+    async function parseIG(txt, file) {
+        let data;
+        try {
+            data = JSON.parse(txt);
+        } catch {
+            return;
+        }
+        if (!data.messages) return;
+        const cid = (() => {
+            const parts = (file.webkitRelativePath || file.name).replace(/\\/g, '/').split('/');
+            const i = parts.indexOf('inbox');
+            return i >= 0 ? parts[i + 1] : parts[parts.length - 2];
+        })();
+        if (!convs.ig[cid]) convs.ig[cid] = {
+            title: fix(data.title || cid),
+            plat: 'ig',
+            messages: [],
+            isGroup: (data.participants || []).length > 2
+        };
+        convs.ig[cid].messages.push(...data.messages);
+        if (!myNameIg) {
+            const cnt = {};
+            data.messages.forEach(m => {
+                const s = fix(m.sender_name || '');
+                if (s) cnt[s] = (cnt[s] || 0) + 1;
+            });
+            const top = Object.entries(cnt).sort((a, b) => b[1] - a[1])[0];
+            if (top) myNameIg = top[0];
+        }
+        convs.ig[cid].messages.sort((a, b) => a.timestamp_ms - b.timestamp_ms);
+    }
+
+    // ── Twitter ──
+    async function parseTW(txt) {
+        const clean = txt.replace(/^window\.YTD\.\w+\.\w+\s*=\s*/, '').trim();
+        let data;
+        try {
+            data = JSON.parse(clean);
+        } catch {
+            return;
+        }
+        for (const entry of data) {
+            const conv = entry.dmConversation || entry;
+            const cid = conv.conversationId || 'tw_' + Date.now();
+            const msgs = conv.messages || [];
+            if (!convs.tw[cid]) convs.tw[cid] = {
+                title: cid,
+                plat: 'tw',
+                messages: [],
+                isGroup: cid.split('-').length > 2
+            };
+            convs.tw[cid].messages.push(...msgs);
+        }
+        // 1. Detecter mon ID EN PREMIER (le plus frequent comme sender)
+        if (!myIdTw) {
+            const cnt = {};
+            Object.values(convs.tw).forEach(c => c.messages.forEach(e => {
+                const m = e.messageCreate || e;
+                const s = m.senderId || '';
+                if (s) cnt[s] = (cnt[s] || 0) + 1;
+            }));
+            const top = Object.entries(cnt).sort((a, b) => b[1] - a[1])[0];
+            if (top) myIdTw = top[0];
+        }
+        // 2. Trier chaque conv par date croissante (plus vieux en haut)
+        Object.values(convs.tw).forEach(c => {
+            c.messages.sort((a, b) => {
+                const ta = new Date((a.messageCreate || a).createdAt || 0).getTime();
+                const tb = new Date((b.messageCreate || b).createdAt || 0).getTime();
+                return ta - tb;
+            });
+        });
+        // 3. Set readable titles
+        Object.entries(convs.tw).forEach(([id, c]) => {
+            const parts = id.split('-');
+            const other = parts.find(p => p !== myIdTw) || id;
+            c.title = `@${other.slice(-8)}`;
+        });
+    }
+
+    // ── TikTok ──
+    async function parseTT(txt) {
+        let data;
+        try {
+            data = JSON.parse(txt);
+        } catch {
+            return;
+        }
+        const ch = data?.['Direct Message']?.['Direct Messages']?.['ChatHistory'] || {};
+
+        // 1. Detecter mon nom EN PREMIER sur toutes les convs
+        if (!myNameTt) {
+            const cnt = {};
+            for (const msgs of Object.values(ch)) {
+                if (Array.isArray(msgs)) msgs.forEach(m => {
+                    const f = m.From || '';
+                    if (f) cnt[f] = (cnt[f] || 0) + 1;
+                });
+            }
+            const top = Object.entries(cnt).sort((a, b) => b[1] - a[1])[0];
+            if (top) myNameTt = top[0];
+        }
+
+        // 2. Parser et trier chaque conv (croissant = plus vieux en haut)
+        for (const [key, msgs] of Object.entries(ch)) {
+            const nm = key.match(/with\s+(.+?):/i);
+            const other = nm ? nm[1] : key;
+            const cid = 'tt_' + other;
+            const sortedMsgs = (Array.isArray(msgs) ? msgs : []).slice().sort((a, b) => new Date(a.Date || 0) - new Date(b.Date || 0));
+            convs.tt[cid] = {title: other, plat: 'tt', messages: sortedMsgs, isGroup: false};
+        }
+
+        // Group chats
+        const grp = data?.['Direct Message']?.['Group Chat']?.['GroupChat'];
+        if (Array.isArray(grp)) grp.forEach((g, i) => {
+            const sortedMsgs = (g.MessageList || []).slice().sort((a, b) => new Date(a.Date || 0) - new Date(b.Date || 0));
+            convs.tt['tt_grp_' + i] = {
+                title: g.Name || `Groupe ${i + 1}`,
+                plat: 'tt',
+                messages: sortedMsgs,
+                isGroup: true
+            };
+        });
+    }
+
+    // ── Sidebar ──
+    function renderSidebar(q = '') {
+        const list = document.getElementById('conv-list');
+        const ql = q.toLowerCase();
+        const all = convs[plat];
+        const platName = {ig: 'Instagram', tw: 'Twitter', tt: 'TikTok'}[plat];
+
+        const sorted = Object.entries(all)
+            .filter(([, c]) => !ql || c.title.toLowerCase().includes(ql))
+            .sort(([, a], [, b]) => {
+                const la = a.messages.length ? extractTs(a.messages[a.messages.length - 1], plat) : 0;
+                const lb = b.messages.length ? extractTs(b.messages[b.messages.length - 1], plat) : 0;
+                return lb - la;
+            });
+
+        document.getElementById('sb-count').textContent = `${Object.keys(all).length} conversations · ${platName}`;
+        list.innerHTML = '';
+
+        sorted.forEach(([id, c]) => {
+            const ts = c.messages.length ? extractTs(c.messages[c.messages.length - 1], plat) : 0;
+            const d = ts ? new Date(ts > 1e12 ? ts : ts * 1000) : null;
+            const div = document.createElement('div');
+            div.className = 'ci' + (id === activeCid ? ' active' : '');
+            div.dataset.id = id;
+            div.innerHTML = `
+      <div class="ci-av ${c.isGroup ? 'grp' : ''} ${plat}">${c.isGroup ? '👥' : ini(c.title)}</div>
+      <div class="ci-info">
+        <div class="ci-name">${c.title}</div>
+        <div class="ci-sub">${c.messages.length} messages</div>
+      </div>
+      <div class="ci-date">${fmtShort(d)}</div>`;
+            div.addEventListener('click', () => openConv(id));
+            list.appendChild(div);
+        });
+    }
+
+    // ── Open conversation ──
+    function openConv(id) {
+        activeCid = id;
+        document.querySelectorAll('.ci').forEach(el => el.classList.toggle('active', el.dataset.id === id));
+        const c = convs[plat][id];
+        document.getElementById('ch').style.display = 'flex';
+        document.getElementById('mc').style.display = 'flex';
+        document.getElementById('ch-av').textContent = c.isGroup ? '👥' : ini(c.title);
+        document.getElementById('ch-title').textContent = c.title;
+        document.getElementById('ch-sub').textContent = {ig: 'Instagram', tw: 'Twitter/X DM', tt: 'TikTok DM'}[plat];
+        const media = c.messages.filter(m => hasMed(m, plat)).length;
+        document.getElementById('ch-stats').innerHTML = `<div class="sp">Messages <b>${c.messages.length}</b></div><div class="sp">Médias <b>${media}</b></div>`;
+        renderMsgs(c.messages, plat);
+    }
+
+    function hasMed(m, p) {
+        if (p === 'ig') return !!(m.photos || m.videos || m.audio_files);
+        if (p === 'tw') return !!((m.messageCreate || m).mediaUrls?.length);
+        if (p === 'tt') return isTT(m.Content || '');
+        return false;
+    }
+
+    // ── Render messages ──
+    function renderMsgs(msgs, p) {
+        const mc = document.getElementById('mc');
+        mc.innerHTML = '';
+        let lastDate = null, lastSender = null;
+
+        msgs.forEach(msg => {
+            const {sender, isMe, date} = getMeta(msg, p);
+            const ds = date.toDateString();
+            const cont = sender === lastSender;
+            if (ds !== lastDate) {
+                const s = document.createElement('div');
+                s.className = 'dsep';
+                s.textContent = fmtDate(date);
+                mc.appendChild(s);
+                lastDate = ds;
+            }
+            if (!cont && !isMe) {
+                const n = document.createElement('div');
+                n.className = 'sname';
+                n.textContent = sender;
+                mc.appendChild(n);
+            }
+            const row = document.createElement('div');
+            row.className = `mr ${isMe ? 'me' : 'them'} ${cont ? 'cont' : ''}`;
+            getBubbles(msg, p).forEach(b => row.appendChild(b));
+            const reacts = getReacts(msg, p);
+            if (reacts) {
+                const rb = document.createElement('div');
+                rb.className = 'react-bar';
+                rb.textContent = reacts;
+                row.appendChild(rb);
+            }
+            const tm = document.createElement('div');
+            tm.className = 'mt';
+            tm.textContent = fmtTime(date);
+            row.appendChild(tm);
+            mc.appendChild(row);
+            lastSender = sender;
+        });
+        mc.scrollTop = mc.scrollHeight;
+    }
+
+    function getMeta(msg, p) {
+        let sender = '', ts = 0;
+        if (p === 'ig') {
+            sender = fix(msg.sender_name || '');
+            ts = msg.timestamp_ms || 0;
+        } else if (p === 'tw') {
+            const m = msg.messageCreate || msg;
+            sender = m.senderId || '';
+            ts = new Date(m.createdAt || 0).getTime();
+        } else if (p === 'tt') {
+            sender = msg.From || '';
+            ts = new Date(msg.Date || 0).getTime();
+        }
+        const isMe = p === 'ig' ? sender === myNameIg : p === 'tw' ? sender === myIdTw : sender === myNameTt;
+        return {sender, isMe, date: new Date(ts > 1e12 ? ts : ts * 1000)};
+    }
+
+    function getBubbles(msg, p) {
+        if (p === 'ig') return igBubbles(msg);
+        if (p === 'tw') return twBubbles(msg);
+        if (p === 'tt') return ttBubbles(msg);
+        return [];
+    }
+
+    function igBubbles(msg) {
+        if (msg.is_unsent) return [bbl('<span class="unsent">Message supprimé</span>')];
+        if (msg.photos?.length) return msg.photos.map(x => imgBbl(x.uri));
+        if (msg.videos?.length) return msg.videos.map(x => vidBbl(x.uri));
+        if (msg.audio_files?.length) return msg.audio_files.map(x => audBbl(x.uri));
+        if (msg.content) return [bbl(esc(fix(msg.content)))];
+        return [bbl('<span class="unsent">Contenu non supporté</span>')];
+    }
+
+    function twBubbles(msg) {
+        const m = msg.messageCreate || msg;
+        const txt = m.text || '', media = m.mediaUrls || [];
+        const out = [];
+        media.forEach(u => {
+            if (isImg(u)) out.push(imgBbl(u)); else if (isVid(u)) out.push(vidBbl(u));
+        });
+        const urls = txt.match(/https?:\/\/\S+/g) || [];
+        const clean = txt.replace(/https?:\/\/\S+/g, '').trim();
+        if (clean) out.push(bbl(esc(fix(clean))));
+        urls.forEach(u => {
+            if (!isImg(u) && !isVid(u)) out.push(lkBbl(u));
+        });
+        if (!out.length) out.push(bbl('<span class="unsent">Message vide</span>'));
+        return out;
+    }
+
+    function ttBubbles(msg) {
+        const ct = msg.Content || '';
+        if (!ct) return [bbl('<span class="unsent">Message vide</span>')];
+        const urls = ct.match(/https?:\/\/\S+/g) || [];
+        const txt = ct.replace(/https?:\/\/\S+/g, '').trim();
+        const out = [];
+        if (txt) out.push(bbl(esc(fix(txt))));
+        urls.forEach(u => {
+            if (isTT(u)) out.push(ttCard(u));
+            else if (isImg(u)) out.push(imgBbl(u));
+            else if (isVid(u)) out.push(vidBbl(u));
+            else out.push(lkBbl(u));
+        });
+        if (!out.length) out.push(bbl(esc(fix(ct))));
+        return out;
+    }
+
+    function getReacts(msg, p) {
+        if (p === 'ig') return (msg.reactions || []).map(r => r.reaction).join(' ');
+        if (p === 'tw') return ((msg.messageCreate || msg).reactions || []).map(r => r.reactionKey || '').join(' ');
+        return '';
+    }
+
+    // ── Element factories ──
+    function bbl(html) {
+        const d = document.createElement('div');
+        d.className = 'bbl';
+        d.innerHTML = html;
+        return d;
+    }
+
+    function imgBbl(src) {
+        const w = document.createElement('div');
+        w.className = 'm-img';
+        const img = document.createElement('img');
+        img.src = src;
+        img.alt = 'photo';
+        img.onerror = () => {
+            w.innerHTML = `<div style="padding:9px;font-size:11px;color:var(--text3)">📷 ${src.split('/').pop()}</div>`;
+        };
+        img.onclick = () => {
+            document.getElementById('lb-img').src = src;
+            document.getElementById('lb').classList.add('open');
+        };
+        w.appendChild(img);
+        return w;
+    }
+
+    function vidBbl(src) {
+        const w = document.createElement('div');
+        w.className = 'm-vid';
+        const v = document.createElement('video');
+        v.src = src;
+        v.controls = true;
+        v.onerror = () => {
+            w.innerHTML = `<div style="padding:9px;font-size:11px;color:var(--text3)">🎥 ${src.split('/').pop()}</div>`;
+        };
+        w.appendChild(v);
+        return w;
+    }
+
+    function audBbl(src) {
+        const w = document.createElement('div');
+        w.className = 'm-aud';
+        w.innerHTML = '<span>🎙️</span>';
+        const a = document.createElement('audio');
+        a.src = src;
+        a.controls = true;
+        a.onerror = () => {
+            w.innerHTML = `<span style="font-size:11px;color:var(--text3)">🎙️ ${src.split('/').pop()}</span>`;
+        };
+        w.appendChild(a);
+        return w;
+    }
+
+    function ttCard(url) {
+        const id = ttId(url);
+        const card = document.createElement('div');
+        card.className = 'tt-card';
+        card.innerHTML = `<div class="tt-thumb" id="tt-${id || Date.now()}">🎵<div class="tt-play"></div></div><div class="tt-lbl">${id ? `TikTok ···${id.slice(-6)}` : 'TikTok'}</div>`;
+        card.onclick = () => window.open(url, '_blank');
+        if (id) {
+            fetch(`https://www.tiktok.com/oembed?url=${encodeURIComponent(url)}`)
+                .then(r => r.json()).then(d => {
+                const thumb = card.querySelector('.tt-thumb');
+                if (d.thumbnail_url) {
+                    thumb.style.backgroundImage = `url(${d.thumbnail_url})`;
+                    thumb.style.backgroundSize = 'cover';
+                    thumb.style.backgroundPosition = 'center';
+                    thumb.firstChild.remove();
+                }
+                if (d.title) card.querySelector('.tt-lbl').textContent = d.title.slice(0, 55);
+            }).catch(() => {
+            });
+        }
+        return card;
+    }
+
+    function lkBbl(url) {
+        const a = document.createElement('a');
+        a.className = 'lk-card';
+        a.href = url;
+        a.target = '_blank';
+        a.rel = 'noopener noreferrer';
+        a.innerHTML = `<div class="lk-dom">${domain(url)}</div><div class="lk-title">${url.slice(0, 55)}${url.length > 55 ? '…' : ''}</div>`;
+        return a;
+    }
+
+    // Init
+    switchPlat('ig');
+</script>
+</body>
+</html>
