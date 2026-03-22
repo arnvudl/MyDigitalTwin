@@ -1,0 +1,4 @@
+.venv
+data
+inventory
+__pycache__
