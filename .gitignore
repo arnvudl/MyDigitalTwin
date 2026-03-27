@@ -1,4 +1,24 @@
-.venv
-data
-inventory
-__pycache__
+# IDE
+.idea/
+.vscode/
+*.iml
+
+# Python
+__pycache__/
+*.pyc
+.venv/
+*.egg-info/
+
+# Données personnelles — JAMAIS sur GitHub
+data/raw/
+data/processed/
+data/parquet/
+*.parquet
+contacts_map.json
+
+# Jupyter
+.ipynb_checkpoints/
+
+# OS
+.DS_Store
+Thumbs.db
