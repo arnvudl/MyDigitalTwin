@@ -55,7 +55,9 @@ user_text | platform | timestamp | char_count | word_count | emoji_count | lang
 | `Activity/Like List/ItemFavoriteList` | TikTok | JSON (dans user_data) | Vidéos likées |
 | `Your Activity/Ad Interests/AdInterestCategories` | TikTok | JSON (dans user_data) | Centres d'intérêt détectés |
 | `data/like.js` | Twitter/X | JS | Tweets likés |
-| *Données Spotify à venir* | Spotify | JSON | Historique d'écoute, playlists |
+| `StreamingHistory_music_0-7.json` | Spotify | JSON | ~95k événements d'écoute (artiste, titre, msPlayed, endTime) |
+| `YourLibrary.json` | Spotify | JSON | ~1 500 titres sauvegardés (artiste, album, titre, uri) |
+| `Playlist1.json` | Spotify | JSON | Playlist "LaZone 🤖" — titres + dates d'ajout (addedDate) |
 
 **Output Parquet** : `interactions.parquet`
 ```
@@ -83,7 +85,9 @@ item_id | item_title | item_category | platform | action_type | timestamp | weig
 | `your_instagram_activity/likes/liked_posts.json` | Instagram | JSON | Activité par heure/jour |
 | `your_instagram_activity/messages/inbox/*/message_*.json` | Instagram | JSON | Activité temporelle (métadonnées) |
 | `Extraits de compte Belfius (×4 PDF)` | Belfius | PDF | Dépenses par catégorie + dates |
-| *Données Spotify à venir* | Spotify | JSON | Genres musicaux + moments d'écoute |
+| `StreamingHistory_music_0-7.json` | Spotify | JSON | Moments d'écoute (endTime → heure/jour) + msPlayed |
+| `YourSoundCapsule.json` | Spotify | JSON | Stats hebdomadaires (streamCount, secondsPlayed, topGenres par semaine) |
+| `Wrapped2025.json` | Spotify | JSON | Patterns annuels (% nuit, BPM moyen, 523 genres, jours consécutifs) |
 
 **Output Parquet** : `activity_vectors.parquet`
 ```
@@ -110,11 +114,26 @@ Structure simple : `Title, Date`
 - Extraction : date, montant, description, catégorie
 - Anonymisation des bénéficiaires (remplacés par catégorie)
 
-### Spotify (en attente)
-Fichiers attendus dans l'export :
-- `StreamingHistory_music_*.json` → historique d'écoute (artiste, titre, ms_played)
-- `YourLibrary.json` → playlists, artistes suivis
-- `Inferences.json` → centres d'intérêt détectés par Spotify
+### Spotify — `data/raw/SPOTIFY/`
+Export reçu le 31/03/2026. Fichiers disponibles :
+
+| Fichier | Taille | Contenu | Champs clés |
+|---|---|---|---|
+| `StreamingHistory_music_0-7.json` | ~9.4 MB (8 fichiers) | ~95k événements d'écoute (mars 2025 → mars 2026) | `endTime`, `artistName`, `trackName`, `msPlayed` |
+| `YourLibrary.json` | 175 KB | ~1 500 titres likés/sauvegardés | `artist`, `album`, `track`, `uri` |
+| `Playlist1.json` | 1.6 MB | Playlist "LaZone 🤖" (~100 titres) | `trackName`, `artistName`, `albumName`, `addedDate` |
+| `YourSoundCapsule.json` | 12 KB | Stats hebdomadaires récentes | `date`, `streamCount`, `secondsPlayed`, `topTracks`, `topGenres` |
+| `Wrapped2025.json` | 17 KB | Stats annuelles 2025 | `topArtists`, `topGenres` (523), `party` (% nuit, BPM, jours consécutifs) |
+| `SearchQueries.json` | 448 KB | ~15 900 requêtes de recherche | `searchTime`, `searchQuery`, `platform` |
+| `Follow.json` | 354 B | Abonnements/abonnés | `userIsFollowing`, `userIsFollowedBy` |
+| `UserAttributes.json` | 439 B | Profil utilisateur | `username`, `country`, `birthdate`, `gender` |
+
+**Notes importantes :**
+- `StreamingHistory` couvre 314 jours consécutifs (streak Wrapped)
+- Format `endTime` : `"YYYY-MM-DD HH:MM"` → à parser avec `to_timestamp`
+- `msPlayed` permet de pondérer : une écoute < 30s ≠ une écoute complète
+- `SearchQueries` inclut des saisies intermédiaires (lettre par lettre) → filtrer les queries < 3 chars
+- `Inferences.json` absent de l'export
 
 ---
 
@@ -157,5 +176,5 @@ Notebook 06 — Dashboard (visualisation)
 
 ---
 
-*Document MyDigitalTwin — mis à jour au 27/03/2026*
-*Sources manquantes : Spotify (en attente d'export)*
+*Document MyDigitalTwin — mis à jour au 31/03/2026*
+*Toutes les sources prévues sont maintenant disponibles.*
