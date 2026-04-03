@@ -25,3 +25,29 @@ Thumbs.db
 
 CLAUDE.md
 .claude
+warehouse/
+
+python -c "
+import json, os
+
+files = [
+    r'C:\Users\arnau\Documents\MyDigitalTwin\data\raw\INSTAGRAM\ads_information\ads_and_topics\posts_you're_not_interested_in.json',
+    r'C:\Users\arnau\Documents\MyDigitalTwin\data\raw\INSTAGRAM\ads_information\ads_and_topics\ads_clicked.json',
+]
+
+for path in files:
+    if os.path.exists(path):
+        with open(path, encoding='utf-8') as f:
+            data = json.load(f)
+        print(f'\n=== {os.path.basename(path)} ===')
+        print(type(data))
+        if isinstance(data, dict):
+            print('Clés:', list(data.keys())[:5])
+            first_key = list(data.keys())[0]
+            print('Premier élément:', str(data[first_key])[:300])
+        elif isinstance(data, list):
+            print('Longueur:', len(data))
+            print('Premier élément:', str(data[0])[:300])
+    else:
+        print(f'FICHIER INTROUVABLE: {path}')
+"

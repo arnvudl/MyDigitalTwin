@@ -1,0 +1,488 @@
+@import url('https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Sans:ital,wght@0,300;0,400;0,500;1,300&display=swap');
+
+/* ─── VARIABLES ─────────────────────────────────────────── */
+:root {
+    --bg-void: #04030a;
+    --bg-deep: #080614;
+    --bg-surface: #0f0c1e;
+    --bg-card: #13102a;
+    --bg-card-hover: #1a1735;
+
+    --violet-core: #6c3fc5;
+    --violet-bright: #8b5cf6;
+    --violet-glow: #a78bfa;
+    --violet-soft: rgba(139, 92, 246, 0.15);
+    --violet-border: rgba(139, 92, 246, 0.25);
+
+    --blue-accent: #3b82f6;
+    --pink-accent: #ec4899;
+
+    --text-primary: #f0ecff;
+    --text-secondary: #a89ec9;
+    --text-muted: #5a5278;
+
+    --font-display: 'Syne', sans-serif;
+    --font-body: 'DM Sans', sans-serif;
+
+    --radius-sm: 8px;
+    --radius-md: 14px;
+    --radius-lg: 22px;
+    --radius-xl: 32px;
+
+    --transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+    --glow-violet: 0 0 40px rgba(139, 92, 246, 0.35);
+    --glow-subtle: 0 0 20px rgba(139, 92, 246, 0.15);
+}
+
+/* ─── RESET & BASE ──────────────────────────────────────── */
+*, *::before, *::after {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+}
+
+html, body {
+    background: var(--bg-void);
+    color: var(--text-primary);
+    font-family: var(--font-body);
+    font-size: 15px;
+    line-height: 1.6;
+    -webkit-font-smoothing: antialiased;
+    overflow-x: hidden;
+}
+
+/* Scrollbar */
+::-webkit-scrollbar {
+    width: 4px;
+}
+
+::-webkit-scrollbar-track {
+    background: var(--bg-deep);
+}
+
+::-webkit-scrollbar-thumb {
+    background: var(--violet-border);
+    border-radius: 2px;
+}
+
+/* ─── NAVBAR ────────────────────────────────────────────── */
+.navbar {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    z-index: 1000;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0 40px;
+    height: 64px;
+    background: rgba(4, 3, 10, 0.85);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    border-bottom: 1px solid var(--violet-border);
+}
+
+.navbar-brand {
+    font-family: var(--font-display);
+    font-size: 18px;
+    font-weight: 800;
+    letter-spacing: -0.5px;
+    background: linear-gradient(135deg, var(--violet-glow), var(--violet-bright));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    text-decoration: none;
+}
+
+.navbar-brand span {
+    -webkit-text-fill-color: var(--text-muted);
+    font-weight: 400;
+    font-size: 14px;
+    margin-left: 6px;
+    letter-spacing: 0.5px;
+}
+
+.navbar-links {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+}
+
+.nav-link {
+    font-family: var(--font-body);
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--text-muted);
+    text-decoration: none;
+    padding: 7px 16px;
+    border-radius: var(--radius-sm);
+    border: 1px solid transparent;
+    transition: var(--transition);
+    letter-spacing: 0.3px;
+    cursor: pointer;
+    background: none;
+}
+
+.nav-link:hover {
+    color: var(--text-primary);
+    background: var(--violet-soft);
+    border-color: var(--violet-border);
+}
+
+.nav-link.active {
+    color: var(--violet-glow);
+    background: var(--violet-soft);
+    border-color: var(--violet-border);
+}
+
+.navbar-dot {
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    background: var(--violet-bright);
+    box-shadow: 0 0 10px var(--violet-bright);
+    animation: pulse-dot 2.5s ease-in-out infinite;
+}
+
+@keyframes pulse-dot {
+    0%, 100% {
+        opacity: 1;
+        box-shadow: 0 0 10px var(--violet-bright);
+    }
+    50% {
+        opacity: 0.5;
+        box-shadow: 0 0 4px var(--violet-bright);
+    }
+}
+
+/* ─── PAGE WRAPPER ──────────────────────────────────────── */
+.page-wrapper {
+    padding-top: 64px;
+    min-height: 100vh;
+    background: radial-gradient(ellipse 80% 50% at 50% -10%, rgba(108, 63, 197, 0.18) 0%, transparent 70%),
+    var(--bg-void);
+}
+
+/* ─── HOME PAGE ─────────────────────────────────────────── */
+.home-container {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 60px 40px 80px;
+    gap: 0;
+}
+
+/* Hero */
+.home-hero {
+    text-align: center;
+    margin-bottom: 70px;
+    animation: fadeInUp 0.8s ease both;
+}
+
+.home-hero-label {
+    font-family: var(--font-body);
+    font-size: 11px;
+    font-weight: 500;
+    letter-spacing: 3px;
+    text-transform: uppercase;
+    color: var(--violet-bright);
+    margin-bottom: 16px;
+}
+
+.home-hero-title {
+    font-family: var(--font-display);
+    font-size: clamp(36px, 5vw, 60px);
+    font-weight: 800;
+    letter-spacing: -2px;
+    line-height: 1.05;
+    color: var(--text-primary);
+}
+
+.home-hero-title em {
+    font-style: normal;
+    background: linear-gradient(135deg, var(--violet-glow) 0%, var(--violet-bright) 50%, var(--pink-accent) 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+}
+
+.home-hero-sub {
+    margin-top: 16px;
+    font-size: 15px;
+    color: var(--text-secondary);
+    font-weight: 300;
+}
+
+/* ─── ORBIT SECTION ─────────────────────────────────────── */
+.orbit-section {
+    position: relative;
+    width: 700px;
+    height: 700px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    animation: fadeIn 1s ease 0.3s both;
+}
+
+/* Rings */
+.orbit-ring {
+    position: absolute;
+    border-radius: 50%;
+    border: 1px solid;
+    pointer-events: none;
+}
+
+.orbit-ring-1 {
+    width: 200px;
+    height: 200px;
+    border-color: rgba(139, 92, 246, 0.40);
+    box-shadow: 0 0 30px rgba(139, 92, 246, 0.08) inset;
+}
+
+.orbit-ring-2 {
+    width: 370px;
+    height: 370px;
+    border-color: rgba(139, 92, 246, 0.22);
+}
+
+.orbit-ring-3 {
+    width: 540px;
+    height: 540px;
+    border-color: rgba(139, 92, 246, 0.12);
+}
+
+.orbit-ring-4 {
+    width: 690px;
+    height: 690px;
+    border-color: rgba(139, 92, 246, 0.06);
+}
+
+/* Avatar */
+.orbit-avatar {
+    position: absolute;
+    z-index: 10;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 10px;
+}
+
+.avatar-circle {
+    width: 110px;
+    height: 110px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, var(--violet-core), #2d1b69);
+    border: 2px solid var(--violet-border);
+    box-shadow: var(--glow-violet);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 48px;
+    position: relative;
+    overflow: hidden;
+}
+
+.avatar-circle::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    border-radius: 50%;
+    background: radial-gradient(circle at 35% 35%, rgba(255, 255, 255, 0.15), transparent 60%);
+}
+
+.avatar-name {
+    font-family: var(--font-display);
+    font-size: 13px;
+    font-weight: 700;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    color: var(--violet-glow);
+}
+
+/* Tags */
+.orbit-tag {
+    position: absolute;
+    display: flex;
+    align-items: center;
+    gap: 7px;
+    padding: 7px 14px;
+    border-radius: 100px;
+    font-family: var(--font-body);
+    font-size: 12px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: var(--transition);
+    white-space: nowrap;
+    border: 1px solid;
+    animation: fadeIn 0.6s ease both;
+}
+
+.orbit-tag:hover {
+    transform: scale(1.08) translateY(-2px);
+    z-index: 20;
+}
+
+.orbit-tag .tag-dot {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    flex-shrink: 0;
+}
+
+/* Ring 1 tags — catégories principales */
+.tag-ring-1 {
+    background: rgba(139, 92, 246, 0.18);
+    border-color: rgba(139, 92, 246, 0.50);
+    color: var(--violet-glow);
+    font-size: 13px;
+    font-weight: 600;
+    padding: 9px 18px;
+    box-shadow: 0 0 20px rgba(139, 92, 246, 0.2);
+}
+
+.tag-ring-1 .tag-dot {
+    background: var(--violet-bright);
+    box-shadow: 0 0 6px var(--violet-bright);
+}
+
+/* Ring 2 tags — exemples */
+.tag-ring-2 {
+    background: rgba(59, 130, 246, 0.10);
+    border-color: rgba(59, 130, 246, 0.30);
+    color: #93c5fd;
+    font-size: 12px;
+}
+
+.tag-ring-2 .tag-dot {
+    background: var(--blue-accent);
+}
+
+/* Ring 3 tags — secondaires */
+.tag-ring-3 {
+    background: rgba(236, 72, 153, 0.08);
+    border-color: rgba(236, 72, 153, 0.20);
+    color: #f9a8d4;
+    font-size: 11px;
+    opacity: 0.8;
+}
+
+.tag-ring-3 .tag-dot {
+    background: var(--pink-accent);
+}
+
+/* ─── STATS ROW ─────────────────────────────────────────── */
+.stats-row {
+    display: flex;
+    gap: 16px;
+    margin-top: 60px;
+    animation: fadeInUp 0.8s ease 0.5s both;
+}
+
+.stat-card {
+    flex: 1;
+    padding: 22px 28px;
+    background: var(--bg-card);
+    border: 1px solid var(--violet-border);
+    border-radius: var(--radius-lg);
+    text-align: center;
+    transition: var(--transition);
+    min-width: 140px;
+}
+
+.stat-card:hover {
+    background: var(--bg-card-hover);
+    border-color: var(--violet-bright);
+    box-shadow: var(--glow-subtle);
+    transform: translateY(-3px);
+}
+
+.stat-value {
+    font-family: var(--font-display);
+    font-size: 28px;
+    font-weight: 800;
+    background: linear-gradient(135deg, var(--violet-glow), var(--violet-bright));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+}
+
+.stat-label {
+    font-size: 11px;
+    font-weight: 500;
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+    color: var(--text-muted);
+    margin-top: 4px;
+}
+
+.stat-icon {
+    font-size: 20px;
+    margin-bottom: 8px;
+}
+
+/* ─── DETAIL PANEL (on tag click) ───────────────────────── */
+.detail-panel {
+    width: 100%;
+    max-width: 800px;
+    margin-top: 48px;
+    padding: 28px 32px;
+    background: var(--bg-card);
+    border: 1px solid var(--violet-border);
+    border-radius: var(--radius-lg);
+    animation: fadeInUp 0.4s ease both;
+}
+
+.detail-panel-title {
+    font-family: var(--font-display);
+    font-size: 20px;
+    font-weight: 700;
+    color: var(--violet-glow);
+    margin-bottom: 20px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.detail-chips {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+}
+
+.detail-chip {
+    padding: 5px 12px;
+    border-radius: 100px;
+    font-size: 12px;
+    background: var(--violet-soft);
+    border: 1px solid var(--violet-border);
+    color: var(--text-secondary);
+}
+
+.detail-source {
+    margin-top: 16px;
+    font-size: 11px;
+    color: var(--text-muted);
+    letter-spacing: 0.5px;
+}
+
+/* ─── ANIMATIONS ────────────────────────────────────────── */
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+    }
+    to {
+        opacity: 1;
+    }
+}
+
+@keyframes fadeInUp {
+    from {
+        opacity: 0;
+        transform: translateY(24px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
