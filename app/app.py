@@ -1,8 +1,8 @@
 import dash
 from dash import Input, Output, callback, dcc, html
 
-from components.navbar import create_navbar
-from pages import home
+from app.components import create_navbar
+from app.pages import home
 
 # ─── APP INIT ─────────────────────────────────────────────────────────────────
 app = dash.Dash(
