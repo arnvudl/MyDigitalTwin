@@ -8,8 +8,8 @@ from dash import Input, Output, callback, html, dcc, ALL
 
 # ─── CONFIG ──────────────────────────────────────────────────────────────────
 DELTA_BASE = r"C:\Users\arnau\Documents\MyDigitalTwin\warehouse"
-IG_TOPICS_PATH = r"C:\Users\arnau\Documents\MyDigitalTwin\data\raw\INSTAGRAM\preferences\your_topics\recommended_topics.json"
-X_PERSONALIZATION_PATH = r"C:\Users\arnau\Documents\MyDigitalTwin\data\raw\X\data\personalization.js"
+IG_TOPICS_PATH = r"/data/raw/INSTAGRAM/preferences/your_topics/recommended_topics.json"
+X_PERSONALIZATION_PATH = r"/data/raw/X/data/personalization.js"
 
 CATEGORY_KEYWORDS = {
     "🎵 Musique":        ["music", "song", "artist", "rap", "album", "track", "beat", "drill", "trap", "afrobeat", "afropop", "rnb", "r&b", "hip", "hop"],

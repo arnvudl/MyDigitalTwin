@@ -50,7 +50,7 @@ RUN chmod u+x /opt/spark/sbin/* && \
 ENV PATH="$PATH:$SPARK_HOME/bin:$SPARK_HOME/sbin"
 
 # Add a spark config for all nodes
-COPY conf/spark-defaults.conf "$SPARK_HOME/conf/"
+COPY infra/conf/spark-defaults.conf "$SPARK_HOME/conf/"
 
 
 FROM spark-base AS pyspark

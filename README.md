@@ -19,6 +19,7 @@ docker exec -it spark-master /bin/bash
 - **PySpark 3.5.5** + Delta Lake
 - **Docker Compose** — cluster Spark local (master + worker + history server)
 - Python 3.11, BeautifulSoup (`lxml`), PyArrow
+- **Dash / Plotly** — UI Web
 
 ## Démarrage rapide
 
@@ -42,20 +43,29 @@ make down
 | Spark Master UI | http://localhost:8080 |
 | History Server | http://localhost:18080 |
 | Jupyter | http://localhost:8889 |
+| Web UI (Dash) | http://localhost:8050 |
 
 ## Structure
 
-```
-data/raw/          ← fichiers bruts (gitignored)
-data/parquet/      ← datasets nettoyés (entrée ML)
-scripts/notebook/  ← notebooks PySpark d'ingestion et ML
-docs/              ← plans et idées
-warehouse/         ← Delta tables
+```text
+app/               ← 🖥️ UI Web (Dash)
+src/               ← ⚙️ Code d'ingestion, PySpark et ML
+ │  ├── scripts/   ← Notebooks PySpark
+ │  ├── tools/     ← Outils et scripts utilitaires
+ │  └── inventory/ ← Inventaire
+infra/             ← 🐳 Fichiers de configuration DevOps/Spark
+ │  └── conf/      ← Configuration Spark
+data/              ← 💾 Fichiers de données
+ │  ├── raw/       ← Fichiers bruts (gitignored)
+ │  └── parquet/   ← Datasets nettoyés (entrée ML)
+docs/              ← 📖 Plans et idées
+warehouse/         ← 🗄️ Delta tables
+spark-logs/        ← 📝 Logs Spark
 ```
 
 ## Sources de données
 
-Netflix, Instagram, Amazon, TikTok, Twitter/X, Google, YouTube, Apple, Belfius
+Netflix, Instagram, Amazon, TikTok, Twitter/X, Google, YouTube, Apple, Belfius, Spotify
 → voir `docs/ml_source_plan.md` pour le détail par axe ML.
 
 ## Notebooks
@@ -66,3 +76,8 @@ Netflix, Instagram, Amazon, TikTok, Twitter/X, Google, YouTube, Apple, Belfius
 | `amazon.ipynb` | Amazon CSV | ✓ |
 | `instagram.ipynb` | Instagram JSON | ✓ |
 | `google_youtube.ipynb` | Google Takeout HTML | En cours |
+| `apple.ipynb` | Apple Data | |
+| `spotify.ipynb` | Spotify Data | |
+| `tiktok.ipynb` | TikTok Data | |
+| `twitter.ipynb` | Twitter Data | |
+| `parquet_to_delta.ipynb` | Conversion Parquet to Delta | |
