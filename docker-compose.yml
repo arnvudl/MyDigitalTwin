@@ -52,5 +52,19 @@ services:
       - ./spark-logs:/opt/spark/spark-events
       - ./warehouse:/opt/spark/warehouse
 
+  dashboard:
+    container_name: dashboard
+    build: 
+      context: .
+      dockerfile: Dockerfile.app
+    ports:
+      - "8050:8050"
+    volumes:
+      - ./app:/app/app
+      - ./data:/app/data
+      - ./warehouse:/app/warehouse
+    depends_on:
+      - spark-master
+
 volumes:
   spark-logs:

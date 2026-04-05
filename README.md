@@ -36,6 +36,22 @@ make down
 
 > **Note Windows** : si tu modifies `entrypoint.sh`, assure-toi que les fins de ligne restent en LF (pas CRLF), sinon le conteneur ne démarre pas.
 
+### Démarrer le Dashboard (Web UI)
+
+Le Dashboard est construit avec Dash/Plotly. Pour le lancer en local :
+
+```bash
+# S'assurer d'être dans l'environnement virtuel (si utilisé)
+# Activer l'environnement virtuel (.venv/Scripts/activate sur Windows ou source .venv/bin/activate sur Mac/Linux)
+
+# Installer les dépendances si ce n'est pas déjà fait
+pip install -r requirements.txt
+
+# Lancer l'application
+python -m app.app
+```
+L'interface sera alors accessible sur [http://localhost:8050](http://localhost:8050).
+
 ## Interfaces
 
 | Service | URL |
@@ -75,9 +91,9 @@ Netflix, Instagram, Amazon, TikTok, Twitter/X, Google, YouTube, Apple, Belfius, 
 | `netflix.ipynb` | Netflix CSV | ✓ |
 | `amazon.ipynb` | Amazon CSV | ✓ |
 | `instagram.ipynb` | Instagram JSON | ✓ |
-| `google_youtube.ipynb` | Google Takeout HTML | En cours |
-| `apple.ipynb` | Apple Data | |
-| `spotify.ipynb` | Spotify Data | |
-| `tiktok.ipynb` | TikTok Data | |
-| `twitter.ipynb` | Twitter Data | |
-| `parquet_to_delta.ipynb` | Conversion Parquet to Delta | |
+| `google_youtube.ipynb` | Google Takeout HTML | ✓ |
+| `apple.ipynb` | Apple Data | ✓ |
+| `spotify.ipynb` | Spotify Data | ✓ |
+| `tiktok.ipynb` | TikTok Data | ✓ |
+| `twitter.ipynb` | Twitter Data | ✓ |
+| `parquet_to_delta.ipynb` | Conversion Parquet to Delta | ✓ |
