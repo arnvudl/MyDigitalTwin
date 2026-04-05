@@ -2,6 +2,7 @@ import json
 import math
 import os
 from functools import lru_cache
+import re
 
 import pandas as pd
 from dash import Input, Output, callback, html, dcc, ALL
@@ -19,9 +20,9 @@ else:
     X_PERSONALIZATION_PATH = "data/raw/X/data/personalization.js"
 
 CATEGORY_KEYWORDS = {
+    "⚽ Sport":          ["football", "soccer", "nba", "league", "match", "goal", "player", "arsenal", "champions", "fifa", "ligue", "rugby", "tennis", "basketball", "sport", "sport utility vehicles"],
     "🎵 Musique":        ["music", "song", "artist", "rap", "album", "track", "beat", "drill", "trap", "afrobeat", "afropop", "rnb", "r&b", "hip", "hop"],
-    "⚽ Sport":          ["foot", "football", "sport", "soccer", "nba", "league", "match", "goal", "player", "arsenal", "champions", "fifa", "ligue", "rugby", "tennis", "basketball"],
-    "💻 Tech":           ["python", "code", "data", "dev", "javascript", "api", "ai", "software", "tech", "developer", "engineering", "science", "consumer tech"],
+    "💻 Tech":           ["python", "code", "data", "dev", "javascript", "api", "ai", "software", "tech", "developer", "engineering", "science", "consumer tech", "technology", "equipment", "artificial intelligence"],
     "🎬 Cinéma/Séries":  ["netflix", "film", "série", "movie", "episode", "cinema", "watch", "trailer", "season", "tv", "show", "streaming"],
     "🎮 Gaming":         ["game", "gaming", "play", "xbox", "ps5", "steam", "minecraft", "fortnite", "esport", "gamer", "action game", "video game", "ar/vr"],
     "🌍 Actu/Société":   ["news", "actu", "society", "monde", "france", "afrique", "africa", "senegal", "politique", "cup of nations"],
@@ -88,23 +89,45 @@ def load_all_keywords() -> dict:
             pass
 
     all_topics = ig_topics + x_interests
-    all_text   = " ".join(all_topics).lower()
 
     category_scores  = {}
     category_examples = {}
+    
+    used_topics = set()
 
     for cat, keywords in CATEGORY_KEYWORDS.items():
-        score = sum(all_text.count(kw) for kw in keywords)
-        category_scores[cat] = score
+        score = 0
         found = []
         for topic in all_topics:
-            if any(kw in topic.lower() for kw in keywords):
+            topic_lower = topic.lower()
+            
+            if topic_lower in used_topics:
+                continue
+
+            is_match = False
+            for kw in keywords:
+                # 1. Correspondance exacte
+                if topic_lower == kw:
+                    is_match = True
+                    break
+                
+                # 2. Utiliser \b pour forcer la correspondance sur un mot entier
+                # On tolère les tirets, underscores ou espaces autour
+                # Pour éviter que "Art" matche "Artificial Intelligence" ou "Mikel Arteta"
+                pattern = r'(?:\b|_|-| )' + re.escape(kw) + r'(?:\b|_|-| )'
+                if re.search(pattern, topic_lower):
+                    is_match = True
+                    break
+                    
+            if is_match:
+                score += 1
                 clean = topic.strip()
-                if clean not in found and len(clean) <= 30:
+                if clean not in found and len(clean) <= 35:
                     found.append(clean)
-            if len(found) >= 10:
-                break
-        category_examples[cat] = found
+                used_topics.add(topic_lower)
+        
+        category_scores[cat] = score
+        category_examples[cat] = found[:15]
 
     sorted_cats = sorted(category_scores.items(), key=lambda x: x[1], reverse=True)
     return {
