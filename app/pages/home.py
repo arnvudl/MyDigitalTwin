@@ -388,25 +388,24 @@ def update_detail_panel(tag_id):
         ex_list = examples[cat]
         score   = data["scores"].get(cat, 0)
         
-    # 2. Si on a cliqué sur un EXEMPLE (ex: "Pop", "Football")
+    # 2. Si on a cliqué sur un EXEMPLE / mot-clé
     else:
-        # On cherche à quelle catégorie appartient cet exemple
         parent_cat = next((c for c, exs in examples.items() if tag_id in exs), None)
-        
+
         if parent_cat:
             cat = f"Sous-catégorie de {parent_cat}"
-            # On cherche combien de fois ce mot clé spécifique apparait dans les topics raw
-            occurrences = sum(1 for topic in data["raw_topics"] if tag_id.lower() in topic.lower())
-            score = occurrences
-            # On affiche les autres exemples de la même catégorie pour contexte
+            if is_kmeans:
+                score = data["scores"].get(parent_cat, 0)
+            else:
+                score = sum(1 for topic in data["raw_topics"] if tag_id.lower() in topic.lower())
             ex_list = [e for e in examples[parent_cat] if e != tag_id]
-            ex_list.insert(0, tag_id) # On met l'élément cliqué en premier
+            ex_list.insert(0, tag_id)
         else:
             cat = tag_id
             ex_list = [tag_id]
-            # S'il ne rentre dans aucune catégorie connue, on compte ses propres occurrences
-            occurrences = sum(1 for topic in data["raw_topics"] if tag_id.lower() in topic.lower())
-            score = occurrences
+            score = 0 if is_kmeans else sum(
+                1 for topic in data["raw_topics"] if tag_id.lower() in topic.lower()
+            )
 
     return html.Div(className="detail-panel", children=[
         html.Div(className="detail-panel-title", children=[
@@ -417,5 +416,10 @@ def update_detail_panel(tag_id):
         html.Div(className="detail-chips", children=[
             html.Span(e, className="detail-chip") for e in ex_list
         ]),
-        html.Div("Sources : Instagram Topics · X Personalization", className="detail-source"),
+        html.Div(
+            "Sources : K-Means · YouTube · Google · Spotify · Netflix · Amazon"
+            if is_kmeans else
+            "Sources : Instagram Topics · X Personalization",
+            className="detail-source"
+        ),
     ])
