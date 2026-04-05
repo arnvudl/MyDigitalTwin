@@ -1,2 +1,6 @@
 lxml
 pandas
+dash
+plotly
+pyarrow
+fastparquet

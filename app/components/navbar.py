@@ -1,16 +1,15 @@
 from dash import html, dcc
 
 PAGES = [
-    {"label": "🏠 Home", "href": "/"},
-    {"label": "🎬 Netflix", "href": "/netflix"},
-    {"label": "🎵 Spotify", "href": "/spotify"},
-    {"label": "🎯 Recommandations", "href": "/recommandations"},
-    {"label": "🤖 Clone", "href": "/clone"},
-    {"label": "📅 Timeline", "href": "/timeline"},
-    {"label": "🕸️ Social", "href": "/social"},
-    {"label": "🖼️ Photos", "href": "/photos"},
+    {"label": "Home", "href": "/"},
+    {"label": "Netflix", "href": "/netflix"},
+    {"label": "Spotify", "href": "/spotify"},
+    {"label": "Recommandations", "href": "/recommandations"},
+    {"label": "Clone", "href": "/clone"},
+    {"label": "Timeline", "href": "/timeline"},
+    {"label": "Social", "href": "/social"},
+    {"label": "Photos", "href": "/photos"},
 ]
-
 
 def create_navbar(current_path="/"):
     links = []
@@ -24,18 +23,20 @@ def create_navbar(current_path="/"):
             )
         )
 
+    # Mac-like window controls (red, yellow, green buttons)
+    window_controls = html.Div(
+        className="mac-controls",
+        children=[
+            html.Div(className="mac-btn close"),
+            html.Div(className="mac-btn minimize"),
+            html.Div(className="mac-btn maximize"),
+        ]
+    )
+
     return html.Nav(
         className="navbar",
         children=[
-            dcc.Link(
-                [
-                    "MyDigitalTwin",
-                    html.Span("v1.0"),
-                ],
-                href="/",
-                className="navbar-brand",
-            ),
+            window_controls,
             html.Div(className="navbar-links", children=links),
-            html.Div(className="navbar-dot"),
         ],
     )

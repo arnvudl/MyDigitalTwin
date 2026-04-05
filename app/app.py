@@ -100,4 +100,6 @@ def on_tag_click(n_clicks_list, ids):
 
 # ─── RUN ──────────────────────────────────────────────────────────────────────
 if __name__ == "__main__":
-    app.run(debug=True)
+    # app.run(debug=True)
+    # Exposer sur 0.0.0.0 pour Docker
+    app.run(host="0.0.0.0", port=8050, debug=True)

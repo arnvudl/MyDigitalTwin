@@ -7,9 +7,16 @@ import pandas as pd
 from dash import Input, Output, callback, html, dcc, ALL
 
 # ─── CONFIG ──────────────────────────────────────────────────────────────────
-DELTA_BASE = r"C:\Users\arnau\Documents\MyDigitalTwin\warehouse"
-IG_TOPICS_PATH = r"/data/raw/INSTAGRAM/preferences/your_topics/recommended_topics.json"
-X_PERSONALIZATION_PATH = r"/data/raw/X/data/personalization.js"
+# On vérifie si on est dans Docker (où les dossiers sont montés à la racine /app/data et /app/warehouse)
+# ou en local (où les dossiers sont dans le répertoire courant).
+if os.path.exists("/app/warehouse"):
+    DELTA_BASE = "/app/warehouse"
+    IG_TOPICS_PATH = "/app/data/raw/INSTAGRAM/preferences/your_topics/recommended_topics.json"
+    X_PERSONALIZATION_PATH = "/app/data/raw/X/data/personalization.js"
+else:
+    DELTA_BASE = "warehouse"
+    IG_TOPICS_PATH = "data/raw/INSTAGRAM/preferences/your_topics/recommended_topics.json"
+    X_PERSONALIZATION_PATH = "data/raw/X/data/personalization.js"
 
 CATEGORY_KEYWORDS = {
     "🎵 Musique":        ["music", "song", "artist", "rap", "album", "track", "beat", "drill", "trap", "afrobeat", "afropop", "rnb", "r&b", "hip", "hop"],
@@ -27,6 +34,8 @@ def _read_delta(table_name: str, cols: list) -> pd.DataFrame:
     table_path = os.path.join(DELTA_BASE, table_name)
     if not os.path.exists(table_path):
         return pd.DataFrame(columns=cols)
+    
+    # Lecture des fichiers parquet au lieu du format delta _delta_log (car la librairie delta prend trop de place pour le web container)
     files = [
         os.path.join(table_path, f)
         for f in os.listdir(table_path)
@@ -41,7 +50,8 @@ def _read_delta(table_name: str, cols: list) -> pd.DataFrame:
             existing = [c for c in cols if c in df.columns]
             if existing:
                 dfs.append(df[existing])
-        except Exception:
+        except Exception as e:
+            print(f"Error reading {f}: {e}")
             pass
     return pd.concat(dfs, ignore_index=True) if dfs else pd.DataFrame(columns=cols)
 
@@ -51,25 +61,31 @@ def load_all_keywords() -> dict:
     ig_topics, x_interests = [], []
 
     if os.path.exists(IG_TOPICS_PATH):
-        with open(IG_TOPICS_PATH, encoding="utf-8") as f:
-            data = json.load(f)
-        for item in data.get("topics_your_topics", []):
-            val = item.get("string_map_data", {}).get("Nom", {}).get("value", "")
-            if val:
-                ig_topics.append(val)
+        try:
+            with open(IG_TOPICS_PATH, encoding="utf-8") as f:
+                data = json.load(f)
+            for item in data.get("topics_your_topics", []):
+                val = item.get("string_map_data", {}).get("Nom", {}).get("value", "")
+                if val:
+                    ig_topics.append(val)
+        except:
+            pass
 
     if os.path.exists(X_PERSONALIZATION_PATH):
-        with open(X_PERSONALIZATION_PATH, encoding="utf-8") as f:
-            raw = f.read()
-        if raw.strip().startswith("window."):
-            raw = raw[raw.index("=") + 1:].strip()
-        data = json.loads(raw)
-        for entry in data:
-            interests = entry.get("p13nData", {}).get("interests", {}).get("interests", [])
-            for i in interests:
-                name = i.get("name", "")
-                if name and not i.get("isDisabled", False):
-                    x_interests.append(name)
+        try:
+            with open(X_PERSONALIZATION_PATH, encoding="utf-8") as f:
+                raw = f.read()
+            if raw.strip().startswith("window."):
+                raw = raw[raw.index("=") + 1:].strip()
+            data = json.loads(raw)
+            for entry in data:
+                interests = entry.get("p13nData", {}).get("interests", {}).get("interests", [])
+                for i in interests:
+                    name = i.get("name", "")
+                    if name and not i.get("isDisabled", False):
+                        x_interests.append(name)
+        except:
+            pass
 
     all_topics = ig_topics + x_interests
     all_text   = " ".join(all_topics).lower()
@@ -94,20 +110,30 @@ def load_all_keywords() -> dict:
     return {
         "scores":   {k: v for k, v in sorted_cats},
         "examples": category_examples,
+        "raw_topics": all_topics
     }
 
 # ─── STATS ───────────────────────────────────────────────────────────────────
 @lru_cache(maxsize=1)
 def compute_stats() -> dict:
     stats = {}
-    df = _read_delta("spotify_streams", ["artistName"])
-    stats["artistes"] = df["artistName"].nunique() if not df.empty else 0
-    df = _read_delta("netflix_views", ["show_title"])
-    stats["films"] = len(df) if not df.empty else 0
-    df = _read_delta("google_searches", ["query"])
-    stats["recherches"] = len(df) if not df.empty else 0
-    df = _read_delta("twitter_tweets", ["tweet_id"])
-    stats["tweets"] = len(df) if not df.empty else 0
+    
+    # Spotify - The column is 'artistName' 
+    df_spotify = _read_delta("spotify_streams", ["artistName"])
+    stats["artistes"] = df_spotify["artistName"].nunique() if not df_spotify.empty else 0
+
+    # Netflix - The column is 'show_title' 
+    df_netflix = _read_delta("netflix_views", ["show_title"])
+    stats["films"] = len(df_netflix) if not df_netflix.empty else 0
+
+    # Google - The column is 'query'
+    df_google = _read_delta("google_searches", ["query"])
+    stats["recherches"] = len(df_google) if not df_google.empty else 0
+
+    # Twitter - The column is 'tweet_id'
+    df_twitter = _read_delta("twitter_tweets", ["tweet_id"])
+    stats["tweets"] = len(df_twitter) if not df_twitter.empty else 0
+
     return stats
 
 # ─── TAG POSITIONING (left/top absolus, centre = 380px) ──────────────────────
@@ -147,8 +173,9 @@ def build_orbit_tags(data: dict) -> list:
     for i, (label, _) in enumerate(ring2_items[:10]):
         angle = (360 / max(len(ring2_items), 1)) * i - 70
         style = _pos(angle, 255)
+        # On passe directement le nom de l'exemple en ID pour que le callback le reconnaisse !
         tags.append(html.Div(
-            id={"type": "orbit-tag", "index": f"ex-{i}"},
+            id={"type": "orbit-tag", "index": label},
             className="orbit-tag tag-r2",
             style=style,
             children=[label],
@@ -156,15 +183,21 @@ def build_orbit_tags(data: dict) -> list:
         ))
 
     # ── Anneau 3 : catégories secondaires + exemples épars
-    ring3_items = list(cats[6:])
+    ring3_items = []
+    # On ajoute d'abord les catégories secondaires en tant que telles (pour avoir le bon comportement au clic)
+    for cat in cats[6:]:
+        ring3_items.append((cat, True))
+    
+    # Puis on ajoute des exemples supplémentaires
     for cat in ring1[:3]:
-        ring3_items += examples.get(cat, [])[2:4]
+        for ex in examples.get(cat, [])[2:4]:
+            ring3_items.append((ex, False))
 
-    for i, label in enumerate(ring3_items[:12]):
+    for i, (label, is_cat) in enumerate(ring3_items[:12]):
         angle = (360 / max(len(ring3_items), 1)) * i - 50
         style = _pos(angle, 340)
         tags.append(html.Div(
-            id={"type": "orbit-tag", "index": f"ring3-{i}"},
+            id={"type": "orbit-tag", "index": label},
             className="orbit-tag tag-r3",
             style=style,
             children=[label],
@@ -235,14 +268,32 @@ def update_detail_panel(tag_id):
         return []
     data     = load_all_keywords()
     examples = data["examples"]
+    
+    # 1. Si on a cliqué sur une CATEGORIE (ex: "🎵 Musique")
     if tag_id in examples:
         cat     = tag_id
         ex_list = examples[cat]
         score   = data["scores"].get(cat, 0)
+        
+    # 2. Si on a cliqué sur un EXEMPLE (ex: "Pop", "Football")
     else:
-        cat     = next((c for c, exs in examples.items() if tag_id in exs), tag_id)
-        ex_list = examples.get(cat, [tag_id])
-        score   = data["scores"].get(cat, 0)
+        # On cherche à quelle catégorie appartient cet exemple
+        parent_cat = next((c for c, exs in examples.items() if tag_id in exs), None)
+        
+        if parent_cat:
+            cat = f"Sous-catégorie de {parent_cat}"
+            # On cherche combien de fois ce mot clé spécifique apparait dans les topics raw
+            occurrences = sum(1 for topic in data["raw_topics"] if tag_id.lower() in topic.lower())
+            score = occurrences
+            # On affiche les autres exemples de la même catégorie pour contexte
+            ex_list = [e for e in examples[parent_cat] if e != tag_id]
+            ex_list.insert(0, tag_id) # On met l'élément cliqué en premier
+        else:
+            cat = tag_id
+            ex_list = [tag_id]
+            # S'il ne rentre dans aucune catégorie connue, on compte ses propres occurrences
+            occurrences = sum(1 for topic in data["raw_topics"] if tag_id.lower() in topic.lower())
+            score = occurrences
 
     return html.Div(className="detail-panel", children=[
         html.Div(className="detail-panel-title", children=[
