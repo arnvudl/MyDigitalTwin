@@ -121,7 +121,7 @@ def _read_delta(table_name: str, cols: list) -> pd.DataFrame:
 def load_interest_profiles() -> dict | None:
     """
     Charge les profils K-Means depuis warehouse/interest_profiles.
-    Retourne None si le notebook n'a pas encore tourné (fallback sur keyword matching).
+    Retourne None si le 01_exploration n'a pas encore tourné (fallback sur keyword matching).
     """
     df = _read_delta("interest_profiles", [
         "label", "emoji", "keywords", "top_platforms",

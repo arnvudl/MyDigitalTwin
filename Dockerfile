@@ -80,7 +80,7 @@ RUN chmod u+x /opt/spark/entrypoint.sh
 # Optionally install Jupyter
 FROM pyspark-runner AS pyspark-jupyter
 
-RUN pip3 install notebook
+RUN pip3 install 01_exploration
 
 ENV JUPYTER_PORT=8889
 
