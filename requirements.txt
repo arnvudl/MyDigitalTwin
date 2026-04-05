@@ -4,3 +4,5 @@ dash
 plotly
 pyarrow
 fastparquet
+matplotlib
+numpy
