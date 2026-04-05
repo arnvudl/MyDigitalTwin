@@ -124,17 +124,23 @@ def load_interest_profiles() -> dict | None:
     Retourne None si le notebook n'a pas encore tourné (fallback sur keyword matching).
     """
     df = _read_delta("interest_profiles", [
-        "hybrid_label", "emoji", "keywords", "sample_items", "item_count", "time_period"
+        "label", "emoji", "keywords", "top_platforms",
+        "item_count", "time_period", "sample_items",
     ])
     if df.empty:
         return None
 
     scores, examples = {}, {}
     for _, row in df.iterrows():
-        label    = row.get("hybrid_label") or "Inconnu"
-        kws      = list(row["keywords"])   if isinstance(row.get("keywords"),   (list, object)) else []
-        samples  = list(row["sample_items"]) if isinstance(row.get("sample_items"), (list, object)) else []
-        count    = int(row.get("item_count") or 0)
+        label   = row.get("label") or "Inconnu"
+        def _to_list(val):
+            if val is None: return []
+            if isinstance(val, list): return val
+            try: return list(val)
+            except: return []
+        kws     = _to_list(row.get("keywords"))
+        samples = _to_list(row.get("sample_items"))
+        count   = int(row.get("item_count") or 0)
         scores[label]   = count
         examples[label] = (kws + samples)[:15]
 
@@ -258,10 +264,8 @@ def load_all_keywords() -> dict:
 
 
 def load_interests() -> dict:
-    """Point d'entrée unique : K-Means en priorité, keyword matching en fallback."""
-    profiles = load_interest_profiles()
-    if profiles is not None:
-        return profiles
+    """Toujours basé sur les données Delta Lake directement.
+    Les résultats des notebooks sont affichés dans /profils."""
     return load_all_keywords()
 
 # ─── STATS ───────────────────────────────────────────────────────────────────

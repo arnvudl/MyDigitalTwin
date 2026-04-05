@@ -2,7 +2,7 @@ import dash
 from dash import Input, Output, callback, dcc, html
 
 from app.components import create_navbar
-from app.pages import home
+from app.pages import home, clusters
 
 # ─── APP INIT ─────────────────────────────────────────────────────────────────
 app = dash.Dash(
@@ -36,6 +36,9 @@ def display_page(pathname):
 
     if pathname == "/":
         return home.layout(), navbar
+
+    if pathname == "/profils":
+        return clusters.layout(), navbar
 
     # Pages à venir — placeholder élégant
     page_names = {

@@ -71,7 +71,7 @@ item_id | item_title | item_category | platform | action_type | timestamp | weig
 
 ---
 
-### 3. Le Dashboard des "Moi" — K-Means Clustering
+### 3. ✅ Le Dashboard des "Moi" — K-Means Clustering *(terminé — 2026-04-06)*
 
 > *Regrouper mes activités en profils comportementaux : Étudiant, Loisirs, Nuit, Shopping...*
 
@@ -98,6 +98,12 @@ timestamp | hour | weekday | platform | category | amount | activity_type
 - `VectorAssembler` → features numériques (heure, jour, montant, catégorie encodée)
 - `KMeans` avec k=5-8 clusters
 - `PCA` pour visualisation 2D de la "galaxie de profils"
+
+**Réalisé** :
+- K=6 clusters comportementaux (hour_sin/cos, weekday_sin/cos, weight, platform_ohe) — Silhouette 0.32
+- `warehouse/behavioral_clusters` + `warehouse/interest_profiles` écrits
+- Page `/profils` dans le dashboard (cards + filtres + exemples par cluster)
+- Content clustering (TF-IDF K-Means) abandonné → analyse fréquentielle à la place
 
 ---
 
@@ -176,5 +182,6 @@ Notebook 06 — Dashboard (visualisation)
 
 ---
 
-*Document MyDigitalTwin — mis à jour au 31/03/2026*
+*Document MyDigitalTwin — mis à jour au 2026-04-06*
 *Toutes les sources prévues sont maintenant disponibles.*
+*Axe 3 (Clustering) terminé. Axes 1 (Clone NLP) et 2 (Recommandations ALS) à venir.*
