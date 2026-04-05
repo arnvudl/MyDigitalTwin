@@ -21,61 +21,72 @@ else:
 
 CATEGORY_KEYWORDS = {
     "⚽ Sport": [
-        "football", "soccer", "nba", "league", "match", "goal", "player", "arsenal", "champions",
-        "fifa", "ligue", "rugby", "tennis", "basketball", "sport", "ballon d'or", "ucl", "premier league",
-        "ufc", "mma", "boxing", "gym", "fitness", "workout", "calisthenics", "training", "nfl",
-        "olympics", "swimming", "cycling", "padel", "volleyball"
+        "football", "soccer", "nba", "match", "goal", "player", "arsenal", "champions",
+        "fifa", "ligue", "rugby", "tennis", "basketball", "sport", "ballon d'or", "ucl",
+        "premier league", "ufc", "mma", "boxing", "gym", "fitness", "workout", "calisthenics",
+        "training", "nfl", "olympics", "swimming", "cycling", "padel", "volleyball",
+        "champions league", "ligue 1"
     ],
     "🏎️ Auto/Moto": [
-        "car", "auto", "voiture", "porsche", "ferrari", "lamborghini", "bmw", "mercedes", "audi",
-        "tesla", "f1", "formula 1", "supercar", "hypercar", "drift", "tuning", "engine", "v8",
-        "v12", "electric vehicle", "motorsport", "motorcycle", "moto", "yamaha", "kawasaki",
-        "mclaren", "bugatti", "aston martin", "jdm", "nissan", "toyota", "supra", "rb26",
-        "porsche 911", "rs6", "amg", "m performance", "ducati", "harley", "grand prix"
+        "car", "auto", "voiture", "porsche", "ferrari", "lamborghini", "bmw", "mercedes",
+        "audi", "tesla", "f1", "formula 1", "supercar", "hypercar", "drift", "tuning",
+        "engine", "v8", "v12", "electric vehicle", "motorsport", "motorcycle", "moto",
+        "yamaha", "kawasaki", "mclaren", "bugatti", "aston martin", "jdm", "nissan",
+        "toyota", "supra", "rb26", "porsche 911", "rs6", "amg", "m performance", "ducati",
+        "harley", "grand prix"
     ],
     "🎵 Musique": [
-        "music", "song", "artist", "rap", "album", "track", "beat", "drill", "trap", "afrobeat",
-        "afropop", "rnb", "r&b", "hip", "hop", "streaming", "spotify", "playlist", "concert",
-        "festival", "lyrics", "producer", "instrumental", "pop", "rock", "techno", "house",
-        "electro", "low fi", "lo-fi", "jazz", "synth", "dj", "remix", "type beat", "soundcloud"
+        "music", "song", "artist", "rap", "album", "track", "beat", "drill", "trap",
+        "afrobeat", "afropop", "rnb", "r&b", "hip", "hop", "streaming", "spotify",
+        "playlist", "concert", "festival", "lyrics", "producer", "instrumental", "pop",
+        "rock", "techno", "house", "electro", "low fi", "lo-fi", "jazz", "synth", "dj",
+        "remix", "type beat", "soundcloud", "rnboi", "l2b", "rema", "gazo", "freeze corleone",
+        "niska", "ninho", "dimitri vegas", "damso", "tiakola", "zamdane", "bezbar",
+        "travis scott", "bad bunny", "deejay", "frank ocean", "blaiz fayah", "mister v",
+        "team bs", "sexion", "shatta", "bouyon", "soca", "gouyad", "zouk"
     ],
     "💻 Tech": [
         "python", "code", "data", "dev", "javascript", "api", "ai", "software", "tech",
         "developer", "engineering", "science", "consumer tech", "technology", "equipment",
-        "artificial intelligence", "machine learning", "deep learning", "nlp", "llm", "pytorch",
-        "tensorflow", "backend", "frontend", "fullstack", "react", "github", "docker", "kubernetes",
-        "cloud", "aws", "cybersecurity", "linux", "open source", "startup", "computer science",
-        "rust", "typescript", "chatgpt", "openai", "gpu", "nvidia", "cuda"
+        "artificial intelligence", "machine learning", "deep learning", "nlp", "llm",
+        "pytorch", "tensorflow", "backend", "frontend", "fullstack", "react", "github",
+        "docker", "kubernetes", "cloud", "aws", "cybersecurity", "linux", "open source",
+        "startup", "computer science", "rust", "typescript", "chatgpt", "openai", "gpu",
+        "nvidia", "cuda", "mac"
     ],
     "🎬 Cinéma/Séries": [
-        "netflix", "film", "série", "movie", "episode", "cinema", "watch", "trailer", "season",
-        "tv", "show", "streaming", "anime", "manga", "crunchyroll", "hbo", "prime video",
-        "disney+", "marvel", "dc comics", "star wars", "oscars", "documentary", "horror",
-        "scifi", "animation", "otaku", "ghibli"
+        "netflix", "film", "série", "movie", "episode", "cinema", "watch", "trailer",
+        "season", "tv", "show", "streaming", "anime", "manga", "crunchyroll", "hbo",
+        "prime video", "disney+", "marvel", "dc comics", "star wars", "oscars",
+        "documentary", "horror", "scifi", "animation", "otaku", "ghibli", "rick", "morty",
+        "jojo's bizarre", "bojack horseman", "naruto", "shippuden", "fairy tail", "jojo",
+        "baki", "boruto", "fullmetal", "one piece", "hunter", "demon slayer",
+        "attack on titan", "fullmetal alchemist", "rick morty"
     ],
     "🎮 Gaming": [
         "game", "gaming", "play", "xbox", "ps5", "steam", "minecraft", "fortnite", "esport",
         "gamer", "action game", "video game", "ar/vr", "nintendo", "switch", "twitch",
         "discord", "multiplayer", "rpg", "fps", "roblox", "league of legends", "valorant",
-        "warzone", "gta", "elden ring", "zelda", "playstation", "controller", "pc master race"
+        "warzone", "gta", "elden ring", "zelda", "playstation", "controller",
+        "pc master race", "casino"
     ],
     "🌍 Actu/Société": [
         "news", "actu", "society", "monde", "france", "afrique", "africa", "senegal",
-        "politique", "cup of nations", "environment", "ecology", "climate", "space",
-        "nasa", "spacex", "economy", "finance", "crypto", "bitcoin", "ethereum",
+        "belgique", "politique", "cup of nations", "environment", "ecology", "climate",
+        "space", "nasa", "spacex", "economy", "finance", "crypto", "bitcoin", "ethereum",
         "blockchain", "stock market", "history", "philosophy", "culture", "university"
     ],
     "🛍️ Shopping": [
         "amazon", "shop", "product", "électronique", "brand", "adidas", "nike", "fashion",
-        "style", "luxury", "streetwear", "sneakers", "yeezy", "jordan", "clothes", "outfit",
-        "ecommerce", "unboxing", "skincare", "watches", "apple", "iphone", "samsung",
-        "gadget", "deals", "dior", "louis vuitton", "stussy", "vintage"
+        "streetwear", "sneakers", "yeezy", "jordan", "clothes", "outfit", "ecommerce",
+        "unboxing", "skincare", "watches", "apple", "iphone", "samsung", "gadget",
+        "deals", "dior", "louis vuitton", "stussy", "vintage", "airpods pro", "ralph lauren"
     ],
     "📸 Photo/Créa": [
         "photo", "photography", "design", "creative", "art", "visual", "camera", "image",
         "graphic", "illustration", "photoshop", "lightroom", "editing", "video production",
         "content creation", "youtube", "tiktok", "reels", "architecture", "interior design",
-        "digital art", "ui/ux", "portfolio", "3d modeling", "blender", "canva"
+        "digital art", "ui/ux", "portfolio", "3d modeling", "blender", "canva", "photopea"
     ],
 }
 
@@ -137,6 +148,18 @@ def load_interest_profiles() -> dict | None:
 
 
 # ─── KEYWORDS (fallback si K-Means pas encore disponible) ────────────────────
+def _kw_pattern(keywords: list) -> str:
+    """Compile un pattern regex OR à partir d'une liste de keywords."""
+    return '|'.join(r'(?<![a-z])' + re.escape(kw) + r'(?![a-z])' for kw in keywords)
+
+
+def _delta_score(series: "pd.Series", pattern: str) -> int:
+    """Compte combien de lignes d'une Series contiennent au moins un keyword."""
+    if series is None or series.empty:
+        return 0
+    return int(series.str.contains(pattern, case=False, na=False, regex=True).sum())
+
+
 @lru_cache(maxsize=1)
 def load_all_keywords() -> dict:
     ig_topics, x_interests = [], []
@@ -170,43 +193,59 @@ def load_all_keywords() -> dict:
 
     all_topics = ig_topics + x_interests
 
-    category_scores  = {}
+    # ── Chargement des données Delta (scoring réel) ───────────────────────────
+    df_google   = _read_delta("google_searches", ["query"])
+    df_youtube  = _read_delta("youtube_watch",   ["title"])
+    df_chrome   = _read_delta("google_chrome",   ["title"])
+    df_spotify  = _read_delta("spotify_streams", ["artistName"])
+    df_netflix  = _read_delta("netflix_views",   ["show_title"])
+
+    s_google  = df_google["query"]      if not df_google.empty  else None
+    s_youtube = df_youtube["title"]     if not df_youtube.empty else None
+    s_chrome  = df_chrome["title"]      if not df_chrome.empty  else None
+    s_spotify = df_spotify["artistName"] if not df_spotify.empty else None
+    s_netflix = df_netflix["show_title"] if not df_netflix.empty else None
+
+    category_scores   = {}
     category_examples = {}
-    
     used_topics = set()
 
     for cat, keywords in CATEGORY_KEYWORDS.items():
-        score = 0
+        pattern = _kw_pattern(keywords)
+
+        # ── Score topics (Instagram + X) ──────────────────────────────────────
+        topic_score = 0
         found = []
         for topic in all_topics:
             topic_lower = topic.lower()
-            
             if topic_lower in used_topics:
                 continue
-
             is_match = False
             for kw in keywords:
-                # 1. Correspondance exacte
                 if topic_lower == kw:
                     is_match = True
                     break
-                
-                # 2. Utiliser \b pour forcer la correspondance sur un mot entier
-                # On tolère les tirets, underscores ou espaces autour
-                # Pour éviter que "Art" matche "Artificial Intelligence" ou "Mikel Arteta"
-                pattern = r'(?:\b|_|-| )' + re.escape(kw) + r'(?:\b|_|-| )'
-                if re.search(pattern, topic_lower):
+                pat = r'(?:\b|_|-| )' + re.escape(kw) + r'(?:\b|_|-| )'
+                if re.search(pat, topic_lower):
                     is_match = True
                     break
-                    
             if is_match:
-                score += 1
+                topic_score += 1
                 clean = topic.strip()
                 if clean not in found and len(clean) <= 35:
                     found.append(clean)
                 used_topics.add(topic_lower)
-        
-        category_scores[cat] = score
+
+        # ── Score Delta (données réelles) ─────────────────────────────────────
+        delta_score = (
+            _delta_score(s_google,  pattern) +
+            _delta_score(s_youtube, pattern) +
+            _delta_score(s_chrome,  pattern) +
+            _delta_score(s_spotify, pattern) +
+            _delta_score(s_netflix, pattern)
+        )
+
+        category_scores[cat]   = topic_score + delta_score
         category_examples[cat] = found[:15]
 
     sorted_cats = sorted(category_scores.items(), key=lambda x: x[1], reverse=True)
