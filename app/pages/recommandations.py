@@ -34,8 +34,11 @@ PLATFORM_CFG = {
 # ─── DATA ────────────────────────────────────────────────────────────────────
 def _load_scores() -> pd.DataFrame:
     path = os.path.join(DELTA_BASE, "als_scores")
+    meta_path = os.path.join(DELTA_BASE, "item_metadata.parquet")
+    
     if not os.path.exists(path):
         return pd.DataFrame()
+    
     files = [
         os.path.join(path, f)
         for f in os.listdir(path)
@@ -43,8 +46,15 @@ def _load_scores() -> pd.DataFrame:
     ]
     if not files:
         return pd.DataFrame()
+    
     dfs = [pd.read_parquet(f) for f in files]
     df = pd.concat(dfs, ignore_index=True)
+    
+    # Joindre avec les métadonnées si elles existent
+    if os.path.exists(meta_path):
+        meta_df = pd.read_parquet(meta_path)
+        df = df.merge(meta_df, on=["item_title", "platform"], how="left")
+    
     df["item_title_lower"] = df["item_title"].str.lower().str.strip()
     return df
 
@@ -215,6 +225,9 @@ def layout():
 
                 # ── Zone de résultat ──────────────────────────────────────────
                 html.Div(id="reco-result-area"),
+
+                # Élément caché pour éviter la ReferenceError du callback
+                html.Div(id="reco-score-counter", style={"display": "none"}),
             ],
         )
     ])
@@ -312,6 +325,9 @@ def do_search(n_clicks, n_submit, query, platform):
             "ratio":    round(ratio, 2),
             "platform": platform,
             "similar":  similar,
+            "category": row.get("category", "N/A"),
+            "genre":    row.get("genre", "N/A"),
+            "atmosphere": row.get("atmosphere", "N/A"),
         }
     else:
         # Pas trouvé : top suggestions de la plateforme
@@ -478,6 +494,13 @@ def _render_found(result: dict, cfg: dict):
                              children=[
                         html.Span(status_icon, style={"color": status_color, "fontSize": "16px"}),
                         html.Span(status_txt, style={"fontSize": "13px", "color": status_color}),
+                        
+                        # Badges Sémantiques
+                        *( [
+                            _badge(result["category"], "#5856d6") if result.get("category") != "N/A" else None,
+                            _badge(result["genre"], "#af52de") if result.get("genre") != "N/A" else None,
+                            _badge(result["atmosphere"], "#ff2d55") if result.get("atmosphere") != "N/A" else None,
+                        ] if result.get("category") else [] )
                     ]),
 
                     # Barre de progression

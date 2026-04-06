@@ -6,3 +6,7 @@ pyarrow
 fastparquet
 matplotlib
 numpy
+groq
+python-dotenv
+requests
+tqdm
