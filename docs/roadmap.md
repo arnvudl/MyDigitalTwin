@@ -98,14 +98,49 @@ src/scripts/
 
 ---
 
-## Graphe social — note
+## Graphe social — architecture détaillée
 
-**Page `/social`** : graphe de tes relations sociales.
-- Nœuds : personnes que tu suis **et** qui te suivent (mutual follows Instagram)
-- Arêtes : épaisseur proportionnelle au volume de messages (DMs Instagram + TikTok)
-- Données : `instagram_follows.json` + messages inbox
-- Affichage : nom + photo de profil si disponible (données Instagram export)
-- Librairie suggérée : `dash-cytoscape` ou `pyvis`
+**Page `/social`** : réseau de relations basé sur les conversations privées.
+
+### Logique de construction
+
+1. **Parsing de l'inbox** (`data/raw/INSTAGRAM/your_instagram_activity/messages/inbox/`)
+   - Chaque dossier = conversation (1-to-1 ou groupe)
+   - **Identifier 1-to-1** : vérifier dans le JSON si seulement 2 participants ("A R N A U D" + 1 autre)
+   - **Ignorer les groupes** : ne garder que les conversations privées
+   - Extraire pseudo du nom du dossier (ex: `3li0tttt_17939266904472883` → `3li0tttt`)
+
+2. **Comptage des messages**
+   - Lire le fichier `message_*.json` avec le plus grand numéro (ex: `message_2.json` > `message_1.json`)
+   - Compter le nombre de messages total dans ce fichier
+   - En cas d'égalité de messages entre deux personnes : utiliser le compte pour départager
+
+3. **Pondération des nœuds**
+   - Vérifier si pseudo ∈ `close_friends.json` : multiplicateur de poids (ajustable, ex: 2x)
+   - Vérifier si pseudo ∈ `followers_1.json` : poids normal
+   - **Personnes hors listes : exclure**
+   - **Avant le calcul** : possibilité d'ajuster la liste `close_friends` manuellement
+
+4. **Construction du graphe**
+   - Nœuds : pseudos des personnes (poids = nombre de messages × multiplicateur close_friends)
+   - Arêtes : lien vers Arnaud, épaisseur ∝ poids du nœud
+   - Visualisation : `dash-cytoscape` ou `pyvis` avec layout force-directed
+
+5. **Enrichissement visuel** (optionnel)
+   - Photos de profil via API Instagram (nécessite token)
+   - Fallback : redirection vers profil Instagram, ou affichage du pseudo en couleur
+
+### Données source
+- `data/raw/INSTAGRAM/connections/followers_and_following/close_friends.json`
+- `data/raw/INSTAGRAM/connections/followers_and_following/followers_1.json`
+- `data/raw/INSTAGRAM/your_instagram_activity/messages/inbox/*/message_*.json`
+
+### Étapes d'implémentation
+1. Parser inbox + identifier 1-to-1
+2. Compter messages et construire DataFrame `(pseudo, message_count, in_close_friends)`
+3. Appliquer poids + visualiser graphe statique
+4. Dashboard interactif (filtres, détails au hover)
+5. API Instagram pour photos (si temps)
 
 ---
 
