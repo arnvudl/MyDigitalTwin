@@ -1,6 +1,68 @@
 # Évolution du Système de Recommandation (Digital Twin)
 _Document de Synthèse Technique — Avril 2026_
 
+---
+
+_paulinalambin
+
+adamvdd
+
+alicedbgf
+
+clara_dtr_
+
+erwan_dnln
+
+fada_bob.1
+
+flavie.kdl
+
+gabriel_bucur_10
+
+hugo_bernard._
+
+jen.shr
+
+jex.brg._
+
+laura.barreto_
+
+leny.soetaerts
+
+llaure_mrt
+
+louisechenoy
+
+louna_vlt_
+
+lucie_lks
+
+luka_olivier_
+
+luna.tstt
+
+manon_vandy
+
+mstph.smb
+
+mylene_arj
+
+romane_dsrt
+
+sachou_wz
+
+thibmadabel
+
+tom_bern_
+
+victoriastofleth
+
+vyktor.g
+
+zoeline.rms
+
+---
+
 ## 1. L'Approche Initiale (Le "Avant") 📉
 
 La V1 reposait sur une structure ingénieuse mais limitée par le manque de précision des données sources.

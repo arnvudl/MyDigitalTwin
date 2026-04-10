@@ -10,3 +10,4 @@ groq
 python-dotenv
 requests
 tqdm
+dash-cytoscape
