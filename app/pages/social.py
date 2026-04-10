@@ -2,7 +2,7 @@ import os
 
 import dash_cytoscape as cyto
 import pandas as pd
-from dash import Input, Output, callback, html
+from dash import Input, Output, callback, html, dash_table, dcc
 
 # ─── CHEMINS ─────────────────────────────────────────────────────────────────
 if os.path.exists("/app/warehouse"):
@@ -214,6 +214,9 @@ def layout():
     n_total  = len(df)
     n_msgs   = int(df["message_count"].sum()) if not df.empty else 0
 
+    # Préparation données tableau
+    table_data = df[["label", "message_count"]].rename(columns={"label": "Pseudo", "message_count": "Messages"}).to_dict("records")
+
     return html.Div(
         style={"paddingTop": "64px", "minHeight": "100vh", "background": "var(--bg-base)"},
         children=[
@@ -238,27 +241,9 @@ def layout():
                 ],
             ),
 
-            # ── Légende ──────────────────────────────────────────────────────
-            html.Div(
-                style={"padding": "0 48px 20px", "display": "flex", "gap": "24px", "alignItems": "center"},
-                children=[
-                    html.Div(style={"display": "flex", "alignItems": "center", "gap": "8px"}, children=[
-                        html.Div(style={"width": 10, "height": 10, "borderRadius": "50%", "background": "#bf5af2"}),
-                        html.Span("Close friends", style={"fontSize": "13px", "color": "var(--text-secondary)"}),
-                    ]),
-                    html.Div(style={"display": "flex", "alignItems": "center", "gap": "8px"}, children=[
-                        html.Div(style={"width": 10, "height": 10, "borderRadius": "50%", "background": "#48484a",
-                                        "border": "1px solid rgba(255,255,255,0.3)"}),
-                        html.Span("Followers", style={"fontSize": "13px", "color": "var(--text-secondary)"}),
-                    ]),
-                    html.Span("— passe la souris sur un nœud pour le mettre en valeur",
-                              style={"fontSize": "12px", "color": "var(--text-muted)", "marginLeft": "8px"}),
-                ],
-            ),
-
             # ── Graphe + info panel ──────────────────────────────────────────
             html.Div(
-                style={"display": "flex", "gap": "24px", "padding": "0 48px 40px"},
+                style={"display": "flex", "gap": "24px", "padding": "0 48px 20px"},
                 children=[
                     html.Div(
                         style={
@@ -267,7 +252,7 @@ def layout():
                             "borderRadius": "16px",
                             "border": "1px solid rgba(255,255,255,0.08)",
                             "overflow": "hidden",
-                            "height": "640px",
+                            "height": "600px",
                         },
                         children=[
                             cyto.Cytoscape(
@@ -291,7 +276,7 @@ def layout():
                                     "coolingFactor": 0.95,
                                     "minTemp": 1.0,
                                 },
-                                style={"width": "100%", "height": "640px", "background": "transparent"},
+                                style={"width": "100%", "height": "600px", "background": "transparent"},
                                 stylesheet=_base_stylesheet(),
                                 responsive=True,
                             )
@@ -300,7 +285,7 @@ def layout():
                     html.Div(
                         id="social-info-panel",
                         style={
-                            "width": "240px", "flexShrink": 0,
+                            "width": "260px", "flexShrink": 0,
                             "background": "rgba(28,28,30,0.7)",
                             "borderRadius": "16px",
                             "border": "1px solid rgba(255,255,255,0.1)",
@@ -309,6 +294,51 @@ def layout():
                             "alignSelf": "flex-start",
                         },
                         children=_empty_panel(),
+                    ),
+                ],
+            ),
+
+            # ── Tableau des interactions ─────────────────────────────────────
+            html.Div(
+                style={"padding": "0 48px 60px"},
+                children=[
+                    html.H2("Détail des interactions", style={
+                        "fontSize": "20px", "fontWeight": "700",
+                        "color": "var(--text-primary)", "marginBottom": "20px",
+                    }),
+                    dash_table.DataTable(
+                        id="social-table",
+                        columns=[
+                            {"name": "Pseudo", "id": "Pseudo", "type": "text"},
+                            {"name": "Messages", "id": "Messages", "type": "numeric"},
+                        ],
+                        data=table_data,
+                        sort_action="native",
+                        filter_action="native",
+                        page_size=15,
+                        style_table={"borderRadius": "12px", "overflow": "hidden", "border": "1px solid rgba(255,255,255,0.08)"},
+                        style_header={
+                            "backgroundColor": "rgba(30,30,35,1)",
+                            "color": "var(--text-primary)",
+                            "fontWeight": "bold",
+                            "border": "1px solid rgba(255,255,255,0.08)",
+                            "padding": "12px",
+                        },
+                        style_cell={
+                            "backgroundColor": "rgba(20,20,25,0.7)",
+                            "color": "var(--text-secondary)",
+                            "border": "1px solid rgba(255,255,255,0.04)",
+                            "padding": "12px",
+                            "textAlign": "left",
+                            "fontFamily": "inherit",
+                        },
+                        style_data_conditional=[
+                            {
+                                "if": {"state": "active"},
+                                "backgroundColor": "rgba(109, 94, 245, 0.2)",
+                                "border": "1px solid var(--accent-primary)",
+                            }
+                        ],
                     ),
                 ],
             ),

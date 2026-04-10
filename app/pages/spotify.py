@@ -211,12 +211,123 @@ def _period_selector(df: pd.DataFrame, sel: dict) -> html.Div:
     )
 
 
+from app.spotify_utils import spotify_meta
+
 # ─── CHARTS ──────────────────────────────────────────────────────────────────
 def _fig_defaults(fig: go.Figure) -> go.Figure:
     fig.update_layout(**_PLOTLY_THEME)
     fig.update_xaxes(showgrid=False, zeroline=False)
     fig.update_yaxes(showgrid=True, gridcolor="rgba(255,255,255,0.05)", zeroline=False)
     return fig
+
+
+def _render_top_artists_visual(df: pd.DataFrame, n: int = 6) -> html.Div:
+    if df.empty:
+        return html.Div()
+    
+    top = (
+        df.groupby("artistName")
+        .agg(streams=("trackName", "count"))
+        .reset_index().sort_values("streams", ascending=False).head(n)
+    )
+    
+    cards = []
+    for _, row in top.iterrows():
+        img_url = spotify_meta.get_artist_image(row["artistName"])
+        
+        # Fallback visuel local si pas d'image
+        img_component = html.Img(src=img_url, style={"width": "100%", "height": "100%", "objectFit": "cover"}) if img_url else \
+                        html.Div("🎤", style={
+                            "display": "flex", "alignItems": "center", "justifyContent": "center",
+                            "width": "100%", "height": "100%", "fontSize": "32px", "background": "linear-gradient(135deg, #282828, #121212)"
+                        })
+
+        cards.append(html.Div(
+            style={
+                "display": "flex", "flexDirection": "column", "alignItems": "center",
+                "width": "120px", "gap": "10px", "textAlign": "center"
+            },
+            children=[
+                html.Div(
+                    style={
+                        "width": "100px", "height": "100px", "borderRadius": "50%",
+                        "overflow": "hidden", "boxShadow": "0 8px 24px rgba(0,0,0,0.3)",
+                        "background": "#282828", "border": "1px solid rgba(255,255,255,0.1)"
+                    },
+                    children=[img_component]
+                ),
+                html.Div([
+                    html.Div(row["artistName"], style={
+                        "fontSize": "13px", "fontWeight": "600", "color": "white",
+                        "whiteSpace": "nowrap", "overflow": "hidden", "textOverflow": "ellipsis", "width": "110px"
+                    }),
+                    html.Div(f"{row['streams']} streams", style={"fontSize": "11px", "color": SPOTIFY_GREEN})
+                ])
+            ]
+        ))
+        
+    return html.Div(
+        style={"display": "flex", "gap": "20px", "flexWrap": "wrap", "justifyContent": "center", "padding": "20px 0"},
+        children=cards
+    )
+
+
+def _render_playlist_visual(df: pd.DataFrame, n: int = 10) -> html.Div:
+    if df.empty:
+        return html.Div()
+    
+    top = (
+        df.groupby(["trackName", "artistName"])
+        .agg(streams=("msPlayed", "count"), minutes=("minutes_played", "sum"))
+        .reset_index().sort_values("streams", ascending=False).head(n)
+    )
+    
+    rows = []
+    for i, (_, row) in enumerate(top.iterrows()):
+        img_url = spotify_meta.get_track_image(row["trackName"], row["artistName"])
+        rows.append(html.Div(
+            style={
+                "display": "flex", "alignItems": "center", "padding": "8px 12px",
+                "borderRadius": "8px", "gap": "16px", "transition": "background 0.2s",
+                "cursor": "default"
+            },
+            className="playlist-row",
+            children=[
+                html.Span(str(i+1), style={"width": "20px", "color": "var(--text-muted)", "fontSize": "13px"}),
+                html.Img(src=img_url or "https://via.placeholder.com/40?text=Album",
+                         style={"width": "40px", "height": "40px", "borderRadius": "4px"}),
+                html.Div(style={"flex": "1", "minWidth": "0"}, children=[
+                    html.Div(row["trackName"], style={
+                        "fontSize": "14px", "fontWeight": "500", "color": "white",
+                        "whiteSpace": "nowrap", "overflow": "hidden", "textOverflow": "ellipsis"
+                    }),
+                    html.Div(row["artistName"], style={"fontSize": "12px", "color": "var(--text-muted)"})
+                ]),
+                html.Div(f"{row['streams']} plays", style={
+                    "fontSize": "12px", "color": "var(--text-muted)", "width": "80px", "textAlign": "right"
+                }),
+                html.Div(f"{int(row['minutes'])}m", style={
+                    "fontSize": "12px", "color": "var(--text-muted)", "width": "50px", "textAlign": "right"
+                })
+            ]
+        ))
+        
+    return html.Div(
+        style={
+            "display": "flex", "flexDirection": "column", "gap": "4px",
+            "background": "rgba(0,0,0,0.2)", "borderRadius": "12px", "padding": "12px"
+        },
+        children=[
+            html.Div(style={"display": "flex", "padding": "0 12px 8px", "borderBottom": "1px solid rgba(255,255,255,0.05)", "marginBottom": "8px"}, children=[
+                html.Span("#", style={"width": "20px", "fontSize": "11px", "color": "var(--text-muted)", "textTransform": "uppercase"}),
+                html.Span("", style={"width": "40px"}),
+                html.Span("Titre", style={"flex": "1", "fontSize": "11px", "color": "var(--text-muted)", "textTransform": "uppercase"}),
+                html.Span("Écoutes", style={"width": "80px", "fontSize": "11px", "color": "var(--text-muted)", "textTransform": "uppercase", "textAlign": "right"}),
+                html.Span("Durée", style={"width": "50px", "fontSize": "11px", "color": "var(--text-muted)", "textTransform": "uppercase", "textAlign": "right"}),
+            ]),
+            *rows
+        ]
+    )
 
 
 def _chart_top_artists(df: pd.DataFrame, n: int = 15) -> go.Figure:
@@ -347,27 +458,39 @@ def _build_content(df: pd.DataFrame, sel: dict) -> list:
         ])
 
     return [
-        html.Div(className="stats-row", style={"marginBottom": "0"}, children=[
+        html.Div(className="stats-row", style={"marginBottom": "24px", "marginLeft": "auto", "marginRight": "auto"}, children=[
             _stat("🎵", f"{total_streams:,}", "Streams"),
             _stat("⏱️", f"{total_hours:,}h",  "Écoutées"),
             _stat("🎤", f"{n_artists:,}",      "Artistes"),
             _stat("🎼", f"{n_tracks:,}",        "Titres distincts"),
         ]),
-        html.Div(style={"display": "flex", "gap": "16px", "flexWrap": "wrap", "marginTop": "24px"},
-                 children=[
-            html.Div(style={**panel, "flex": "1", "minWidth": "300px"},
-                     children=[dcc.Graph(figure=_chart_top_artists(df),
-                                         config={"displayModeBar": False})]),
-            html.Div(style={**panel, "flex": "1", "minWidth": "300px"},
-                     children=[dcc.Graph(figure=_chart_top_tracks(df),
-                                         config={"displayModeBar": False})]),
+
+        # --- TOP ARTISTES VISUEL ---
+        html.Div(style={**panel, "marginBottom": "24px"}, children=[
+            html.Div("Top Artistes", style={
+                "fontSize": "11px", "fontWeight": "700", "color": SPOTIFY_GREEN,
+                "textTransform": "uppercase", "letterSpacing": "2px", "marginBottom": "16px"
+            }),
+            _render_top_artists_visual(df)
         ]),
-        html.Div(style={"display": "flex", "gap": "16px", "flexWrap": "wrap", "marginTop": "16px"},
+
+        # --- PLAYLIST VISUELLE (FULL WIDTH) ---
+        html.Div(style={**panel, "marginBottom": "24px"},
                  children=[
-            html.Div(style={**panel, "flex": "2", "minWidth": "340px"},
+            html.Div("Ma Playlist du moment", style={
+                "fontSize": "11px", "fontWeight": "700", "color": SPOTIFY_GREEN,
+                "textTransform": "uppercase", "letterSpacing": "2px", "marginBottom": "16px"
+            }),
+            _render_playlist_visual(df, n=12) # Augmenté à 12 pour remplir l'espace
+        ]),
+
+        # --- GRAPHIQUES DE VARIÉTÉ ET ACTIVITÉ ---
+        html.Div(style={"display": "flex", "gap": "16px", "flexWrap": "wrap"},
+                 children=[
+            html.Div(style={**panel, "flex": "1.5", "minWidth": "340px"},
                      children=[dcc.Graph(figure=_chart_activity(df, sel),
                                          config={"displayModeBar": False})]),
-            html.Div(style={**panel, "flex": "1", "minWidth": "240px"},
+            html.Div(style={**panel, "flex": "1", "minWidth": "300px"},
                      children=[dcc.Graph(figure=_chart_hourly(df),
                                          config={"displayModeBar": False})]),
         ]),
@@ -397,15 +520,14 @@ def layout():
         html.Div(
             style={"maxWidth": "1100px", "margin": "0 auto", "padding": "40px 32px 80px"},
             children=[
-                html.Div(className="home-hero", children=[
+                html.Div(className="home-hero", style={"textAlign": "center"}, children=[
                     html.P("Wrapped Custom • Année · Mois · Semaine",
-                           className="home-hero-label", style={"color": SPOTIFY_GREEN}),
+                            className="home-hero-label", style={"color": SPOTIFY_GREEN}),
                     html.H1(html.Span(["Mon ", html.Em("Spotify")]),
-                            className="home-hero-title", style={"fontSize": "56px"}),
+                             className="home-hero-title", style={"fontSize": "56px"}),
                     html.P("Choisis une période et explore tes écoutes.",
-                           className="home-hero-sub"),
+                            className="home-hero-sub"),
                 ]),
-
                 dcc.Store(id="spotify-sel-store", data=_DEFAULT_SEL),
 
                 html.Div(id="spotify-period-selector",
