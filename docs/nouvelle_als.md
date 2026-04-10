@@ -1,138 +1,56 @@
 # Évolution du Système de Recommandation (Digital Twin)
-_Document de Synthèse Technique — Avril 2026_
+_Focus : Recommandations Cinéma (Netflix) via MovieLens 32M — Avril 2026_
+
+## 1. L'Approche MovieLens 32M (Big Data) 🚀
+
+L'utilisation du dataset **ml-32m** (32 millions de notes) transforme le projet en un véritable système de recommandation industriel.
+
+*   **Dataset :** `ml-32m` (Grouplens, 2023).
+*   **Format de Stockage :** Conversion intégrale en **Parquet** dans le `warehouse` pour des performances optimales avec Spark.
+*   **Cible :** `content_type == 'movie'`.
 
 ---
 
-_paulinalambin
+## 2. Architecture des Données (Delta Lake / Warehouse) 🏗️
 
-adamvdd
+Pour gérer 32 millions de lignes fluidement, les données sont structurées ainsi dans `warehouse/` :
 
-alicedbgf
-
-clara_dtr_
-
-erwan_dnln
-
-fada_bob.1
-
-flavie.kdl
-
-gabriel_bucur_10
-
-hugo_bernard._
-
-jen.shr
-
-jex.brg._
-
-laura.barreto_
-
-leny.soetaerts
-
-llaure_mrt
-
-louisechenoy
-
-louna_vlt_
-
-lucie_lks
-
-luka_olivier_
-
-luna.tstt
-
-manon_vandy
-
-mstph.smb
-
-mylene_arj
-
-romane_dsrt
-
-sachou_wz
-
-thibmadabel
-
-tom_bern_
-
-victoriastofleth
-
-vyktor.g
-
-zoeline.rms
+1.  **`warehouse/movielens_ratings/`** : Les 32M de notes (userId, movieId, rating, timestamp).
+2.  **`warehouse/movielens_movies/`** : Catalogue mondial (movieId, title, genres).
+3.  **`warehouse/movielens_links/`** : Table de correspondance (movieId, imdbId, tmdbId) — *Crucial pour récupérer les posters via TMDB.*
 
 ---
 
-## 1. L'Approche Initiale (Le "Avant") 📉
+## 3. La Nouvelle Stratégie de Recommandation 🧠
 
-La V1 reposait sur une structure ingénieuse mais limitée par le manque de précision des données sources.
+### A. Ingestion et Préparation
+*   **Conversion CSV → Parquet** : Utilisation de Spark pour lire les fichiers sources `ml-32m` et les réécrire en Parquet partitionné.
+*   **Normalisation** : Nettoyage des titres Netflix locaux pour maximiser le "matching" avec le catalogue MovieLens.
 
-* **Classification Universelle (Ollama) :** Utilisation d'un LLM local pour classifier Netflix et Spotify à partir des noms uniquement.
-    * *Problème :* Hallucinations sur les genres musicaux (ex: musiques africaines classées en "Electronic") par manque de contexte acoustique.
-* **Logique ALS Temporelle :** Utilisation de "Virtual Users" par mois pour simuler une matrice de recommandation.
-    * *Problème :* L'IA recommande ce qui est consommé "en même temps" plutôt que ce qui se ressemble sémantiquement.
-* **Ancrage Statique :** Application d'un bonus fixe de +50% basé sur un simple "Fuzzy Matching" (correspondance de texte) avec le fichier `top.md`.
-    * *Problème :* Si un titre est mal orthographié ou absent du top, il ne bénéficie d'aucun boost, même s'il correspond au genre favori.
+### B. Entraînement ALS à Grande Échelle
+1.  **Matrice d'Interactions** : Fusion de tes vues Netflix (poids implicite) avec les 32M de notes explicites (échelle 0.5-5.0).
+2.  **Hyper-paramètres Spark** : `rank=10`, `maxIter=15`, `regParam=0.1` (à affiner selon les résultats).
+3.  **Recommandations** : Génération des 50 meilleurs films non vus par ton profil.
 
----
-
-## 2. La Nouvelle Stratégie (Le "Après") 🚀
-
-L'objectif est d'injecter de la "Vérité Terrain" et de la mathématique vectorielle pour un ranking chirurgical.
-
-### A. Enrichissement via LLM Généraliste (Manuel)
-* **Extraction Bulk :** Export de tous les items (`item_title`, `platform`) en CSV depuis `interactions.parquet`.
-* **Traitement Manual :** Drag&drop du CSV dans Claude/GPT/Gemini (ou batch par ~1000 items).
-* **Sortie Structurée :** LLM retourne `item_title | platform | category | genre | sub_genre | mood` en CSV strict.
-* **Import en Parquet :** CSV enrichi → `warehouse/item_metadata.parquet` (Delta Lake).
-* **Raison :** Les genres Spotify sont supprimés (API récente). Un LLM généraliste comprend mieux *Naruto = Anime/Action* et *Afro-Pop* que Ollama local ou APIs tierces.
-
-### B. Passage au "Content-Based" Vectoriel
-* **Embeddings de Genres :** Word2Vec/FastText sur `genre | sub_genre | mood` pour transformer chaque item en vecteur numérique.
-* **Profil Utilisateur :** Centre de gravité sémantique calculé depuis les items favoris de `top.md` (moyenne des vecteurs).
-* **Similarité Cosinus :** Distance mathématique entre chaque item et votre profil = `score_semantic`.
-
-### C. Scoring Hybride Dynamique
-Le score final de recommandation ne sera plus un simple pourcentage ALS, mais une fusion pondérée :
-$$Score_{Final} = \\alpha \\cdot Score_{ALS} + (1 - \\alpha) \\cdot Score_{Sémantique}$$
-
-* **L'ALS** apporte la découverte liée à vos habitudes de consommation.
-* **La Sémantique** garantit que l'item correspond à votre ADN culturel.
+### C. Enrichissement Visual & Sémantique
+*   **TMDB Bridge** : Utilisation des `tmdbId` du dataset pour fetcher les affiches et résumés via l'API.
+*   **Filtrage Intelligent** : Élimination des films déjà présents dans ton historique Netflix pour ne proposer que de la pure découverte.
 
 ---
 
-## 3. Gains Attendus 🎯
-
-1.  **Précision Chirurgicale :** Fin des erreurs de genres sur la musique africaine et les niches spécifiques.
-2.  **Résolution du Cold Start :** Capacité à recommander un film que vous n'avez *jamais* vu, simplement parce que son vecteur sémantique est proche de vos favoris.
-3.  **Ranking Cohérent :** Un système qui comprend qu'un fan de *Naruto* aimera probablement *Jujutsu Kaisen*, même sans historique de visionnage commun.
-
----
-
-## 4. Pipeline d'Exécution (Notebooks)
+## 4. Pipeline d'Exécution Technique
 
 ```
-warehouse/spotify_streams + netflix_views
+[ml-32m CSVs] → Notebook Ingestion → [warehouse/movielens_...] (Parquet)
         ↓
-Notebook 01_build_interactions.ipynb (INCHANGÉ)
+Notebook 03_netflix_als_global.ipynb
+  - Join : Netflix local + MovieLens Global
+  - Spark ALS Training (32M rows)
+  - Output : Top Recommendations
         ↓
-warehouse/interactions.parquet
-        ↓
-[Export CSV + Enrichissement LLM manuel (Claude/GPT)]
-        ↓
-warehouse/item_metadata.parquet
-        ↓
-Notebook 02_als_model.ipynb (À REFAIRE — V2 Hybride)
-  - Charger interactions + item_metadata
-  - Word2Vec/FastText sur genres
-  - Calculer score_ALS (vecteurs latents ALS)
-  - Calculer score_semantic (cosinus similarity)
-  - Fusionner : score_final = α·ALS + (1-α)·Semantic
-        ↓
-warehouse/als_scores.parquet
+warehouse/movie_recommendations.parquet
 ```
 
-**Fichiers modifiés :**
-- ❌ `01b_semantic_enrichment.py` : **Supprimé** (remplacé par drag&drop CSV)
-- ❌ `02_als_model.ipynb` : **À refaire** pour intégrer embeddings vectoriels + scoring hybride
-- ✅ `01_build_interactions.ipynb` : **Inchangé**
+**Fichiers mis à jour :**
+- ✅ `docs/nouvelle_als.md` : Stratégie 32M.
+- 🆕 `src/scripts/01_exploration/ingest_movielens.ipynb` : Notebook à créer pour la conversion CSV → Parquet.
