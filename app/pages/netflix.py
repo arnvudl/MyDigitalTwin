@@ -345,7 +345,7 @@ def _build_content(df: pd.DataFrame, sel: dict) -> list:
     show_yearly = sel.get("year") is None
 
     return [
-        html.Div(className="stats-row", style={"marginBottom": "0"}, children=[
+        html.Div(className="stats-row", style={"marginBottom": "24px", "marginLeft": "auto", "marginRight": "auto"}, children=[
             _stat("🎬", f"{total:,}",    "Épisodes / Films"),
             _stat("📺", f"{n_series:,}", "Séries distinctes"),
             _stat("🎥", f"{n_movies:,}", "Films regardés"),
@@ -398,15 +398,14 @@ def layout():
         html.Div(
             style={"maxWidth": "1100px", "margin": "0 auto", "padding": "40px 32px 80px"},
             children=[
-                html.Div(className="home-hero", children=[
+                html.Div(className="home-hero", style={"textAlign": "center"}, children=[
                     html.P("Historique Netflix • Année · Mois · Semaine",
-                           className="home-hero-label", style={"color": NETFLIX_RED}),
+                            className="home-hero-label", style={"color": NETFLIX_RED}),
                     html.H1(html.Span(["Mon ", html.Em("Netflix")]),
-                            className="home-hero-title", style={"fontSize": "56px"}),
+                             className="home-hero-title", style={"fontSize": "56px"}),
                     html.P("Timeline de tes visionnages, tes séries et films favoris.",
-                           className="home-hero-sub"),
+                            className="home-hero-sub"),
                 ]),
-
                 dcc.Store(id="netflix-sel-store", data=_DEFAULT_SEL),
 
                 html.Div(id="netflix-period-selector",

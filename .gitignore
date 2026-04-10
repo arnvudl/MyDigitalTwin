@@ -28,6 +28,3 @@ Thumbs.db
 CLAUDE.md
 .claude
 warehouse/
-
-python -c "
-import json, os

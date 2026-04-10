@@ -105,7 +105,7 @@ html, body {
 
 /* HOME */
 .home-container { display: flex; flex-direction: column; align-items: center; padding: 40px 32px 80px; }
-.home-hero { text-align: center; margin-bottom: 80px; animation: fadeIn 0.6s ease both; max-width: 800px; }
+.home-hero { text-align: center; margin-left: auto; margin-right: auto; margin-bottom: 80px; animation: fadeIn 0.6s ease both; max-width: 800px; }
 .home-hero-label { font-family: var(--font-family); font-size: 11px; font-weight: 600; letter-spacing: 3px; text-transform: uppercase; color: var(--text-muted); margin-bottom: 24px; }
 .home-hero-title {
   font-family: var(--font-serif);
@@ -414,4 +414,9 @@ details[open] .profile-kw-toggle::after { content: "▾"; }
 .filter-chip-reset.filter-chip-active {
   background: rgba(255,255,255,0.08) !important;
   color: var(--text-secondary) !important;
+}
+
+/* SPOTIFY PLAYLIST */
+.playlist-row:hover {
+  background: rgba(255,255,255,0.1);
 }
