@@ -260,6 +260,7 @@ html, body {
   grid-template-columns: repeat(3, 1fr);
   gap: 16px;
   width: 100%; max-width: 1100px;
+  margin: 0 auto;
   animation: slideUp 0.6s ease 0.2s both;
 }
 
@@ -380,14 +381,14 @@ details[open] .profile-kw-toggle::after { content: "▾"; }
 .filter-bar {
   width: 100%; max-width: 1100px;
   display: flex; flex-direction: column; gap: 8px;
-  margin-bottom: 28px;
+  margin: 0 auto 28px;
   animation: slideUp 0.4s ease both;
 }
 .filter-label {
   font-size: 10px; font-weight: 600; letter-spacing: 1.5px;
   text-transform: uppercase; color: var(--text-muted);
 }
-.filter-chips-row { display: flex; flex-wrap: wrap; gap: 8px; }
+.filter-chips-row { display: flex; flex-wrap: wrap; gap: 8px; justify-content: center; }
 
 .filter-chip {
   padding: 5px 14px; border-radius: 100px; cursor: pointer;
