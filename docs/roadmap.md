@@ -105,8 +105,24 @@ src/scripts/
 | `/spotify` | 🔜 AXE 2 | `spotify_streams` + Wrapped custom |
 | `/recommandations` | 🔜 AXE 2 | ALS output |
 | `/clone` | 🔜 AXE 1 | Corpus texte + RAG |
-| `/timeline` | ⏳ À évaluer | Tous les parquets (volume à tester) |
+| `/timeline` | ✅ Live | Vue agrégée de tous les événements (volume OK) |
 | `/photos` | ⏳ Après 10 mai | CLIP embeddings + photo clusters |
+
+---
+
+## 📊 Timeline des données (Warehouse)
+
+*Analyse automatique du contenu du warehouse pour l'axe `/timeline`.*
+
+| Source | Volume | Période couverte | État |
+|---|---|---|---|
+| **TikTok** | 234 771 vues | 2024-03 → 2026-04 | ✅ Riche |
+| **Google Searches** | 55 854 recherches | 2018-01 → 2026-04 | ✅ Historique long |
+| **Spotify** | 33 972 streams | 2025-03 → 2026-03 | ✅ Actif |
+| **Instagram** | 17 535 likes | 2015-06 → 2026-04 | ✅ Très ancien |
+| **YouTube** | 13 821 vues | 2018-05 → 2026-04 | ✅ Stable |
+| **Netflix** | 4 288 sessions | 2017-10 → 2026-04 | ✅ Complet |
+| **Twitter** | 319 tweets | 2019-06 → 2026-03 | ⚠️ Faible volume |
 
 ---
 
@@ -115,6 +131,5 @@ src/scripts/
 ```
 1. 03_als/  →  /netflix + /spotify + /recommandations   (données prêtes)
 2. 04_clone/  →  /clone                                  (nécessite sélection DMs)
-3. /timeline                                             (évaluer volume d'abord)
-4. 05_CLIP/  →  /photos                                  (après 10 mai)
+3. 05_CLIP/  →  /photos                                  (après 10 mai)
 ```
