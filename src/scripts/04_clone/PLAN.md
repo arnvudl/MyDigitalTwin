@@ -1,5 +1,5 @@
 # AXE 1 — Clone Conversationnel
-_Priorité : moyenne — données à préparer manuellement_
+_Priorité : haute — dataset prêt, fine-tuning à lancer_
 
 ---
 
@@ -11,86 +11,70 @@ Un chatbot qui **parle comme Arnaud** : même vocabulaire, même registre, même
 
 ## Contrainte matérielle
 
-**8 Go VRAM → fine-tuning LLM exclu.**
+**8 Go VRAM → fine-tuning local exclu.**
 
-Même en QLoRA (quantification 4-bit), un Mistral-7B nécessite ~12–16 Go pour l'entraînement.  
-Phi-3-mini (3.8B) serait faisable mais le résultat serait trop limité.
+**Approche retenue : fine-tuning cloud (RunPod / Vast.ai) + inférence locale.**
 
-**Approche retenue : RAG-style prompt injection.**
-
----
-
-## Approche RAG (Retrieval-Augmented Generation)
-
-Construire une **mémoire personnelle** d'Arnaud depuis ses données texte, puis l'injecter dans le contexte d'un LLM (Claude ou Mistral local via Ollama).
-
-```
-Données texte → extraction style + lexique + exemples de réponses
-        ↓
-Base vectorielle (ChromaDB / FAISS)
-        ↓
-Query : "comment Arnaud répondrait à ce message ?"
-        ↓
-Retrieval : top-k exemples pertinents depuis la base
-        ↓
-Prompt enrichi → Claude API / Mistral Ollama
-        ↓
-Réponse "à la manière d'Arnaud"
-```
+- Fine-tuning QLoRA sur RunPod (~1-2h, < $5)
+- Modèle base : **Mistral 7B Instruct** (meilleur français, tourne en Q4_K_M sur 8Go VRAM)
+- Inférence locale via **Ollama**
+- Framework recommandé : **Unsloth** (plus rapide que HuggingFace pour QLoRA)
 
 ---
 
 ## Données sources
 
-| Source | Contenu | Valeur pour le clone |
-|---|---|---|
-| `twitter_tweets` | Tweets publics | Style d'écriture, humour, références |
-| Instagram `post_comments_1.json` | Commentaires publics | Réactions courtes, emojis |
-| Instagram `reels_comments.json` | Commentaires Reels | Même |
-| Instagram DMs sélectionnés | Conversations privées | Registre informel, dynamiques |
-| TikTok `ChatHistory` | Messages TikTok | Complémentaire |
+**21 conversations Instagram DM** sélectionnées — personnes avec qui Arnaud est lui-même.  
+Convos riches (250 ex) : Alice, Nana, Lou, Maelle  
+Convos standard (100-300 ex) : Djyoyo, Evan, Pilou, Laura, Jen, Loulou, Laure, Gabi, Mylene, Manonvandy, Fafie, Ama, Eliott, Paulina, Celia, Vic, Romane
 
-**Sélection manuelle obligatoire pour les DMs** : uniquement les conversations avec des comportements intéressants (humour, émotions, ironie). Les autres participants sont anonymisés.
+**Score de sélection calibré** sur 62k messages réels d'Arnaud (marqueurs slang, raisonnement, curiosité, rythme multi-messages).
 
 ---
 
 ## Pipeline
 
 ```
-01_extract_corpus.ipynb
-  - Lecture tweets, commentaires, DMs sélectionnés
-  - Nettoyage + anonymisation interlocuteurs
-  - Export : warehouse/text_corpus.parquet
-        ↓
-02_style_analysis.ipynb  (PySpark — NLP axe 1 du plan ML)
-  - Tokenizer + StopWordsRemover + NGram
-  - Top n-grams, emojis favoris, longueur moyenne, ponctuation
-  - Profil de style → style_profile.json
-        ↓
-03_clone_rag.ipynb / app
-  - Embeddings des messages (sentence-transformers, local CPU)
-  - Index FAISS ou ChromaDB
-  - Fonction retrieval + prompt template
-  - Interface dans /clone
+01_extract_corpus.py        [DONE]
+  - Sliding window (70 msgs, step 35) sur 21 convos Instagram
+  - Scoring calibré sur style réel d'Arnaud
+  - Sampling temporel stratifié (couvre debut->fin de chaque conv)
+  - Fusion avec sélections manuelles (CONV_BIG_DATA/)
+  - Export : data/LLM_DATA/dataset_final.jsonl (6363 exemples)
+        |
+        v
+02_convert_chatml.py        [DONE]
+  - System prompt complet (personnalité, style, expressions)
+  - Conversion au format ChatML (human/gpt)
+  - Split train (95%) / val (5%)
+  - Export : data/LLM_DATA/train.jsonl + val.jsonl (6341 exemples)
+        |
+        v
+03_finetune_runpod/          [TODO]
+  - Config Unsloth pour Mistral 7B QLoRA
+  - Lancement sur RunPod
+  - Récupération des poids LoRA
+        |
+        v
+04_deploy_local/             [TODO]
+  - Fusion poids LoRA + modèle base
+  - Export GGUF pour Ollama
+  - Test local
+        |
+        v
+app/pages/clone.py           [TODO]
+  - Interface chatbot dans le dashboard
 ```
 
 ---
 
-## Prompt template
+## System Prompt (dans 02_convert_chatml.py)
 
-```
-Tu es Arnaud, 22 ans, belge, étudiant en data science.
-Voici des exemples de comment tu parles :
-{exemples_retrieved}
-
-Voici ton profil de style :
-- Emojis favoris : {top_emojis}
-- Expressions récurrentes : {top_ngrams}
-- Registre : informel, direct, références musique/gaming/anime
-
-Réponds au message suivant comme tu le ferais naturellement :
-{message_utilisateur}
-```
+Construit sur analyse statistique de 62k messages. Couvre :
+- Identité (HPI, belge, data science, 22 ans)
+- Personnalité (philosophe, psy naturel, curieux, s'énerve vite)
+- Passions (musique, films Nolan/Spielberg, voyages, volley)
+- Style d'écriture (slang, peu d'emojis, multi-messages, signatures uniques)
 
 ---
 
@@ -111,11 +95,21 @@ Réponds au message suivant comme tu le ferais naturellement :
 
 ---
 
-## Fichiers à créer
+## Fichiers
+
+| Fichier | Statut | Contenu |
+|---|---|---|
+| `01_extract_corpus.py` | **DONE** | Extraction + scoring + fusion dataset |
+| `02_convert_chatml.py` | **DONE** | Conversion ChatML + system prompt + split train/val |
+| `03_finetune_runpod/` | TODO | Config Unsloth + instructions RunPod |
+| `04_deploy_local/` | TODO | Export GGUF + config Ollama |
+| `app/pages/clone.py` | TODO | Interface chatbot dashboard |
+
+## Données générées
 
 | Fichier | Contenu |
 |---|---|
-| `01_extract_corpus.ipynb` | Extraction + nettoyage texte |
-| `02_style_analysis.ipynb` | NLP PySpark — profil style |
-| `03_clone_rag.ipynb` | Construction index + retrieval |
-| `app/pages/clone.py` | Interface chatbot dashboard |
+| `data/LLM_DATA/dataset_final.jsonl` | 6363 exemples fusionnés (auto + manuel) |
+| `data/LLM_DATA/dataset_chatml.jsonl` | 6341 exemples format ChatML |
+| `data/LLM_DATA/train.jsonl` | 6023 exemples (95%) |
+| `data/LLM_DATA/val.jsonl` | 318 exemples (5%) |
