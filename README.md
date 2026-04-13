@@ -1,99 +1,144 @@
 # MyDigitalTwin
 
-Analyse ML de données personnelles multi-plateformes pour construire un jumeau numérique.
+Analyse ML de données personnelles multi-plateformes pour construire un jumeau numérique interactif.
 
-```
-docker exec -it spark-master /bin/bash  
-```
+**Dashboard live** : clustering comportemental, graphe social, recommandations ALS, clone conversationnel.
 
-## Objectifs
-
-| Axe | Modèle | Output |
-|---|---|---|
-| Clone NLP | TF-IDF + N-grams | Profil de style d'écriture |
-| Oracle des recommandations | ALS | Prédictions de contenu |
-| Dashboard des "Moi" | K-Means | Clusters comportementaux |
+---
 
 ## Stack
 
-- **PySpark 3.5.5** + Delta Lake
-- **Docker Compose** — cluster Spark local (master + worker + history server)
-- Python 3.11, BeautifulSoup (`lxml`), PyArrow
-- **Dash / Plotly** — UI Web
+| Composant | Outil |
+|---|---|
+| Traitement de données | PySpark 3.5.5 + Delta Lake |
+| Machine Learning | Spark MLlib (K-Means, ALS) |
+| Dashboard | Dash / Plotly |
+| Clone conversationnel | RAG + Gemini 1.5 Flash |
+| Infra locale | Docker Compose (Spark master + worker + history) |
 
-## Démarrage rapide
+---
 
-```bash
-# Build et démarrage du cluster
-make up
+## Tu veux refaire ce projet avec tes propres données ?
 
-# Shell dans le master
-make dev
+### 1. Exporter tes données personnelles
 
-# Arrêt et nettoyage complet
-make down
+Chaque plateforme a une page "Télécharger mes données" dans les paramètres :
+
+| Plateforme | Où | Format attendu |
+|---|---|---|
+| **Google** | [myaccount.google.com/data-and-privacy](https://myaccount.google.com/data-and-privacy) → Google Takeout | HTML/JSON |
+| **Spotify** | Paramètres → Confidentialité → Télécharger tes données | JSON |
+| **Netflix** | [netflix.com/account](https://www.netflix.com/account) → Confidentialité → Télécharger tes informations personnelles | CSV |
+| **Instagram** | Paramètres → Activités → Télécharger tes informations | JSON |
+| **TikTok** | Paramètres → Confidentialité → Données personnalisées | JSON |
+| **Amazon** | [amazon.fr/gp/privacycentral](https://www.amazon.fr/gp/privacycentral) | CSV |
+| **Apple** | [privacy.apple.com](https://privacy.apple.com) | CSV |
+| **Twitter/X** | Paramètres → Ton compte → Télécharger une archive | JS |
+
+Décompresse tout dans `data/raw/` en respectant cette structure :
+```
+data/raw/
+├── GOOGLE/          ← Google Takeout décompressé
+├── SPOTIFY/
+├── NETFLIX/
+├── INSTAGRAM/
+├── TIKTOK/
+├── AMAZON/
+├── APPLE/
+└── X/
 ```
 
-> **Note Windows** : si tu modifies `entrypoint.sh`, assure-toi que les fins de ligne restent en LF (pas CRLF), sinon le conteneur ne démarre pas.
+### 2. Configurer le projet
 
-### Démarrer le Dashboard (Web UI)
+**Ouvre `config.py` à la racine** et change :
+- `CLOSE_FRIENDS` → tes amis proches (prénoms des dossiers inbox Instagram)
+- `SPOTIFY_ANCHOR_ARTISTS` → tes artistes Spotify favoris
+- `NETFLIX_ANCHOR_TITLES` → tes séries/films Netflix favoris
 
-Le Dashboard est construit avec Dash/Plotly. Pour le lancer en local :
+Les chemins (`WAREHOUSE`, `RAW_DATA`) se calculent automatiquement depuis la racine du projet.
+
+### 3. Installer les dépendances
 
 ```bash
-# S'assurer d'être dans l'environnement virtuel (si utilisé)
-# Activer l'environnement virtuel (.venv/Scripts/activate sur Windows ou source .venv/bin/activate sur Mac/Linux)
+# Créer un environnement virtuel
+python -m venv .venv
+.venv\Scripts\activate          # Windows
+source .venv/bin/activate       # Mac/Linux
 
-# Installer les dépendances si ce n'est pas déjà fait
 pip install -r requirements.txt
+```
 
-# Lancer l'application
+**Prérequis système** :
+- Python 3.11+
+- Java 11 (requis par Spark) → `java -version` pour vérifier
+- Docker Desktop (optionnel, pour le cluster Spark)
+
+### 4. Exécuter les notebooks dans l'ordre
+
+```
+src/scripts/01_exploration/   → un notebook par plateforme (ingestion → warehouse)
+src/scripts/02_clustering/    → 01 → 02 → 03 (clustering comportemental)
+src/scripts/03_als/           → 01 → 02 (recommandations)
+src/scripts/06_social/        → 01 (graphe social Instagram)
+```
+
+Lancer Jupyter :
+```bash
+jupyter notebook
+```
+
+### 5. Lancer le dashboard
+
+```bash
 python -m app.app
 ```
-L'interface sera alors accessible sur [http://localhost:8050](http://localhost:8050).
+Accessible sur [http://localhost:8050](http://localhost:8050)
 
-## Interfaces
+---
+
+## Démarrage avec Docker (cluster Spark)
+
+```bash
+make up       # Build et démarrage
+make dev      # Shell dans le master
+make down     # Arrêt et nettoyage
+```
 
 | Service | URL |
 |---|---|
 | Spark Master UI | http://localhost:8080 |
 | History Server | http://localhost:18080 |
 | Jupyter | http://localhost:8889 |
-| Web UI (Dash) | http://localhost:8050 |
+| Dashboard | http://localhost:8050 |
 
-## Structure
+> **Windows** : si tu modifies `entrypoint.sh`, garde les fins de ligne en LF (pas CRLF).
 
-```text
-app/               ← 🖥️ UI Web (Dash)
-src/               ← ⚙️ Code d'ingestion, PySpark et ML
- │  ├── scripts/   ← Notebooks PySpark
- │  ├── tools/     ← Outils et scripts utilitaires
- │  └── inventory/ ← Inventaire
-infra/             ← 🐳 Fichiers de configuration DevOps/Spark
- │  └── conf/      ← Configuration Spark
-data/              ← 💾 Fichiers de données
- │  ├── raw/       ← Fichiers bruts (gitignored)
- │  └── parquet/   ← Datasets nettoyés (entrée ML)
-docs/              ← 📖 Plans et idées
-warehouse/         ← 🗄️ Delta tables
-spark-logs/        ← 📝 Logs Spark
+---
+
+## Structure du projet
+
+```
+config.py          ← ⚙️  À modifier en premier (chemins + données perso)
+app/               ← 🖥️  Dashboard Dash/Plotly
+src/scripts/       ← 📓  Notebooks PySpark par phase
+data/
+├── raw/           ← 📥  Exports bruts des plateformes (gitignored)
+└── warehouse/     ← 🗄️  Tables Parquet transformées (gitignored)
+docs/
+├── rapport/       ← 📖  Rapports techniques par phase
+└── CONTRAINTES_PROJET.md  ← règles et contexte du projet
+infra/             ← 🐳  Config Spark
 ```
 
-## Sources de données
+---
 
-Netflix, Instagram, Amazon, TikTok, Twitter/X, Google, YouTube, Apple, Belfius, Spotify
-→ voir `docs/ml_source_plan.md` pour le détail par axe ML.
+## Documentation technique
 
-## Notebooks
-
-| Notebook | Source | Statut |
-|---|---|---|
-| `netflix.ipynb` | Netflix CSV | ✓ |
-| `amazon.ipynb` | Amazon CSV | ✓ |
-| `instagram.ipynb` | Instagram JSON | ✓ |
-| `google_youtube.ipynb` | Google Takeout HTML | ✓ |
-| `apple.ipynb` | Apple Data | ✓ |
-| `spotify.ipynb` | Spotify Data | ✓ |
-| `tiktok.ipynb` | TikTok Data | ✓ |
-| `twitter.ipynb` | Twitter Data | ✓ |
-| `parquet_to_delta.ipynb` | Conversion Parquet to Delta | ✓ |
+| Document | Contenu |
+|---|---|
+| `docs/rapport/01_exploration.md` | Pourquoi Spark, pourquoi un warehouse |
+| `docs/rapport/02_clustering.md` | K-Means comportemental, choix de k=6 |
+| `docs/rapport/03_als.md` | ALS implicite, MovieLens 32M |
+| `docs/rapport/04_clone.md` | Historique fine-tuning → RAG Gemini |
+| `docs/rapport/06_social.md` | Graphe social Instagram |
+| `docs/CONTRAINTES_PROJET.md` | Règles Spark, contraintes par phase |

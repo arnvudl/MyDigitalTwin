@@ -50,7 +50,7 @@ Return ONLY: Category|Genre|Sub-Genre|Vibe. No talk."""
 if __name__ == "__main__":
     # Trouver la racine du projet (MyDigitalTwin)
     ROOT_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..", ".."))
-    WAREHOUSE = os.path.join(ROOT_DIR, "warehouse")
+    WAREHOUSE = os.path.join(ROOT_DIR, "data/warehouse")
     input_path = os.path.join(WAREHOUSE, "interactions")
     output_path = os.path.join(WAREHOUSE, "item_metadata.parquet")
 

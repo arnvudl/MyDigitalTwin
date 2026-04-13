@@ -7,10 +7,10 @@ from dash.exceptions import PreventUpdate
 from functools import lru_cache
 
 # ─── CONFIG ──────────────────────────────────────────────────────────────────
-if os.path.exists("/app/warehouse"):
-    DELTA_BASE = "/app/warehouse"
+if os.path.exists("/app/data/warehouse"):
+    DELTA_BASE = "/app/data/warehouse"
 else:
-    DELTA_BASE = "warehouse"
+    DELTA_BASE = "data/warehouse"
 
 SOURCES = {
     "netflix_views": {"date_col": "watch_date", "label": "Netflix", "color": "#FF0000"},

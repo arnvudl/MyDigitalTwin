@@ -1,16 +1,11 @@
-import dash
 from dash import html, dcc, Input, Output, State, callback, ALL
-import requests
+import dash
 import json
 import os
-from dotenv import load_dotenv
-
-load_dotenv()
+from app.clone_utils import arnaud_rag
 
 # ─── CONFIG ────────────────────────────────────────────────────────────────────
-OLLAMA_HOST = os.getenv("OLLAMA_HOST", "http://localhost:11434")
-OLLAMA_URL = f"{OLLAMA_HOST}/api/chat"
-MODEL_NAME = "arnaud-clone"
+MODEL_NAME = "Gemini 1.5 Flash (RAG)"
 
 # ─── LAYOUT ──────────────────────────────────────────────────────────────────
 def layout():
@@ -82,23 +77,8 @@ def update_chat(n_clicks, n_submit, user_input, history):
     # Append user message
     history.append({"role": "user", "content": user_input})
 
-    # Call Ollama
-    try:
-        response = requests.post(
-            OLLAMA_URL,
-            json={
-                "model": MODEL_NAME,
-                "messages": history,
-                "stream": False
-            },
-            timeout=30
-        )
-        if response.status_code == 200:
-            assistant_message = response.json().get("message", {}).get("content", "Erreur de réponse Ollama")
-        else:
-            assistant_message = f"Erreur Ollama ({response.status_code}): {response.text}"
-    except Exception as e:
-        assistant_message = f"Erreur de connexion à Ollama : {str(e)}"
+    # Call Gemini RAG
+    assistant_message = arnaud_rag.generate_response(user_input, history[:-1])
 
     # Append assistant message
     history.append({"role": "assistant", "content": assistant_message})

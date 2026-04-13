@@ -8,14 +8,14 @@ import pandas as pd
 from dash import Input, Output, callback, html, dcc, ALL
 
 # ─── CONFIG ──────────────────────────────────────────────────────────────────
-# On vérifie si on est dans Docker (où les dossiers sont montés à la racine /app/data et /app/warehouse)
+# On vérifie si on est dans Docker (où les dossiers sont montés à la racine /app/data et /app/data/warehouse)
 # ou en local (où les dossiers sont dans le répertoire courant).
-if os.path.exists("/app/warehouse"):
-    DELTA_BASE = "/app/warehouse"
+if os.path.exists("/app/data/warehouse"):
+    DELTA_BASE = "/app/data/warehouse"
     IG_TOPICS_PATH = "/app/data/raw/INSTAGRAM/preferences/your_topics/recommended_topics.json"
     X_PERSONALIZATION_PATH = "/app/data/raw/X/data/personalization.js"
 else:
-    DELTA_BASE = "warehouse"
+    DELTA_BASE = "data/warehouse"
     IG_TOPICS_PATH = "data/raw/INSTAGRAM/preferences/your_topics/recommended_topics.json"
     X_PERSONALIZATION_PATH = "data/raw/X/data/personalization.js"
 
@@ -120,7 +120,7 @@ def _read_delta(table_name: str, cols: list) -> pd.DataFrame:
 @lru_cache(maxsize=1)
 def load_interest_profiles() -> dict | None:
     """
-    Charge les profils K-Means depuis warehouse/interest_profiles.
+    Charge les profils K-Means depuis data/warehouse/interest_profiles.
     Retourne None si le 01_exploration n'a pas encore tourné (fallback sur keyword matching).
     """
     df = _read_delta("interest_profiles", [

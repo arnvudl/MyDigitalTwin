@@ -7,7 +7,7 @@ from dotenv import load_dotenv
 load_dotenv()
 
 # Cache file path
-CACHE_PATH = os.path.join("warehouse", "spotify_metadata.json")
+CACHE_PATH = os.path.join("data/warehouse", "spotify_metadata.json")
 
 class SpotifyMetadata:
     def __init__(self):

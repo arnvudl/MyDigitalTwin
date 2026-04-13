@@ -14,10 +14,12 @@ data/raw/
 data/processed/
 data/parquet/
 data/LLM_DATA
+data/warehouse/
 *.parquet
 contacts_map.json
 .env
 .env.spark
+spark-logs
 
 # Jupyter
 .ipynb_checkpoints/
@@ -28,4 +30,3 @@ Thumbs.db
 
 CLAUDE.md
 .claude
-warehouse/

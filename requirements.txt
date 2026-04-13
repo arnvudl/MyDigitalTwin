@@ -12,3 +12,6 @@ requests
 tqdm
 dash-cytoscape
 spotipy
+google-generativeai
+sentence-transformers
+scikit-learn

@@ -5,7 +5,7 @@ from difflib import SequenceMatcher
 from dash import Input, Output, State, callback, clientside_callback, dcc, html, no_update
 
 # ─── CONFIG ──────────────────────────────────────────────────────────────────
-DELTA_BASE = "/app/warehouse" if os.path.exists("/app/warehouse") else "warehouse"
+DELTA_BASE = "/app/data/warehouse" if os.path.exists("/app/data/warehouse") else "warehouse"
 
 PLATFORM_CFG = {
     "netflix": {

@@ -4,7 +4,7 @@ import plotly.graph_objects as go
 from dash import ALL, Input, Output, State, callback, dcc, html
 
 # ─── CONFIG ──────────────────────────────────────────────────────────────────
-DELTA_BASE = "/app/warehouse" if os.path.exists("/app/warehouse") else "warehouse"
+DELTA_BASE = "/app/data/warehouse" if os.path.exists("/app/data/warehouse") else "warehouse"
 
 NETFLIX_RED = "#e50914"
 
