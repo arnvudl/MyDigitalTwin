@@ -124,6 +124,14 @@ def _build_3d_html(df: pd.DataFrame) -> str:
     .leg-dot {{ width:9px; height:9px; border-radius:50%; flex-shrink:0; }}
     .leg-lbl {{ color:rgba(255,255,255,.55); }}
 
+    /* ── Force-graph tooltip override ── */
+    #graph-tooltip {{
+      pointer-events: none !important;
+      background: transparent !important;
+      border: none !important;
+      padding: 0 !important;
+    }}
+
     /* ── Hint ── */
     #hint {{
       position:fixed; bottom:20px; left:50%; transform:translateX(-50%);
@@ -200,45 +208,28 @@ def _build_3d_html(df: pd.DataFrame) -> str:
       .linkDirectionalParticleWidth(l => l.is_close ? 2.5 : 1.2)
       .linkDirectionalParticleColor(l => l.is_close ? '#c084fc' : '#6b7db3')
       .linkDirectionalParticleSpeed(l => l.is_close ? 0.005 : 0.003)
-      .nodeLabel(() => '')
-      .nodeThreeObject(node => {{
-        const THREE = Graph.scene().children[0]?.constructor?.THREE
-                   || window.THREE
-                   || (Graph.__threeObj && Graph.__threeObj.constructor.THREE);
-
-        // Build canvas sprite
-        const canvas = document.createElement('canvas');
-        const ctx    = canvas.getContext('2d');
-        const text   = node.id === 'arnaud' ? 'Arnaud' : node.label;
-        const font   = node.id === 'arnaud' ? 'bold 28px SF Pro Display,Segoe UI,sans-serif'
-                                             : (node.is_close ? 'bold 22px SF Pro Display,Segoe UI,sans-serif'
-                                                               : '18px SF Pro Display,Segoe UI,sans-serif');
-        ctx.font = font;
-        const w = ctx.measureText(text).width + 20;
-        canvas.width  = w;
-        canvas.height = 40;
-
-        ctx.font = font;
-        ctx.fillStyle = node.id === 'arnaud'   ? 'rgba(240,240,255,0.95)'
-                      : node.is_close           ? 'rgba(192,132,252,0.92)'
-                                                : 'rgba(147,168,212,0.75)';
-        ctx.textAlign    = 'center';
-        ctx.textBaseline = 'middle';
-        ctx.fillText(text, w / 2, 20);
-
-        const texture  = new (Graph.renderer().getContext().canvas.constructor === HTMLCanvasElement
-          ? window.THREE.CanvasTexture : window.THREE.CanvasTexture)(canvas);
-        const mat = new window.THREE.SpriteMaterial({{
-          map: texture, transparent: true, depthWrite: false,
-        }});
-        const sprite  = new window.THREE.Sprite(mat);
-        const radius  = Math.cbrt(node.val) * 4;   // nodeRelSize = 4
-        const scale   = Math.max(w, 40) * 0.18;
-        sprite.scale.set(scale, scale * 40 / Math.max(w, 40), 1);
-        sprite.position.set(0, -(radius + 8), 0);
-        return sprite;
+      .nodeLabel(node => {{
+        const badge = node.is_close
+          ? '<span style="background:rgba(168,85,247,.25);color:#c084fc;padding:2px 8px;border-radius:12px;font-size:10px;font-weight:700;letter-spacing:.8px;text-transform:uppercase">⭐ Close Friend</span>'
+          : (node.id === 'arnaud' ? '' : '<span style="background:rgba(59,79,160,.2);color:#93a8d4;padding:2px 8px;border-radius:12px;font-size:10px;font-weight:700;letter-spacing:.8px;text-transform:uppercase">Follower</span>');
+        const msgs = node.msg_count > 0
+          ? `<div style="margin-top:6px;font-size:12px;color:rgba(255,255,255,.45)">💬 ${{node.msg_count.toLocaleString()}} messages</div>`
+          : '';
+        return `<div style="
+          background:rgba(10,7,26,.88);
+          backdrop-filter:blur(16px);
+          border:1px solid rgba(168,85,247,.2);
+          border-radius:12px;
+          padding:10px 14px;
+          font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;
+          pointer-events:none;
+          min-width:120px;
+        ">
+          <div style="font-size:14px;font-weight:700;color:#ede8ff;margin-bottom:5px">${{node.label}}</div>
+          ${{badge}}
+          ${{msgs}}
+        </div>`;
       }})
-      .nodeThreeObjectExtend(true)
 
       .onNodeHover(node => {{
         hoveredId = node ? node.id : null;
