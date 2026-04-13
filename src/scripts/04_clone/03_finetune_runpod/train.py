@@ -1,6 +1,6 @@
 """
 Fine-tuning Mistral 7B Instruct avec Unsloth (QLoRA 4-bit).
-Version 2.3 — Spéciale RunPod (Dataset Robuste)
+Version 3.0 — Sagesse (1 Epoch pour éviter l'overfitting)
 """
 
 from unsloth import FastLanguageModel
@@ -17,7 +17,8 @@ import os
 # Utilise la v0.3 qui a réussi à charger tout à l'heure
 MODEL_NAME   = "unsloth/mistral-7b-instruct-v0.3-bnb-4bit"
 OUTPUT_DIR   = "/workspace/work/arnaud-clone-lora"
-GGUF_DIR     = "/workspace/work/arnaud-clone-gguf"
+# On envoie le GGUF sur le disque éphémère (/tmp) pour éviter l'erreur de stockage !
+GGUF_DIR     = "/tmp/arnaud-clone-gguf"
 
 # Chemins dataset sur le Pod
 TRAIN_FILE   = "/workspace/work/train.jsonl"
@@ -34,8 +35,8 @@ LORA_DROPOUT   = 0
 
 BATCH_SIZE          = 2    
 GRAD_ACCUMULATION   = 4    
-LEARNING_RATE       = 2e-4
-NUM_EPOCHS          = 3    
+LEARNING_RATE       = 1e-4
+NUM_EPOCHS          = 1    
 WARMUP_RATIO        = 0.05
 LR_SCHEDULER        = "cosine"
 WEIGHT_DECAY        = 0.01
@@ -162,7 +163,7 @@ print(f"\nPoids LoRA sauvegardés : {OUTPUT_DIR}")
 
 # ─── EXPORT GGUF (pour Ollama) ─────────────────────────────────────────────────
 
-print("\nExport GGUF Q4_K_M pour Ollama...")
+print("\nExport GGUF Q4_K_M pour Ollama sur /tmp ...")
 # Création du dossier si besoin
 os.makedirs(GGUF_DIR, exist_ok=True)
 
