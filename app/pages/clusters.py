@@ -53,11 +53,11 @@ def _clean_samples(samples: list) -> list:
     return cleaned
 
 # ─── CONFIG ──────────────────────────────────────────────────────────────────
-if os.path.exists("/app/warehouse"):
-    DELTA_BASE = "/app/warehouse"
+if os.path.exists("/app/data/warehouse"):
+    DELTA_BASE = "/app/data/warehouse"
     ASSETS_DIR = "/app/assets"
 else:
-    DELTA_BASE = "warehouse"
+    DELTA_BASE = "data/warehouse"
     ASSETS_DIR = "app/assets"
 
 PLATFORM_COLORS = {
