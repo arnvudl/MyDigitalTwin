@@ -1,226 +1,317 @@
+import json
 import os
 
-import dash_cytoscape as cyto
 import pandas as pd
-from dash import Input, Output, callback, html, dash_table, dcc
+from dash import html, dash_table
 
-# ─── CHEMINS ─────────────────────────────────────────────────────────────────
-if os.path.exists("/app/warehouse"):
-    WAREHOUSE = "/app/warehouse"
-else:
-    WAREHOUSE = "warehouse"
+# ─── PATHS ───────────────────────────────────────────────────────────────────
+WAREHOUSE = "/app/warehouse" if os.path.exists("/app/warehouse") else "warehouse"
+PARQUET   = os.path.join(WAREHOUSE, "social_graph.parquet")
 
-PARQUET = os.path.join(WAREHOUSE, "social_graph.parquet")
+_HERE      = os.path.dirname(os.path.abspath(__file__))
+ASSETS_DIR = os.path.join(_HERE, "..", "assets")
 
-# ─── DONNÉES ─────────────────────────────────────────────────────────────────
+
+# ─── DATA ────────────────────────────────────────────────────────────────────
 def _load():
     if not os.path.exists(PARQUET):
         return pd.DataFrame()
     return pd.read_parquet(PARQUET)
 
 
-def _build_elements(df: pd.DataFrame) -> list:
+def _df_to_graph_data(df: pd.DataFrame) -> dict:
+    nodes = [{"id": "arnaud", "label": "Arnaud", "is_close": False, "msg_count": 0, "val": 80}]
+    links = []
+
     if df.empty:
-        return []
+        return {"nodes": nodes, "links": links}
 
-    w_max = df["weight"].max()
-    elements = []
-
-    elements.append({
-        "data": {"id": "arnaud", "label": "Arnaud", "role": "center"},
-        "classes": "center-node",
-    })
+    w_max = df["message_count"].max()
 
     for _, row in df.iterrows():
-        node_id    = row["node_id"]
-        label      = row["label"]
-        weight     = row["weight"]
-        is_close   = bool(row["in_close_friends"])
-        msg_count  = int(row["message_count"])
-        # Taille : 20–60 px (plus compact, moins de chevauchement)
-        size       = 20 + int(40 * (weight / w_max))
-        edge_width = 1 + int(6 * (weight / w_max))
+        node_id   = str(row["node_id"])
+        label     = str(row["label"])
+        msg_count = int(row["message_count"])
+        is_close  = bool(row["in_close_friends"])
+        # nodeVal drives sphere VOLUME (radius = cbrt(val) * nodeRelSize).
+        # Scaling is non-linear so size differences are clearly visible.
+        ratio = msg_count / w_max          # 0.0 → 1.0
+        if is_close:
+            val = int(20 + 44 * ratio)     # 20 → 64  (radius ≈ 2.7× → 4.0×)
+        else:
+            val = int(1  + 11 * ratio)     # 1  → 12  (radius ≈ 1.0× → 2.3×)
 
-        elements.append({
-            "data": {
-                "id": node_id,
-                "label": label,
-                "weight": weight,
-                "msg_count": msg_count,
-                "is_close": is_close,
-                "size": size,
-                "edge_width": edge_width,
-            },
-            "classes": "close-node" if is_close else "follower-node",
+        nodes.append({
+            "id": node_id, "label": label,
+            "is_close": is_close, "msg_count": msg_count, "val": val,
         })
-        elements.append({
-            "data": {
-                "source": "arnaud",
-                "target": node_id,
-                "weight": edge_width,
-                "node_id": node_id,
-            },
-            "classes": "close-edge" if is_close else "follower-edge",
+        links.append({
+            "source": "arnaud", "target": node_id,
+            "is_close": is_close,
+            "width": 0.8 + int(2 * ratio),
         })
 
-    return elements
+    return {"nodes": nodes, "links": links}
 
 
-# ─── STYLESHEET DE BASE ───────────────────────────────────────────────────────
-def _base_stylesheet(hovered_id: str | None = None) -> list:
-    """
-    hovered_id=None        → état repos (liens quasi invisibles, labels discrets)
-    hovered_id="arnaud"    → tout est mis en valeur
-    hovered_id="xxx_id"    → seulement le lien vers cette personne est mis en valeur
-    """
-    all_dim  = hovered_id is not None and hovered_id != "arnaud"
+# ─── 3D HTML GENERATOR ───────────────────────────────────────────────────────
+def _build_3d_html(df: pd.DataFrame) -> str:
+    data_json = json.dumps(_df_to_graph_data(df))
 
-    # Opacité des nœuds non-focalisés
-    node_opacity      = 0.25 if all_dim else 1.0
-    label_opacity     = 0.0  if all_dim else 0.75   # labels masqués par défaut sauf hover
-    edge_opacity_def  = 0.0  if all_dim else 0.07   # liens quasi-invisibles au repos
-    edge_opacity_cf   = 0.0  if all_dim else 0.15
+    return f"""<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8"/>
+  <style>
+    * {{ margin:0; padding:0; box-sizing:border-box; }}
+    body {{
+      background: radial-gradient(ellipse at 50% 40%, #130d2e 0%, #07051a 55%, #030210 100%);
+      overflow: hidden;
+      font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Segoe UI', sans-serif;
+    }}
+    #g {{ width:100vw; height:100vh; }}
 
-    sheet = [
-        # ── Nœud central ─────────────────────────────────────────────────────
-        {
-            "selector": ".center-node",
-            "style": {
-                "width": 70, "height": 70,
-                "background-color": "#ffffff",
-                "label": "data(label)",
-                "color": "#000000",
-                "font-size": 13, "font-weight": "bold",
-                "text-valign": "center", "text-halign": "center",
-                "border-width": 0,
-                "opacity": 1,
-            },
-        },
-        # ── Close friends ─────────────────────────────────────────────────────
-        {
-            "selector": ".close-node",
-            "style": {
-                "width": "data(size)", "height": "data(size)",
-                "background-color": "#bf5af2",
-                "label": "data(label)",
-                "color": "#ffffff",
-                "font-size": 11, "font-weight": "700",
-                "text-valign": "bottom", "text-margin-y": 5,
-                "text-opacity": label_opacity,
-                "border-width": 2, "border-color": "#d97df7",
-                "opacity": node_opacity,
-                "text-background-color": "#000000",
-                "text-background-opacity": 0.5 if label_opacity > 0 else 0,
-                "text-background-padding": "3px",
-                "text-background-shape": "roundrectangle",
-            },
-        },
-        # ── Followers ─────────────────────────────────────────────────────────
-        {
-            "selector": ".follower-node",
-            "style": {
-                "width": "data(size)", "height": "data(size)",
-                "background-color": "#48484a",
-                "label": "data(label)",
-                "color": "#ffffff",
-                "font-size": 11, "font-weight": "600",
-                "text-valign": "bottom", "text-margin-y": 5,
-                "text-opacity": label_opacity,
-                "border-width": 1, "border-color": "rgba(255,255,255,0.2)",
-                "opacity": node_opacity,
-                "text-background-color": "#000000",
-                "text-background-opacity": 0.5 if label_opacity > 0 else 0,
-                "text-background-padding": "3px",
-                "text-background-shape": "roundrectangle",
-            },
-        },
-        # ── Arêtes close friends ──────────────────────────────────────────────
-        {
-            "selector": ".close-edge",
-            "style": {
-                "width": "data(weight)",
-                "line-color": f"rgba(191,90,242,{edge_opacity_cf})",
-                "curve-style": "straight",
-                "opacity": 1,
-            },
-        },
-        # ── Arêtes followers ──────────────────────────────────────────────────
-        {
-            "selector": ".follower-edge",
-            "style": {
-                "width": "data(weight)",
-                "line-color": f"rgba(180,180,200,{edge_opacity_def})",
-                "curve-style": "straight",
-                "opacity": 1,
-            },
-        },
-    ]
+    /* ── Info card (bottom-right) ── */
+    #card {{
+      position: fixed; bottom: 28px; right: 28px; width: 230px;
+      background: rgba(10, 7, 26, 0.80);
+      backdrop-filter: blur(28px) saturate(160%);
+      -webkit-backdrop-filter: blur(28px) saturate(160%);
+      border: 1px solid rgba(168,85,247,0.22);
+      border-radius: 20px; padding: 20px 22px;
+      color:#fff; pointer-events:none;
+      box-shadow: 0 12px 48px rgba(0,0,0,0.55), inset 0 0 0 1px rgba(255,255,255,0.04);
+      opacity:0; transform:translateY(14px);
+      transition: opacity .22s ease, transform .28s cubic-bezier(.34,1.5,.64,1);
+    }}
+    #card.on {{ opacity:1; transform:translateY(0); }}
+    #card-avatar {{
+      width:42px; height:42px; border-radius:50%;
+      display:flex; align-items:center; justify-content:center;
+      font-size:15px; font-weight:700; margin-bottom:13px;
+      background:rgba(168,85,247,.18); border:1.5px solid rgba(168,85,247,.5);
+      letter-spacing:.5px;
+    }}
+    #card-avatar.fol {{
+      background:rgba(59,79,160,.18); border-color:rgba(99,119,200,.45);
+    }}
+    #card-name {{ font-size:15px; font-weight:700; color:#ede8ff; margin-bottom:4px; }}
+    #card-badge {{
+      display:inline-block; font-size:10px; font-weight:700;
+      letter-spacing:.8px; text-transform:uppercase;
+      padding:3px 10px; border-radius:20px; margin-bottom:15px;
+    }}
+    #card-badge.cf  {{ background:rgba(168,85,247,.22); color:#c084fc; }}
+    #card-badge.fol {{ background:rgba(59,79,160,.22);  color:#93a8d4; }}
+    .card-row {{
+      display:flex; justify-content:space-between; align-items:center;
+      padding-top:12px; border-top:1px solid rgba(255,255,255,.07);
+    }}
+    .card-row-lbl {{ font-size:12px; color:rgba(255,255,255,.4); }}
+    .card-row-val {{ font-size:14px; font-weight:600; color:#e8dfff; }}
 
-    # ── Nœud survolé : pleine visibilité ─────────────────────────────────────
-    if hovered_id and hovered_id != "arnaud":
-        sheet += [
-            {
-                "selector": f'node[id = "{hovered_id}"]',
-                "style": {
-                    "opacity": 1,
-                    "text-opacity": 1,
-                    "text-background-opacity": 0.6,
-                    "border-width": 3,
-                    "border-color": "#ffffff",
-                },
-            },
-            # Arête vers ce nœud — couleur vive selon type
-            {
-                "selector": f'edge[target = "{hovered_id}"].close-edge',
-                "style": {
-                    "line-color": "rgba(191,90,242,0.9)",
-                    "width": 3,
-                },
-            },
-            {
-                "selector": f'edge[target = "{hovered_id}"].follower-edge',
-                "style": {
-                    "line-color": "rgba(100,180,255,0.85)",
-                    "width": 2,
-                },
-            },
-        ]
+    /* ── Legend ── */
+    #legend {{
+      position:fixed; top:18px; right:18px;
+      background:rgba(10,7,26,.72);
+      backdrop-filter:blur(16px); -webkit-backdrop-filter:blur(16px);
+      border:1px solid rgba(255,255,255,.08);
+      border-radius:14px; padding:13px 16px;
+      color:#fff; font-size:12px; pointer-events:none;
+    }}
+    .leg {{ display:flex; align-items:center; gap:9px; margin-bottom:7px; }}
+    .leg:last-child {{ margin-bottom:0; }}
+    .leg-dot {{ width:9px; height:9px; border-radius:50%; flex-shrink:0; }}
+    .leg-lbl {{ color:rgba(255,255,255,.55); }}
 
-    # ── Survol Arnaud : tout illuminé ────────────────────────────────────────
-    if hovered_id == "arnaud":
-        sheet += [
-            {
-                "selector": ".close-node, .follower-node",
-                "style": {"opacity": 1, "text-opacity": 1, "text-background-opacity": 0.5},
-            },
-            {
-                "selector": ".close-edge",
-                "style": {"line-color": "rgba(191,90,242,0.6)"},
-            },
-            {
-                "selector": ".follower-edge",
-                "style": {"line-color": "rgba(100,180,255,0.35)"},
-            },
-        ]
+    /* ── Hint ── */
+    #hint {{
+      position:fixed; bottom:20px; left:50%; transform:translateX(-50%);
+      background:rgba(10,7,26,.65); backdrop-filter:blur(12px);
+      border:1px solid rgba(255,255,255,.07); border-radius:30px;
+      padding:7px 18px; font-size:11px; color:rgba(255,255,255,.38);
+      pointer-events:none; letter-spacing:.3px;
+      transition:opacity 1s ease;
+    }}
+  </style>
+</head>
+<body>
+  <div id="g"></div>
 
-    return sheet
+  <!-- Info card -->
+  <div id="card">
+    <div id="card-avatar">AB</div>
+    <div id="card-name">@username</div>
+    <div id="card-badge" class="cf">⭐ Close Friend</div>
+    <div class="card-row">
+      <span class="card-row-lbl">💬 Messages</span>
+      <span class="card-row-val" id="card-msgs">—</span>
+    </div>
+  </div>
+
+  <!-- Legend -->
+  <div id="legend">
+    <div class="leg">
+      <div class="leg-dot" style="background:#f0f0ff;box-shadow:0 0 5px #fff"></div>
+      <span class="leg-lbl">Arnaud</span>
+    </div>
+    <div class="leg">
+      <div class="leg-dot" style="background:#a855f7;box-shadow:0 0 5px rgba(168,85,247,.9)"></div>
+      <span class="leg-lbl">Close friends</span>
+    </div>
+    <div class="leg">
+      <div class="leg-dot" style="background:#3b4fa0"></div>
+      <span class="leg-lbl">Followers</span>
+    </div>
+  </div>
+
+  <!-- Hint -->
+  <div id="hint">Drag to orbit &nbsp;·&nbsp; Scroll to zoom &nbsp;·&nbsp; Click to focus</div>
+
+  <script src="/assets/3d-force-graph.min.js"></script>
+  <script>
+    const graphData = {data_json};
+
+    let hoveredId = null;
+
+    function nColor(n) {{
+      if (n.id === 'arnaud') return '#f0f0ff';
+      if (hoveredId && n.id !== hoveredId) return n.is_close ? '#6a2fa0' : '#232338';
+      return n.is_close ? '#a855f7' : '#3b4fa0';
+    }}
+    function lColor(l) {{
+      const tgt = typeof l.target === 'object' ? l.target.id : l.target;
+      if (hoveredId && tgt !== hoveredId) return 'rgba(0,0,0,0)';
+      return l.is_close ? 'rgba(168,85,247,0.55)' : 'rgba(59,79,160,0.2)';
+    }}
+
+    const Graph = ForceGraph3D({{ controlType: 'orbit' }})(document.getElementById('g'))
+      .graphData(graphData)
+      .backgroundColor('rgba(0,0,0,0)')
+      .showNavInfo(false)
+      .nodeVal(n => n.val)
+      .nodeRelSize(4)
+      .nodeColor(nColor)
+      .nodeOpacity(0.92)
+      .nodeResolution(24)
+      .linkColor(lColor)
+      .linkWidth(l => l.width)
+      .linkDirectionalParticles(l => l.is_close ? 6 : 2)
+      .linkDirectionalParticleWidth(l => l.is_close ? 2.5 : 1.2)
+      .linkDirectionalParticleColor(l => l.is_close ? '#c084fc' : '#6b7db3')
+      .linkDirectionalParticleSpeed(l => l.is_close ? 0.005 : 0.003)
+      .nodeLabel(() => '')
+      .nodeThreeObject(node => {{
+        const THREE = Graph.scene().children[0]?.constructor?.THREE
+                   || window.THREE
+                   || (Graph.__threeObj && Graph.__threeObj.constructor.THREE);
+
+        // Build canvas sprite
+        const canvas = document.createElement('canvas');
+        const ctx    = canvas.getContext('2d');
+        const text   = node.id === 'arnaud' ? 'Arnaud' : node.label;
+        const font   = node.id === 'arnaud' ? 'bold 28px SF Pro Display,Segoe UI,sans-serif'
+                                             : (node.is_close ? 'bold 22px SF Pro Display,Segoe UI,sans-serif'
+                                                               : '18px SF Pro Display,Segoe UI,sans-serif');
+        ctx.font = font;
+        const w = ctx.measureText(text).width + 20;
+        canvas.width  = w;
+        canvas.height = 40;
+
+        ctx.font = font;
+        ctx.fillStyle = node.id === 'arnaud'   ? 'rgba(240,240,255,0.95)'
+                      : node.is_close           ? 'rgba(192,132,252,0.92)'
+                                                : 'rgba(147,168,212,0.75)';
+        ctx.textAlign    = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText(text, w / 2, 20);
+
+        const texture  = new (Graph.renderer().getContext().canvas.constructor === HTMLCanvasElement
+          ? window.THREE.CanvasTexture : window.THREE.CanvasTexture)(canvas);
+        const mat = new window.THREE.SpriteMaterial({{
+          map: texture, transparent: true, depthWrite: false,
+        }});
+        const sprite  = new window.THREE.Sprite(mat);
+        const radius  = Math.cbrt(node.val) * 4;   // nodeRelSize = 4
+        const scale   = Math.max(w, 40) * 0.18;
+        sprite.scale.set(scale, scale * 40 / Math.max(w, 40), 1);
+        sprite.position.set(0, -(radius + 8), 0);
+        return sprite;
+      }})
+      .nodeThreeObjectExtend(true)
+
+      .onNodeHover(node => {{
+        hoveredId = node ? node.id : null;
+        Graph.nodeColor(nColor).linkColor(lColor);
+        document.body.style.cursor = node ? 'pointer' : 'default';
+
+        const card = document.getElementById('card');
+        if (!node || node.id === 'arnaud') {{ card.classList.remove('on'); return; }}
+
+        const cf = node.is_close;
+        const av = document.getElementById('card-avatar');
+        av.textContent = node.label.slice(0,2).toUpperCase();
+        av.className   = cf ? 'cf' : 'fol';
+        document.getElementById('card-name').textContent = '@' + node.label;
+        const badge = document.getElementById('card-badge');
+        badge.textContent = cf ? '⭐ Close Friend' : 'Follower';
+        badge.className   = 'card-badge ' + (cf ? 'cf' : 'fol');
+        document.getElementById('card-msgs').textContent = node.msg_count.toLocaleString();
+        card.classList.add('on');
+      }})
+
+      .onNodeClick(node => {{
+        const len = Math.hypot(node.x||.01, node.y||.01, node.z||.01);
+        Graph.cameraPosition(
+          {{ x: node.x*(len+150)/len, y: node.y*(len+150)/len, z: node.z*(len+150)/len }},
+          node, 900
+        );
+      }})
+      .onBackgroundClick(() => {{
+        Graph.cameraPosition({{x:0, y:0, z:500}}, {{x:0,y:0,z:0}}, 800);
+      }});
+
+    Graph.d3Force('charge').strength(-900);
+    Graph.d3Force('link').distance(l => l.is_close ? 180 : 130);
+    Graph.d3VelocityDecay(0.25);
+    Graph.d3AlphaDecay(0.02);
+    setTimeout(() => Graph.zoomToFit(600, 80), 3500);
+
+    Graph.controls().autoRotate      = true;
+    Graph.controls().autoRotateSpeed = 0.35;
+
+    setTimeout(() => {{ document.getElementById('hint').style.opacity = '0'; }}, 5000);
+  </script>
+</body>
+</html>"""
 
 
 # ─── LAYOUT ──────────────────────────────────────────────────────────────────
 def layout():
-    df      = _load()
-    elements = _build_elements(df)
-    n_close  = int(df["in_close_friends"].sum()) if not df.empty else 0
-    n_total  = len(df)
-    n_msgs   = int(df["message_count"].sum()) if not df.empty else 0
+    df = _load()
 
-    # Préparation données tableau
-    table_data = df[["label", "message_count"]].rename(columns={"label": "Pseudo", "message_count": "Messages"}).to_dict("records")
+    embed_path = os.path.join(ASSETS_DIR, "social_3d.html")
+    with open(embed_path, "w", encoding="utf-8") as fh:
+        fh.write(_build_3d_html(df))
+
+    n_close = int(df["in_close_friends"].sum()) if not df.empty and "in_close_friends" in df.columns else 0
+    n_total = len(df)
+    n_msgs  = int(df["message_count"].sum())    if not df.empty and "message_count"    in df.columns else 0
+
+    if not df.empty and {"label", "message_count"}.issubset(df.columns):
+        table_data = (
+            df[["label", "message_count"]]
+            .rename(columns={"label": "Pseudo", "message_count": "Messages"})
+            .sort_values("Messages", ascending=False)
+            .to_dict("records")
+        )
+    else:
+        table_data = []
 
     return html.Div(
         style={"paddingTop": "64px", "minHeight": "100vh", "background": "var(--bg-base)"},
         children=[
-            # ── Header ───────────────────────────────────────────────────────
+
             html.Div(
                 style={"padding": "40px 48px 24px"},
                 children=[
@@ -241,64 +332,23 @@ def layout():
                 ],
             ),
 
-            # ── Graphe + info panel ──────────────────────────────────────────
             html.Div(
-                style={"display": "flex", "gap": "24px", "padding": "0 48px 20px"},
+                style={"padding": "0 48px 24px"},
                 children=[
-                    html.Div(
+                    html.Iframe(
+                        src="/assets/social_3d.html",
                         style={
-                            "flex": "1",
-                            "background": "rgba(18,18,20,0.85)",
+                            "width": "100%",
+                            "height": "720px",
+                            "border": "none",
                             "borderRadius": "16px",
-                            "border": "1px solid rgba(255,255,255,0.08)",
                             "overflow": "hidden",
-                            "height": "600px",
+                            "display": "block",
                         },
-                        children=[
-                            cyto.Cytoscape(
-                                id="social-graph",
-                                elements=elements,
-                                layout={
-                                    "name": "cose",
-                                    "idealEdgeLength": 220,
-                                    "nodeOverlap": 4,
-                                    "refresh": 20,
-                                    "fit": True,
-                                    "padding": 60,
-                                    "randomize": False,
-                                    "componentSpacing": 120,
-                                    "nodeRepulsion": 2000000,
-                                    "edgeElasticity": 80,
-                                    "nestingFactor": 5,
-                                    "gravity": 40,
-                                    "numIter": 1500,
-                                    "initialTemp": 300,
-                                    "coolingFactor": 0.95,
-                                    "minTemp": 1.0,
-                                },
-                                style={"width": "100%", "height": "600px", "background": "transparent"},
-                                stylesheet=_base_stylesheet(),
-                                responsive=True,
-                            )
-                        ],
-                    ),
-                    html.Div(
-                        id="social-info-panel",
-                        style={
-                            "width": "260px", "flexShrink": 0,
-                            "background": "rgba(28,28,30,0.7)",
-                            "borderRadius": "16px",
-                            "border": "1px solid rgba(255,255,255,0.1)",
-                            "padding": "24px",
-                            "height": "fit-content",
-                            "alignSelf": "flex-start",
-                        },
-                        children=_empty_panel(),
-                    ),
+                    )
                 ],
             ),
 
-            # ── Tableau des interactions ─────────────────────────────────────
             html.Div(
                 style={"padding": "0 48px 60px"},
                 children=[
@@ -309,14 +359,17 @@ def layout():
                     dash_table.DataTable(
                         id="social-table",
                         columns=[
-                            {"name": "Pseudo", "id": "Pseudo", "type": "text"},
+                            {"name": "Pseudo",   "id": "Pseudo",   "type": "text"},
                             {"name": "Messages", "id": "Messages", "type": "numeric"},
                         ],
                         data=table_data,
                         sort_action="native",
                         filter_action="native",
                         page_size=15,
-                        style_table={"borderRadius": "12px", "overflow": "hidden", "border": "1px solid rgba(255,255,255,0.08)"},
+                        style_table={
+                            "borderRadius": "12px", "overflow": "hidden",
+                            "border": "1px solid rgba(255,255,255,0.08)",
+                        },
                         style_header={
                             "backgroundColor": "rgba(30,30,35,1)",
                             "color": "var(--text-primary)",
@@ -332,63 +385,13 @@ def layout():
                             "textAlign": "left",
                             "fontFamily": "inherit",
                         },
-                        style_data_conditional=[
-                            {
-                                "if": {"state": "active"},
-                                "backgroundColor": "rgba(109, 94, 245, 0.2)",
-                                "border": "1px solid var(--accent-primary)",
-                            }
-                        ],
+                        style_data_conditional=[{
+                            "if": {"state": "active"},
+                            "backgroundColor": "rgba(109,94,245,0.2)",
+                            "border": "1px solid var(--accent-primary)",
+                        }],
                     ),
                 ],
             ),
         ],
     )
-
-
-# ─── HELPERS PANEL ───────────────────────────────────────────────────────────
-def _empty_panel():
-    return [html.P("Passe la souris sur un nœud", style={
-        "fontSize": "13px", "color": "var(--text-muted)",
-        "textAlign": "center", "marginTop": "60px",
-    })]
-
-
-def _node_panel(node_data: dict) -> list:
-    label    = node_data.get("label", "")
-    msg      = node_data.get("msg_count", 0)
-    is_close = node_data.get("is_close", False)
-
-    return [
-        html.H3(f"@{label}", style={
-            "fontSize": "18px", "fontWeight": "700",
-            "color": "var(--text-primary)", "margin": "0 0 8px",
-            "wordBreak": "break-all",
-        }),
-        html.Span("⭐ Close friend" if is_close else "Follower", style={
-            "display": "inline-block", "padding": "3px 10px",
-            "borderRadius": "12px", "fontSize": "12px", "fontWeight": "600",
-            "background": "#bf5af2" if is_close else "rgba(255,255,255,0.1)",
-            "color": "#fff", "marginBottom": "16px",
-        }),
-        html.Hr(style={"border": "none", "borderTop": "1px solid rgba(255,255,255,0.1)", "margin": "12px 0"}),
-        html.Div(style={"display": "flex", "justifyContent": "space-between"}, children=[
-            html.Span("💬 Messages", style={"fontSize": "13px", "color": "var(--text-muted)"}),
-            html.Span(f"{msg:,}", style={"fontSize": "14px", "fontWeight": "600", "color": "var(--text-primary)"}),
-        ]),
-    ]
-
-
-# ─── CALLBACKS ───────────────────────────────────────────────────────────────
-@callback(
-    Output("social-graph", "stylesheet"),
-    Output("social-info-panel", "children"),
-    Input("social-graph", "mouseoverNodeData"),
-)
-def on_hover(hover_data):
-    if not hover_data:
-        return _base_stylesheet(None), _empty_panel()
-
-    hovered_id = hover_data.get("id")
-    panel = _node_panel(hover_data) if hovered_id != "arnaud" else _empty_panel()
-    return _base_stylesheet(hovered_id), panel
