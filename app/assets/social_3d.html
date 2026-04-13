@@ -1,0 +1,217 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8"/>
+  <style>
+    * { margin:0; padding:0; box-sizing:border-box; }
+    body {
+      background: radial-gradient(ellipse at 50% 40%, #130d2e 0%, #07051a 55%, #030210 100%);
+      overflow: hidden;
+      font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Segoe UI', sans-serif;
+    }
+    #g { width:100vw; height:100vh; }
+
+    /* ── Info card (bottom-right) ── */
+    #card {
+      position: fixed; bottom: 28px; right: 28px; width: 230px;
+      background: rgba(10, 7, 26, 0.80);
+      backdrop-filter: blur(28px) saturate(160%);
+      -webkit-backdrop-filter: blur(28px) saturate(160%);
+      border: 1px solid rgba(168,85,247,0.22);
+      border-radius: 20px; padding: 20px 22px;
+      color:#fff; pointer-events:none;
+      box-shadow: 0 12px 48px rgba(0,0,0,0.55), inset 0 0 0 1px rgba(255,255,255,0.04);
+      opacity:0; transform:translateY(14px);
+      transition: opacity .22s ease, transform .28s cubic-bezier(.34,1.5,.64,1);
+    }
+    #card.on { opacity:1; transform:translateY(0); }
+    #card-avatar {
+      width:42px; height:42px; border-radius:50%;
+      display:flex; align-items:center; justify-content:center;
+      font-size:15px; font-weight:700; margin-bottom:13px;
+      background:rgba(168,85,247,.18); border:1.5px solid rgba(168,85,247,.5);
+      letter-spacing:.5px;
+    }
+    #card-avatar.fol {
+      background:rgba(59,79,160,.18); border-color:rgba(99,119,200,.45);
+    }
+    #card-name { font-size:15px; font-weight:700; color:#ede8ff; margin-bottom:4px; }
+    #card-badge {
+      display:inline-block; font-size:10px; font-weight:700;
+      letter-spacing:.8px; text-transform:uppercase;
+      padding:3px 10px; border-radius:20px; margin-bottom:15px;
+    }
+    #card-badge.cf  { background:rgba(168,85,247,.22); color:#c084fc; }
+    #card-badge.fol { background:rgba(59,79,160,.22);  color:#93a8d4; }
+    .card-row {
+      display:flex; justify-content:space-between; align-items:center;
+      padding-top:12px; border-top:1px solid rgba(255,255,255,.07);
+    }
+    .card-row-lbl { font-size:12px; color:rgba(255,255,255,.4); }
+    .card-row-val { font-size:14px; font-weight:600; color:#e8dfff; }
+
+    /* ── Legend ── */
+    #legend {
+      position:fixed; top:18px; right:18px;
+      background:rgba(10,7,26,.72);
+      backdrop-filter:blur(16px); -webkit-backdrop-filter:blur(16px);
+      border:1px solid rgba(255,255,255,.08);
+      border-radius:14px; padding:13px 16px;
+      color:#fff; font-size:12px; pointer-events:none;
+    }
+    .leg { display:flex; align-items:center; gap:9px; margin-bottom:7px; }
+    .leg:last-child { margin-bottom:0; }
+    .leg-dot { width:9px; height:9px; border-radius:50%; flex-shrink:0; }
+    .leg-lbl { color:rgba(255,255,255,.55); }
+
+    /* ── Force-graph tooltip override ── */
+    #graph-tooltip {
+      pointer-events: none !important;
+      background: transparent !important;
+      border: none !important;
+      padding: 0 !important;
+    }
+
+    /* ── Hint ── */
+    #hint {
+      position:fixed; bottom:20px; left:50%; transform:translateX(-50%);
+      background:rgba(10,7,26,.65); backdrop-filter:blur(12px);
+      border:1px solid rgba(255,255,255,.07); border-radius:30px;
+      padding:7px 18px; font-size:11px; color:rgba(255,255,255,.38);
+      pointer-events:none; letter-spacing:.3px;
+      transition:opacity 1s ease;
+    }
+  </style>
+</head>
+<body>
+  <div id="g"></div>
+
+  <!-- Info card -->
+  <div id="card">
+    <div id="card-avatar">AB</div>
+    <div id="card-name">@username</div>
+    <div id="card-badge" class="cf">⭐ Close Friend</div>
+    <div class="card-row">
+      <span class="card-row-lbl">💬 Messages</span>
+      <span class="card-row-val" id="card-msgs">—</span>
+    </div>
+  </div>
+
+  <!-- Legend -->
+  <div id="legend">
+    <div class="leg">
+      <div class="leg-dot" style="background:#f0f0ff;box-shadow:0 0 5px #fff"></div>
+      <span class="leg-lbl">Arnaud</span>
+    </div>
+    <div class="leg">
+      <div class="leg-dot" style="background:#a855f7;box-shadow:0 0 5px rgba(168,85,247,.9)"></div>
+      <span class="leg-lbl">Close friends</span>
+    </div>
+    <div class="leg">
+      <div class="leg-dot" style="background:#3b4fa0"></div>
+      <span class="leg-lbl">Followers</span>
+    </div>
+  </div>
+
+  <!-- Hint -->
+  <div id="hint">Drag to orbit &nbsp;·&nbsp; Scroll to zoom &nbsp;·&nbsp; Click to focus</div>
+
+  <script src="/assets/3d-force-graph.min.js"></script>
+  <script>
+    const graphData = {"nodes": [{"id": "arnaud", "label": "Arnaud", "is_close": false, "msg_count": 0, "val": 80}, {"id": "lou_1085673686153338", "label": "lou", "is_close": true, "msg_count": 66685, "val": 64}, {"id": "nana_18068525429472883", "label": "nana", "is_close": true, "msg_count": 34809, "val": 42}, {"id": "pilou_519116326140721", "label": "pilou", "is_close": true, "msg_count": 24502, "val": 36}, {"id": "maelle_17935615418472883", "label": "maelle", "is_close": true, "msg_count": 22257, "val": 34}, {"id": "jen_945836883473151", "label": "jen", "is_close": true, "msg_count": 16506, "val": 30}, {"id": "djyoyo_489918669070722", "label": "djyoyo", "is_close": true, "msg_count": 12506, "val": 28}, {"id": "evan_17940018788164627", "label": "evan", "is_close": true, "msg_count": 11607, "val": 27}, {"id": "laura_994708765285921", "label": "laura", "is_close": true, "msg_count": 10762, "val": 27}, {"id": "loulou_1188711339191134", "label": "loulou", "is_close": true, "msg_count": 9920, "val": 26}, {"id": "alice_1204248657633025", "label": "alice", "is_close": true, "msg_count": 9726, "val": 26}, {"id": "gabi_1275393733851743", "label": "gabi", "is_close": true, "msg_count": 6502, "val": 24}, {"id": "3li0tttt_17939266904472883", "label": "3li0tttt", "is_close": true, "msg_count": 5306, "val": 23}, {"id": "mylene_802792480745084", "label": "mylene", "is_close": true, "msg_count": 3695, "val": 22}, {"id": "laure_1094343585289278", "label": "laure", "is_close": false, "msg_count": 4974, "val": 1}, {"id": "sachou_640528687441288", "label": "sachou", "is_close": true, "msg_count": 2258, "val": 21}, {"id": "manonvandy_1292074112190912", "label": "manonvandy", "is_close": true, "msg_count": 2032, "val": 21}, {"id": "estelle_999713171428465", "label": "estelle", "is_close": false, "msg_count": 3461, "val": 1}, {"id": "hugobernard_732765141576345", "label": "hugobernard", "is_close": true, "msg_count": 1543, "val": 21}, {"id": "_paulinalambin_824971795573896", "label": "_paulinalambin", "is_close": true, "msg_count": 1517, "val": 21}, {"id": "fafie_1121444139243508", "label": "fafie", "is_close": true, "msg_count": 1117, "val": 20}, {"id": "erwan_697528161734627", "label": "erwan", "is_close": true, "msg_count": 1092, "val": 20}, {"id": "jo_573791184015710", "label": "jo", "is_close": false, "msg_count": 1839, "val": 1}, {"id": "samuel_213310734290407", "label": "samuel", "is_close": false, "msg_count": 1448, "val": 1}, {"id": "manonnnn_prv_913542383452351", "label": "manonnnn_prv", "is_close": false, "msg_count": 1176, "val": 1}, {"id": "fredfnmz_228212342448435", "label": "fredfnmz", "is_close": true, "msg_count": 564, "val": 20}, {"id": "aurianevanasselt_1089808882406704", "label": "aurianevanasselt", "is_close": false, "msg_count": 841, "val": 1}, {"id": "jerome_570378324355521", "label": "jerome", "is_close": true, "msg_count": 401, "val": 20}, {"id": "eleabr__1226020692130780", "label": "eleabr_", "is_close": false, "msg_count": 746, "val": 1}, {"id": "lenysoetaerts_17999821868472883", "label": "lenysoetaerts", "is_close": true, "msg_count": 328, "val": 20}, {"id": "_zoealbert__18005989349472883", "label": "_zoealbert_", "is_close": false, "msg_count": 576, "val": 1}, {"id": "vic_1114899529906843", "label": "vic", "is_close": true, "msg_count": 271, "val": 20}, {"id": "clara_1249381813115118", "label": "clara", "is_close": true, "msg_count": 263, "val": 20}, {"id": "moustaboy_1029150635145089", "label": "moustaboy", "is_close": false, "msg_count": 503, "val": 1}, {"id": "celia_1366428128080987", "label": "celia", "is_close": false, "msg_count": 411, "val": 1}, {"id": "mattpetit9_990272952365950", "label": "mattpetit9", "is_close": false, "msg_count": 384, "val": 1}, {"id": "zo_1437188227679472", "label": "zo", "is_close": true, "msg_count": 188, "val": 20}, {"id": "victor_996469818416214", "label": "victor", "is_close": false, "msg_count": 363, "val": 1}, {"id": "adamvdd_422846189105961", "label": "adamvdd", "is_close": true, "msg_count": 168, "val": 20}, {"id": "prout_9185793844826042", "label": "prout", "is_close": false, "msg_count": 316, "val": 1}, {"id": "547307596667329", "label": "547307596667329", "is_close": false, "msg_count": 306, "val": 1}, {"id": "ts_983142933077574", "label": "ts", "is_close": false, "msg_count": 271, "val": 1}, {"id": "lulu_1551519559574000", "label": "lulu", "is_close": false, "msg_count": 258, "val": 1}, {"id": "melchior_1073231450759592", "label": "melchior", "is_close": false, "msg_count": 180, "val": 1}, {"id": "evaaadg_1100247177168688", "label": "evaaadg", "is_close": false, "msg_count": 173, "val": 1}, {"id": "timdelhez_1607389107318932", "label": "timdelhez", "is_close": false, "msg_count": 172, "val": 1}, {"id": "ama_17970077582700199", "label": "ama", "is_close": false, "msg_count": 163, "val": 1}, {"id": "romane_1357028805748638", "label": "romane", "is_close": true, "msg_count": 64, "val": 20}, {"id": "jojo_466211854818247", "label": "jojo", "is_close": false, "msg_count": 113, "val": 1}, {"id": "maxus_18001748177472883", "label": "maxus", "is_close": false, "msg_count": 110, "val": 1}, {"id": "lu_1310207683709029", "label": "lu", "is_close": false, "msg_count": 95, "val": 1}, {"id": "igor_gqt_801143051277097", "label": "igor_gqt", "is_close": false, "msg_count": 94, "val": 1}, {"id": "louisvanimpe_1179478830112861", "label": "louisvanimpe", "is_close": false, "msg_count": 91, "val": 1}, {"id": "jasonios_1411071023615850", "label": "jasonios", "is_close": false, "msg_count": 90, "val": 1}, {"id": "maaa_18000452297515186", "label": "maaa", "is_close": false, "msg_count": 90, "val": 1}, {"id": "nwra_1200805694647182", "label": "nwra", "is_close": false, "msg_count": 87, "val": 1}, {"id": "noegermain_18068424521472883", "label": "noegermain", "is_close": false, "msg_count": 86, "val": 1}, {"id": "steven_1140532557338204", "label": "steven", "is_close": false, "msg_count": 85, "val": 1}, {"id": "m_18084406424472883", "label": "m", "is_close": false, "msg_count": 85, "val": 1}, {"id": "gillou_659207765652940", "label": "gillou", "is_close": false, "msg_count": 70, "val": 1}, {"id": "maxence_587048146027207", "label": "maxence", "is_close": false, "msg_count": 55, "val": 1}, {"id": "maudinette_1667102874689525", "label": "maudinette", "is_close": false, "msg_count": 51, "val": 1}, {"id": "lucie_564582054812025", "label": "lucie", "is_close": false, "msg_count": 46, "val": 1}, {"id": "laora_1248978103167916", "label": "laora", "is_close": false, "msg_count": 45, "val": 1}, {"id": "maison23_1780759033310605", "label": "maison23", "is_close": false, "msg_count": 44, "val": 1}, {"id": "nora_1755862099145252", "label": "nora", "is_close": false, "msg_count": 42, "val": 1}, {"id": "hu_donat_307296814399994", "label": "hu_donat", "is_close": false, "msg_count": 41, "val": 1}, {"id": "matt_1355036145896122", "label": "matt", "is_close": false, "msg_count": 41, "val": 1}, {"id": "madaclub_1768509987884620", "label": "madaclub", "is_close": false, "msg_count": 41, "val": 1}, {"id": "sachh_1267592481301293", "label": "sachh", "is_close": false, "msg_count": 37, "val": 1}, {"id": "kimmmm_1211936733532240", "label": "kimmmm", "is_close": false, "msg_count": 35, "val": 1}, {"id": "jexenhess_18077889110472883", "label": "jexenhess", "is_close": false, "msg_count": 35, "val": 1}, {"id": "luka_1545639320159687", "label": "luka", "is_close": false, "msg_count": 34, "val": 1}, {"id": "syb_18024816194472883", "label": "syb", "is_close": false, "msg_count": 34, "val": 1}, {"id": "loyd_1631602001572122", "label": "loyd", "is_close": false, "msg_count": 28, "val": 1}, {"id": "fafita_18053876219472883", "label": "fafita", "is_close": false, "msg_count": 27, "val": 1}, {"id": "sofia_1712679810122187", "label": "sofia", "is_close": false, "msg_count": 25, "val": 1}, {"id": "nononieco_18_1896663148395371", "label": "nononieco_18", "is_close": false, "msg_count": 24, "val": 1}, {"id": "saaan_1084792279586239", "label": "saaan", "is_close": false, "msg_count": 24, "val": 1}, {"id": "mmnk01_1326356535532956", "label": "mmnk01", "is_close": false, "msg_count": 23, "val": 1}, {"id": "tsalvaaa_1856655419057267", "label": "tsalvaaa", "is_close": false, "msg_count": 22, "val": 1}, {"id": "djm4ss_1857413722314927", "label": "djm4ss", "is_close": false, "msg_count": 22, "val": 1}, {"id": "206vibes_17865832590576318", "label": "206vibes", "is_close": false, "msg_count": 22, "val": 1}, {"id": "mamolava_17990406713472883", "label": "mamolava", "is_close": false, "msg_count": 19, "val": 1}, {"id": "ethansterckx_1737478124313194", "label": "ethansterckx", "is_close": false, "msg_count": 18, "val": 1}, {"id": "elianepiquerez_3210448272570057", "label": "elianepiquerez", "is_close": false, "msg_count": 16, "val": 1}, {"id": "17943990356472883", "label": "17943990356472883", "is_close": false, "msg_count": 16, "val": 1}, {"id": "martin_1358582462204648", "label": "martin", "is_close": false, "msg_count": 16, "val": 1}, {"id": "bigt_532341424823371", "label": "bigt", "is_close": false, "msg_count": 15, "val": 1}, {"id": "anais_1726430015426506", "label": "anais", "is_close": false, "msg_count": 15, "val": 1}, {"id": "merlijnlmt_18034334354472883", "label": "merlijnlmt", "is_close": false, "msg_count": 15, "val": 1}, {"id": "mateosyko_18080633303098045", "label": "mateosyko", "is_close": false, "msg_count": 14, "val": 1}, {"id": "pge_18045161903472883", "label": "pge", "is_close": false, "msg_count": 14, "val": 1}, {"id": "chia_18058846661530104", "label": "chia", "is_close": false, "msg_count": 13, "val": 1}, {"id": "chloe_17860545987454965", "label": "chloe", "is_close": false, "msg_count": 13, "val": 1}, {"id": "crossfader_1872127860851862", "label": "crossfader", "is_close": false, "msg_count": 13, "val": 1}, {"id": "liana_1796705391724221", "label": "liana", "is_close": false, "msg_count": 13, "val": 1}, {"id": "renato_1767648551294002", "label": "renato", "is_close": false, "msg_count": 13, "val": 1}, {"id": "magyvther_18073465256565015", "label": "magyvther", "is_close": false, "msg_count": 12, "val": 1}, {"id": "maya_1613377586726109", "label": "maya", "is_close": false, "msg_count": 12, "val": 1}, {"id": "utilisateurinstagram_1326146775632416", "label": "utilisateurinstagram", "is_close": false, "msg_count": 12, "val": 1}, {"id": "n_18068529977472883", "label": "n", "is_close": false, "msg_count": 12, "val": 1}, {"id": "isa72_567165934646402", "label": "isa72", "is_close": false, "msg_count": 11, "val": 1}, {"id": "cam_1875291843865156", "label": "cam", "is_close": false, "msg_count": 10, "val": 1}, {"id": "ka_969565301110770", "label": "ka", "is_close": false, "msg_count": 10, "val": 1}, {"id": "alice_1093935518743724", "label": "alice", "is_close": true, "msg_count": 5, "val": 20}, {"id": "jason_1184813299583373", "label": "jason", "is_close": false, "msg_count": 10, "val": 1}, {"id": "evan_6857168627650302", "label": "evan", "is_close": true, "msg_count": 5, "val": 20}, {"id": "adelineraymond_1371919620869156", "label": "adelineraymond", "is_close": false, "msg_count": 8, "val": 1}, {"id": "maeline_wth_1588572465909548", "label": "maeline_wth", "is_close": false, "msg_count": 8, "val": 1}, {"id": "noa_1452001552866998", "label": "noa", "is_close": false, "msg_count": 8, "val": 1}, {"id": "martinhernaut_18082738877080401", "label": "martinhernaut", "is_close": false, "msg_count": 8, "val": 1}, {"id": "camille_1737597340970755", "label": "camille", "is_close": false, "msg_count": 7, "val": 1}, {"id": "jeanbaptiste_3877304002373021", "label": "jeanbaptiste", "is_close": false, "msg_count": 7, "val": 1}, {"id": "emma_1933261718072161", "label": "emma", "is_close": false, "msg_count": 7, "val": 1}, {"id": "seriecoco_953769462684166", "label": "seriecoco", "is_close": false, "msg_count": 7, "val": 1}, {"id": "jess_1180729626745017", "label": "jess", "is_close": false, "msg_count": 6, "val": 1}, {"id": "elie_568292561235511", "label": "elie", "is_close": false, "msg_count": 6, "val": 1}, {"id": "eloanne_1287513449447324", "label": "eloanne", "is_close": false, "msg_count": 6, "val": 1}, {"id": "ene10taerre_1767801174610396", "label": "ene10taerre", "is_close": false, "msg_count": 6, "val": 1}, {"id": "lina_1300397328077203", "label": "lina", "is_close": false, "msg_count": 6, "val": 1}, {"id": "mia_566471644747444", "label": "mia", "is_close": false, "msg_count": 6, "val": 1}, {"id": "sacha_18082662077472883", "label": "sacha", "is_close": false, "msg_count": 6, "val": 1}, {"id": "lylou_18023162900472883", "label": "lylou", "is_close": false, "msg_count": 6, "val": 1}, {"id": "emma_1739608540760478", "label": "emma", "is_close": false, "msg_count": 5, "val": 1}, {"id": "julienpilliez_851307463104208", "label": "julienpilliez", "is_close": false, "msg_count": 5, "val": 1}, {"id": "illiasyn_213278984086987", "label": "illiasyn", "is_close": false, "msg_count": 5, "val": 1}, {"id": "titoumz_18023165003472883", "label": "titoumz", "is_close": false, "msg_count": 5, "val": 1}, {"id": "utilisateurinstagram_1901842434546199", "label": "utilisateurinstagram", "is_close": false, "msg_count": 5, "val": 1}], "links": [{"source": "arnaud", "target": "lou_1085673686153338", "is_close": true, "width": 2.8}, {"source": "arnaud", "target": "nana_18068525429472883", "is_close": true, "width": 1.8}, {"source": "arnaud", "target": "pilou_519116326140721", "is_close": true, "width": 0.8}, {"source": "arnaud", "target": "maelle_17935615418472883", "is_close": true, "width": 0.8}, {"source": "arnaud", "target": "jen_945836883473151", "is_close": true, "width": 0.8}, {"source": "arnaud", "target": "djyoyo_489918669070722", "is_close": true, "width": 0.8}, {"source": "arnaud", "target": "evan_17940018788164627", "is_close": true, "width": 0.8}, {"source": "arnaud", "target": "laura_994708765285921", "is_close": true, "width": 0.8}, {"source": "arnaud", "target": "loulou_1188711339191134", "is_close": true, "width": 0.8}, {"source": "arnaud", "target": "alice_1204248657633025", "is_close": true, "width": 0.8}, {"source": "arnaud", "target": "gabi_1275393733851743", "is_close": true, "width": 0.8}, {"source": "arnaud", "target": "3li0tttt_17939266904472883", "is_close": true, "width": 0.8}, {"source": "arnaud", "target": "mylene_802792480745084", "is_close": true, "width": 0.8}, {"source": "arnaud", "target": "laure_1094343585289278", "is_close": false, "width": 0.8}, {"source": "arnaud", "target": "sachou_640528687441288", "is_close": true, "width": 0.8}, {"source": "arnaud", "target": "manonvandy_1292074112190912", "is_close": true, "width": 0.8}, {"source": "arnaud", "target": "estelle_999713171428465", "is_close": false, "width": 0.8}, {"source": "arnaud", "target": "hugobernard_732765141576345", "is_close": true, "width": 0.8}, {"source": "arnaud", "target": "_paulinalambin_824971795573896", "is_close": true, "width": 0.8}, {"source": "arnaud", "target": "fafie_1121444139243508", "is_close": true, "width": 0.8}, {"source": "arnaud", "target": "erwan_697528161734627", "is_close": true, "width": 0.8}, {"source": "arnaud", "target": "jo_573791184015710", "is_close": false, "width": 0.8}, {"source": "arnaud", "target": "samuel_213310734290407", "is_close": false, "width": 0.8}, {"source": "arnaud", "target": "manonnnn_prv_913542383452351", "is_close": false, "width": 0.8}, {"source": "arnaud", "target": "fredfnmz_228212342448435", "is_close": true, "width": 0.8}, {"source": "arnaud", "target": "aurianevanasselt_1089808882406704", "is_close": false, "width": 0.8}, {"source": "arnaud", "target": "jerome_570378324355521", "is_close": true, "width": 0.8}, {"source": "arnaud", "target": "eleabr__1226020692130780", "is_close": false, "width": 0.8}, {"source": "arnaud", "target": "lenysoetaerts_17999821868472883", "is_close": true, "width": 0.8}, {"source": "arnaud", "target": "_zoealbert__18005989349472883", "is_close": false, "width": 0.8}, {"source": "arnaud", "target": "vic_1114899529906843", "is_close": true, "width": 0.8}, {"source": "arnaud", "target": "clara_1249381813115118", "is_close": true, "width": 0.8}, {"source": "arnaud", "target": "moustaboy_1029150635145089", "is_close": false, "width": 0.8}, {"source": "arnaud", "target": "celia_1366428128080987", "is_close": false, "width": 0.8}, {"source": "arnaud", "target": "mattpetit9_990272952365950", "is_close": false, "width": 0.8}, {"source": "arnaud", "target": "zo_1437188227679472", "is_close": true, "width": 0.8}, {"source": "arnaud", "target": "victor_996469818416214", "is_close": false, "width": 0.8}, {"source": "arnaud", "target": "adamvdd_422846189105961", "is_close": true, "width": 0.8}, {"source": "arnaud", "target": "prout_9185793844826042", "is_close": false, "width": 0.8}, {"source": "arnaud", "target": "547307596667329", "is_close": false, "width": 0.8}, {"source": "arnaud", "target": "ts_983142933077574", "is_close": false, "width": 0.8}, {"source": "arnaud", "target": "lulu_1551519559574000", "is_close": false, "width": 0.8}, {"source": "arnaud", "target": "melchior_1073231450759592", "is_close": false, "width": 0.8}, {"source": "arnaud", "target": "evaaadg_1100247177168688", "is_close": false, "width": 0.8}, {"source": "arnaud", "target": "timdelhez_1607389107318932", "is_close": false, "width": 0.8}, {"source": "arnaud", "target": "ama_17970077582700199", "is_close": false, "width": 0.8}, {"source": "arnaud", "target": "romane_1357028805748638", "is_close": true, "width": 0.8}, {"source": "arnaud", "target": "jojo_466211854818247", "is_close": false, "width": 0.8}, {"source": "arnaud", "target": "maxus_18001748177472883", "is_close": false, "width": 0.8}, {"source": "arnaud", "target": "lu_1310207683709029", "is_close": false, "width": 0.8}, {"source": "arnaud", "target": "igor_gqt_801143051277097", "is_close": false, "width": 0.8}, {"source": "arnaud", "target": "louisvanimpe_1179478830112861", "is_close": false, "width": 0.8}, {"source": "arnaud", "target": "jasonios_1411071023615850", "is_close": false, "width": 0.8}, {"source": "arnaud", "target": "maaa_18000452297515186", "is_close": false, "width": 0.8}, {"source": "arnaud", "target": "nwra_1200805694647182", "is_close": false, "width": 0.8}, {"source": "arnaud", "target": "noegermain_18068424521472883", "is_close": false, "width": 0.8}, {"source": "arnaud", "target": "steven_1140532557338204", "is_close": false, "width": 0.8}, {"source": "arnaud", "target": "m_18084406424472883", "is_close": false, "width": 0.8}, {"source": "arnaud", "target": "gillou_659207765652940", "is_close": false, "width": 0.8}, {"source": "arnaud", "target": "maxence_587048146027207", "is_close": false, "width": 0.8}, {"source": "arnaud", "target": "maudinette_1667102874689525", "is_close": false, "width": 0.8}, {"source": "arnaud", "target": "lucie_564582054812025", "is_close": false, "width": 0.8}, {"source": "arnaud", "target": "laora_1248978103167916", "is_close": false, "width": 0.8}, {"source": "arnaud", "target": "maison23_1780759033310605", "is_close": false, "width": 0.8}, {"source": "arnaud", "target": "nora_1755862099145252", "is_close": false, "width": 0.8}, {"source": "arnaud", "target": "hu_donat_307296814399994", "is_close": false, "width": 0.8}, {"source": "arnaud", "target": "matt_1355036145896122", "is_close": false, "width": 0.8}, {"source": "arnaud", "target": "madaclub_1768509987884620", "is_close": false, "width": 0.8}, {"source": "arnaud", "target": "sachh_1267592481301293", "is_close": false, "width": 0.8}, {"source": "arnaud", "target": "kimmmm_1211936733532240", "is_close": false, "width": 0.8}, {"source": "arnaud", "target": "jexenhess_18077889110472883", "is_close": false, "width": 0.8}, {"source": "arnaud", "target": "luka_1545639320159687", "is_close": false, "width": 0.8}, {"source": "arnaud", "target": "syb_18024816194472883", "is_close": false, "width": 0.8}, {"source": "arnaud", "target": "loyd_1631602001572122", "is_close": false, "width": 0.8}, {"source": "arnaud", "target": "fafita_18053876219472883", "is_close": false, "width": 0.8}, {"source": "arnaud", "target": "sofia_1712679810122187", "is_close": false, "width": 0.8}, {"source": "arnaud", "target": "nononieco_18_1896663148395371", "is_close": false, "width": 0.8}, {"source": "arnaud", "target": "saaan_1084792279586239", "is_close": false, "width": 0.8}, {"source": "arnaud", "target": "mmnk01_1326356535532956", "is_close": false, "width": 0.8}, {"source": "arnaud", "target": "tsalvaaa_1856655419057267", "is_close": false, "width": 0.8}, {"source": "arnaud", "target": "djm4ss_1857413722314927", "is_close": false, "width": 0.8}, {"source": "arnaud", "target": "206vibes_17865832590576318", "is_close": false, "width": 0.8}, {"source": "arnaud", "target": "mamolava_17990406713472883", "is_close": false, "width": 0.8}, {"source": "arnaud", "target": "ethansterckx_1737478124313194", "is_close": false, "width": 0.8}, {"source": "arnaud", "target": "elianepiquerez_3210448272570057", "is_close": false, "width": 0.8}, {"source": "arnaud", "target": "17943990356472883", "is_close": false, "width": 0.8}, {"source": "arnaud", "target": "martin_1358582462204648", "is_close": false, "width": 0.8}, {"source": "arnaud", "target": "bigt_532341424823371", "is_close": false, "width": 0.8}, {"source": "arnaud", "target": "anais_1726430015426506", "is_close": false, "width": 0.8}, {"source": "arnaud", "target": "merlijnlmt_18034334354472883", "is_close": false, "width": 0.8}, {"source": "arnaud", "target": "mateosyko_18080633303098045", "is_close": false, "width": 0.8}, {"source": "arnaud", "target": "pge_18045161903472883", "is_close": false, "width": 0.8}, {"source": "arnaud", "target": "chia_18058846661530104", "is_close": false, "width": 0.8}, {"source": "arnaud", "target": "chloe_17860545987454965", "is_close": false, "width": 0.8}, {"source": "arnaud", "target": "crossfader_1872127860851862", "is_close": false, "width": 0.8}, {"source": "arnaud", "target": "liana_1796705391724221", "is_close": false, "width": 0.8}, {"source": "arnaud", "target": "renato_1767648551294002", "is_close": false, "width": 0.8}, {"source": "arnaud", "target": "magyvther_18073465256565015", "is_close": false, "width": 0.8}, {"source": "arnaud", "target": "maya_1613377586726109", "is_close": false, "width": 0.8}, {"source": "arnaud", "target": "utilisateurinstagram_1326146775632416", "is_close": false, "width": 0.8}, {"source": "arnaud", "target": "n_18068529977472883", "is_close": false, "width": 0.8}, {"source": "arnaud", "target": "isa72_567165934646402", "is_close": false, "width": 0.8}, {"source": "arnaud", "target": "cam_1875291843865156", "is_close": false, "width": 0.8}, {"source": "arnaud", "target": "ka_969565301110770", "is_close": false, "width": 0.8}, {"source": "arnaud", "target": "alice_1093935518743724", "is_close": true, "width": 0.8}, {"source": "arnaud", "target": "jason_1184813299583373", "is_close": false, "width": 0.8}, {"source": "arnaud", "target": "evan_6857168627650302", "is_close": true, "width": 0.8}, {"source": "arnaud", "target": "adelineraymond_1371919620869156", "is_close": false, "width": 0.8}, {"source": "arnaud", "target": "maeline_wth_1588572465909548", "is_close": false, "width": 0.8}, {"source": "arnaud", "target": "noa_1452001552866998", "is_close": false, "width": 0.8}, {"source": "arnaud", "target": "martinhernaut_18082738877080401", "is_close": false, "width": 0.8}, {"source": "arnaud", "target": "camille_1737597340970755", "is_close": false, "width": 0.8}, {"source": "arnaud", "target": "jeanbaptiste_3877304002373021", "is_close": false, "width": 0.8}, {"source": "arnaud", "target": "emma_1933261718072161", "is_close": false, "width": 0.8}, {"source": "arnaud", "target": "seriecoco_953769462684166", "is_close": false, "width": 0.8}, {"source": "arnaud", "target": "jess_1180729626745017", "is_close": false, "width": 0.8}, {"source": "arnaud", "target": "elie_568292561235511", "is_close": false, "width": 0.8}, {"source": "arnaud", "target": "eloanne_1287513449447324", "is_close": false, "width": 0.8}, {"source": "arnaud", "target": "ene10taerre_1767801174610396", "is_close": false, "width": 0.8}, {"source": "arnaud", "target": "lina_1300397328077203", "is_close": false, "width": 0.8}, {"source": "arnaud", "target": "mia_566471644747444", "is_close": false, "width": 0.8}, {"source": "arnaud", "target": "sacha_18082662077472883", "is_close": false, "width": 0.8}, {"source": "arnaud", "target": "lylou_18023162900472883", "is_close": false, "width": 0.8}, {"source": "arnaud", "target": "emma_1739608540760478", "is_close": false, "width": 0.8}, {"source": "arnaud", "target": "julienpilliez_851307463104208", "is_close": false, "width": 0.8}, {"source": "arnaud", "target": "illiasyn_213278984086987", "is_close": false, "width": 0.8}, {"source": "arnaud", "target": "titoumz_18023165003472883", "is_close": false, "width": 0.8}, {"source": "arnaud", "target": "utilisateurinstagram_1901842434546199", "is_close": false, "width": 0.8}]};
+
+    let hoveredId = null;
+
+    function nColor(n) {
+      if (n.id === 'arnaud') return '#f0f0ff';
+      if (hoveredId && n.id !== hoveredId) return n.is_close ? '#6a2fa0' : '#232338';
+      return n.is_close ? '#a855f7' : '#3b4fa0';
+    }
+    function lColor(l) {
+      const tgt = typeof l.target === 'object' ? l.target.id : l.target;
+      if (hoveredId && tgt !== hoveredId) return 'rgba(0,0,0,0)';
+      return l.is_close ? 'rgba(168,85,247,0.55)' : 'rgba(59,79,160,0.2)';
+    }
+
+    const Graph = ForceGraph3D({ controlType: 'orbit' })(document.getElementById('g'))
+      .graphData(graphData)
+      .backgroundColor('rgba(0,0,0,0)')
+      .showNavInfo(false)
+      .nodeVal(n => n.val)
+      .nodeRelSize(4)
+      .nodeColor(nColor)
+      .nodeOpacity(0.92)
+      .nodeResolution(24)
+      .linkColor(lColor)
+      .linkWidth(l => l.width)
+      .linkDirectionalParticles(l => l.is_close ? 6 : 2)
+      .linkDirectionalParticleWidth(l => l.is_close ? 2.5 : 1.2)
+      .linkDirectionalParticleColor(l => l.is_close ? '#c084fc' : '#6b7db3')
+      .linkDirectionalParticleSpeed(l => l.is_close ? 0.005 : 0.003)
+      .nodeLabel(node => {
+        const badge = node.is_close
+          ? '<span style="background:rgba(168,85,247,.25);color:#c084fc;padding:2px 8px;border-radius:12px;font-size:10px;font-weight:700;letter-spacing:.8px;text-transform:uppercase">⭐ Close Friend</span>'
+          : (node.id === 'arnaud' ? '' : '<span style="background:rgba(59,79,160,.2);color:#93a8d4;padding:2px 8px;border-radius:12px;font-size:10px;font-weight:700;letter-spacing:.8px;text-transform:uppercase">Follower</span>');
+        const msgs = node.msg_count > 0
+          ? `<div style="margin-top:6px;font-size:12px;color:rgba(255,255,255,.45)">💬 ${node.msg_count.toLocaleString()} messages</div>`
+          : '';
+        return `<div style="
+          background:rgba(10,7,26,.88);
+          backdrop-filter:blur(16px);
+          border:1px solid rgba(168,85,247,.2);
+          border-radius:12px;
+          padding:10px 14px;
+          font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;
+          pointer-events:none;
+          min-width:120px;
+        ">
+          <div style="font-size:14px;font-weight:700;color:#ede8ff;margin-bottom:5px">${node.label}</div>
+          ${badge}
+          ${msgs}
+        </div>`;
+      })
+
+      .onNodeHover(node => {
+        hoveredId = node ? node.id : null;
+        Graph.nodeColor(nColor).linkColor(lColor);
+        document.body.style.cursor = node ? 'pointer' : 'default';
+
+        const card = document.getElementById('card');
+        if (!node || node.id === 'arnaud') { card.classList.remove('on'); return; }
+
+        const cf = node.is_close;
+        const av = document.getElementById('card-avatar');
+        av.textContent = node.label.slice(0,2).toUpperCase();
+        av.className   = cf ? 'cf' : 'fol';
+        document.getElementById('card-name').textContent = '@' + node.label;
+        const badge = document.getElementById('card-badge');
+        badge.textContent = cf ? '⭐ Close Friend' : 'Follower';
+        badge.className   = 'card-badge ' + (cf ? 'cf' : 'fol');
+        document.getElementById('card-msgs').textContent = node.msg_count.toLocaleString();
+        card.classList.add('on');
+      })
+
+      .onNodeClick(node => {
+        const len = Math.hypot(node.x||.01, node.y||.01, node.z||.01);
+        Graph.cameraPosition(
+          { x: node.x*(len+150)/len, y: node.y*(len+150)/len, z: node.z*(len+150)/len },
+          node, 900
+        );
+      })
+      .onBackgroundClick(() => {
+        Graph.cameraPosition({x:0, y:0, z:500}, {x:0,y:0,z:0}, 800);
+      });
+
+    Graph.d3Force('charge').strength(-900);
+    Graph.d3Force('link').distance(l => l.is_close ? 180 : 130);
+    Graph.d3VelocityDecay(0.25);
+    Graph.d3AlphaDecay(0.02);
+    setTimeout(() => Graph.zoomToFit(600, 80), 3500);
+
+    Graph.controls().autoRotate      = true;
+    Graph.controls().autoRotateSpeed = 0.35;
+
+    setTimeout(() => { document.getElementById('hint').style.opacity = '0'; }, 5000);
+  </script>
+</body>
+</html>
