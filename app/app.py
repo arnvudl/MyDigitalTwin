@@ -2,7 +2,7 @@ import dash
 from dash import Input, Output, callback, dcc, html
 
 from app.components import create_navbar
-from app.pages import home, clusters, netflix, spotify, recommandations, social, timeline, clone
+from app.pages import home, clusters, netflix, spotify, social, timeline, psy
 
 # ─── APP INIT ─────────────────────────────────────────────────────────────────
 app = dash.Dash(
@@ -46,21 +46,20 @@ def display_page(pathname):
     if pathname == "/spotify":
         return spotify.layout(), navbar
 
-    if pathname == "/recommandations":
-        return recommandations.layout(), navbar
-
     if pathname == "/social":
         return social.layout(), navbar
 
     if pathname == "/timeline":
         return timeline.layout(), navbar
 
-    if pathname == "/clone":
-        return clone.layout(), navbar
+    if pathname == "/psy":
+        return psy.layout(), navbar
 
     # Pages à venir — placeholder élégant
     page_names = {
         "/photos": ("🖼️", "Photos", "Tes photos & médias sauvegardés"),
+        "/clone": ("🤖", "Clone", "Chatbot conversationnel — style Arnaud"),
+        "/recommandations": ("🎬", "Recommandations", "Films & musiques recommandés"),
     }
 
     if pathname in page_names:

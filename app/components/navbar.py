@@ -5,11 +5,11 @@ PAGES = [
     {"label": "Profils", "href": "/profils"},
     {"label": "Netflix", "href": "/netflix"},
     {"label": "Spotify", "href": "/spotify"},
-    {"label": "Recommandations", "href": "/recommandations"},
     {"label": "Clone", "href": "/clone"},
     {"label": "Timeline", "href": "/timeline"},
     {"label": "Social", "href": "/social"},
     {"label": "Photos", "href": "/photos"},
+    {"label": "Psy", "href": "/psy"},
 ]
 
 def create_navbar(current_path="/"):

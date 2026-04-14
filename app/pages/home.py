@@ -1,6 +1,7 @@
 import json
 import math
 import os
+import random
 from functools import lru_cache
 import re
 
@@ -291,80 +292,89 @@ def compute_stats() -> dict:
 
     return stats
 
-# ─── TAG POSITIONING (left/top absolus, centre = 380px) ──────────────────────
-CENTER = 380  # moitié de 760px
-
-def _pos(angle_deg: float, radius: float) -> dict:
-    rad = math.radians(angle_deg)
-    x = CENTER + radius * math.cos(rad)
-    y = CENTER + radius * math.sin(rad)
-    return {"left": f"{x}px", "top": f"{y}px"}
-
 def build_orbit_tags(data: dict) -> list:
     scores   = data["scores"]
     examples = data["examples"]
     cats     = list(scores.keys())
-    tags     = []
+    elements = []
 
-    # ── Anneau 1 : top 6 catégories
-    ring1 = cats[:6]
-    for i, cat in enumerate(ring1):
-        angle = (360 / len(ring1)) * i - 90
-        style = _pos(angle, 170)
-        tags.append(html.Div(
-            id={"type": "orbit-tag", "index": cat},
-            className="orbit-tag tag-r1",
-            style=style,
-            children=[cat],
-            n_clicks=0,
-        ))
+    # Configuration des anneaux (rayon, durée de rotation, nombre d'astéroïdes)
+    rings_config = [
+        {"radius": 130, "duration": "35s", "items": cats[:6], "class": "tag-r1", "asteroids": 8},
+        {"radius": 220, "duration": "50s", "items": [], "class": "tag-r2", "asteroids": 12}, # Rempli dynamiquement
+        {"radius": 310, "duration": "70s", "items": [], "class": "tag-r3", "asteroids": 15}, # Rempli dynamiquement
+        {"radius": 390, "duration": "90s", "items": [], "class": "tag-r3", "asteroids": 20}, # Décoratif
+    ]
 
-    # ── Anneau 2 : 2 exemples par top-4 catégorie
-    ring2_items = []
-    for cat in ring1[:4]:
-        for ex in examples.get(cat, [])[:2]:
-            ring2_items.append((ex, cat))
+    # Remplissage de l'anneau 2 (exemples des top catégories)
+    ring2_labels = []
+    for cat in cats[:4]:
+        ring2_labels.extend(examples.get(cat, [])[:2])
+    rings_config[1]["items"] = ring2_labels[:10]
 
-    for i, (label, _) in enumerate(ring2_items[:10]):
-        angle = (360 / max(len(ring2_items), 1)) * i - 70
-        style = _pos(angle, 255)
-        # On passe directement le nom de l'exemple en ID pour que le callback le reconnaisse !
-        tags.append(html.Div(
-            id={"type": "orbit-tag", "index": label},
-            className="orbit-tag tag-r2",
-            style=style,
-            children=[label],
-            n_clicks=0,
-        ))
+    # Remplissage de l'anneau 3 (catégories restantes + exemples)
+    ring3_labels = cats[6:10]
+    for cat in cats[:3]:
+        ring3_labels.extend(examples.get(cat, [])[2:5])
+    rings_config[2]["items"] = ring3_labels[:12]
 
-    # ── Anneau 3 : catégories secondaires + exemples épars
-    ring3_items = []
-    # On ajoute d'abord les catégories secondaires en tant que telles (pour avoir le bon comportement au clic)
-    for cat in cats[6:]:
-        ring3_items.append((cat, True))
-    
-    # Puis on ajoute des exemples supplémentaires
-    for cat in ring1[:3]:
-        for ex in examples.get(cat, [])[2:4]:
-            ring3_items.append((ex, False))
+    for config in rings_config:
+        radius = config["radius"]
+        duration = config["duration"]
+        items = config.get("items", [])
+        
+        # Ajouter les étiquettes (Tags)
+        for i, label in enumerate(items):
+            angle = (360 / max(len(items), 1)) * i
+            
+            # Plus besoin du wrapper statique externe, on gère tout via les variables CSS
+            elements.append(html.Div(
+                className="orbit-wrapper gravitate",
+                style={
+                    "--duration": duration,
+                    "--start-angle": f"{angle}deg"
+                },
+                children=[
+                    html.Div(
+                        id={"type": "orbit-tag", "index": label},
+                        className=f"orbit-tag {config['class']}",
+                        style={"left": f"{radius}px"},
+                        children=[label],
+                        n_clicks=0,
+                    )
+                ]
+            ))
 
-    for i, (label, is_cat) in enumerate(ring3_items[:12]):
-        angle = (360 / max(len(ring3_items), 1)) * i - 50
-        style = _pos(angle, 340)
-        tags.append(html.Div(
-            id={"type": "orbit-tag", "index": label},
-            className="orbit-tag tag-r3",
-            style=style,
-            children=[label],
-            n_clicks=0,
-        ))
+        # Ajouter des astéroïdes décoratifs
+        for i in range(config.get("asteroids", 0)):
+            ast_angle = random.uniform(0, 360)
+            ast_offset = random.uniform(-10, 10)
+            ast_duration = f"{float(duration[:-1]) * random.uniform(0.8, 1.2):.1f}s"
+            
+            elements.append(html.Div(
+                className="orbit-wrapper gravitate",
+                style={
+                    "--duration": ast_duration,
+                    "--start-angle": f"{ast_angle}deg"
+                },
+                children=[
+                    html.Div(
+                        className="asteroid",
+                        style={
+                            "left": f"{radius + ast_offset}px",
+                            "opacity": random.uniform(0.2, 0.6)
+                        }
+                    )
+                ]
+            ))
 
-    return tags
+    return elements
 
 # ─── LAYOUT ──────────────────────────────────────────────────────────────────
 def layout():
     data  = load_interests()
     stats = compute_stats()
+    random.seed(42) # Pour garder la même disposition au rafraîchissement
     tags  = build_orbit_tags(data)
 
     stats_cards = [

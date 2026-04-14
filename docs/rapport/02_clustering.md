@@ -7,6 +7,26 @@ _Outputs_ : `data/warehouse/behavioral_clusters`, `data/warehouse/interest_profi
 
 ---
 
+## Configuration SparkSession en phase 02
+
+Contrairement à la phase 01 (Docker cluster), les notebooks de clustering tournent **en local standalone**, ce qui nécessite une config explicite :
+
+```python
+SparkSession.builder
+    .master("local[*]")                          # utilise tous les cœurs CPU locaux
+    .config("spark.driver.memory", "4g")         # défaut = 1g, insuffisant pour le ML
+    .config("spark.sql.shuffle.partitions", "8") # défaut = 200 → absurde pour quelques milliers de lignes
+    .getOrCreate()
+```
+
+**Pourquoi `shuffle.partitions = 8` ?**  
+Le paramètre par défaut est **200**. Lors d'un `groupBy` ou d'un `join`, Spark crée 200 partitions de shuffle. Sur nos datasets (quelques milliers à 80 000 lignes), cela produit 200 micro-fichiers quasi vides — overhead réseau et disque considérable. Avec 8 partitions, chaque partition a une taille raisonnable et le job termine 3-5x plus vite.
+
+**Pourquoi `local[*]` explicite ?**  
+Sans `.master()`, Spark cherche un cluster Spark distant (défini dans `spark-defaults.conf` pour Docker). En dehors du cluster, il faut forcer le mode local.
+
+---
+
 ## Objectif
 
 Identifier des **profils comportementaux** (moments, habitudes, plateformes) à partir des données d'activité multi-sources, et en extraire des **centres d'intérêts** lisibles pour le dashboard.

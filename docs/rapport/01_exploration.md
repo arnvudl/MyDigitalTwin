@@ -31,6 +31,25 @@ Au départ, les transformations écrivaient directement des fichiers `.parquet` 
 - **Séparation des responsabilités** : `data/raw/` = données brutes d'origine (jamais modifiées), `data/warehouse/` = données transformées prêtes à l'emploi.
 - **Idempotence** : chaque notebook écrit avec `.mode("overwrite")`, donc re-exécutable à tout moment sans double-comptage.
 
+## Configuration SparkSession en phase 01
+
+Les notebooks d'exploration tournent **dans le cluster Docker** (Spark master + worker définis par `docker-compose.yml`). La configuration Spark est centralisée dans `infra/conf/spark-defaults.conf` — le notebook se connecte au master existant sans avoir à le redéfinir.
+
+C'est pourquoi les SparkSessions de phase 01 sont minimalistes (juste `.appName()`) : tout le reste (master URL, shuffle partitions, mémoire executor) est injecté par le cluster.
+
+**Exceptions justifiées :**
+
+| Notebook | Config ajoutée | Raison |
+|---|---|---|
+| `google_youtube` | `spark.driver.memory = 6g` | BeautifulSoup parse du HTML Google Takeout en mémoire driver — fichiers HTML volumineux |
+| `instagram` | `spark.driver.memory = 4g` | 368 000 lignes messages_meta |
+| `tiktok` | `spark.driver.memory = 4g` | 234 000 lignes watch history |
+| `parquet_to_delta` | Extensions Delta | Obligatoires pour écrire le format Delta Lake (`DeltaCatalog` + `DeltaSparkSessionExtension`) |
+
+Les notebooks sans config explicite (`amazon`, `netflix`, `spotify`, `twitter`, `apple`) traitent de petits volumes (< 35k lignes) et n'ont pas besoin de surcharger les defaults du cluster.
+
+---
+
 ## Évolution : Parquet → Delta Lake
 
 Les notebooks d'exploration écrivent d'abord en **Parquet pur**. Après avoir étudié Delta Lake dans le cours, le notebook `parquet_to_delta.ipynb` relit tous les fichiers Parquet du warehouse et les réécrit en **format Delta**.
