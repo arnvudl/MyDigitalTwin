@@ -64,25 +64,8 @@ services:
     volumes:
       - ./app:/app/app
       - ./data:/app/data
-      - ./warehouse:/app/warehouse
     depends_on:
       - spark-master
-      - ollama
-
-  ollama:
-    container_name: ollama
-    image: ollama/ollama:latest
-    ports:
-      - "11434:11434"
-    volumes:
-      - ./data/ollama:/root/.ollama
-    deploy:
-      resources:
-        reservations:
-          devices:
-            - driver: nvidia
-              count: all
-              capabilities: [gpu]
 
 volumes:
   spark-logs:

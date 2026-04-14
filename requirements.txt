@@ -1,17 +1,7 @@
-lxml
 pandas
 dash
 plotly
 pyarrow
-fastparquet
-matplotlib
-numpy
-groq
 python-dotenv
 requests
-tqdm
-dash-cytoscape
 spotipy
-google-generativeai
-sentence-transformers
-scikit-learn
