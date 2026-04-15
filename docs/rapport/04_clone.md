@@ -1,8 +1,8 @@
 # Phase 04 — Clone Conversationnel (Le Sage)
 
 _Dossier_ : `src/scripts/04_clone/`  
-_Statut_ : 🔜 En cours (V5 RAG)  
-_Scripts_ : `01_extract_corpus.py`, `02_convert_chatml.py`, `03_finetune_runpod/`, `05_export_for_gemini.py`  
+_Statut_ : ✅ V6 déployée (Gemini Flash — corpus injecté)  
+_Scripts_ : `01_extract_corpus.py`, `02_build_gemini_corpus.py`  
 _Historique complet_ : `src/scripts/04_clone/STATUS.md`
 
 ---
@@ -20,8 +20,9 @@ Un clone conversationnel qui parle nativement comme Arnaud — vocabulaire, ryth
 | V1 | Overfitting massif, réponses par cœur |
 | V2 | Overfitting dès epoch 2-3, loss chute à 0.55 |
 | V3 | ✅ Style OK — cohérence conversationnelle ❌ |
-| V4 | ❌ Abandonnée → pivot vers RAG |
-| **V5** | **🚀 En cours — RAG + Gemini 1.5 Flash** |
+| V4 | ❌ Abandonnée → pivot vers Gemini |
+| V5 RAG | ❌ Abandonnée → RAG inutile (corpus rentre dans la fenêtre) |
+| **V6** | **✅ Gemini Flash — system prompt + corpus injecté directement** |
 
 ---
 
@@ -62,30 +63,43 @@ Deux problèmes fondamentaux persistent même après correction du modèle de ba
 
 ---
 
-## Approche retenue : RAG + Gemini 1.5 Flash (V5)
+## Approche retenue : Gemini Flash + corpus injecté (V6)
 
 ### Principe
 
-1. Le corpus (300 meilleurs exemples) est indexé avec `sentence-transformers` (`all-MiniLM-L6-v2`).
-2. À chaque message, les **3 exemples de style les plus proches** sont récupérés par recherche sémantique.
-3. Gemini reçoit : `System Prompt` + `Exemples RAG` + `Historique récent` + `Message actuel`.
+Le corpus (300 meilleurs exemples scorés) et le system prompt sont injectés **en entier** dans chaque appel API — pas de RAG, pas de vector store. La fenêtre de contexte de Gemini Flash (~1M tokens) est suffisante pour absorber le corpus complet.
 
-### Pourquoi RAG est meilleur ici
+### Pourquoi pas de RAG ?
 
-| Critère | Fine-tuning | RAG + Gemini |
-|---|---|---|
-| Hallucinations | ❌ Fréquentes | ✅ Ancrées dans les exemples réels |
-| Style | ✅ Parfait | ✅ Parfait (exemples injectés dynamiquement) |
-| Coût inférence | GPU local ou loué | ✅ Gratuit (Gemini Flash) |
-| Mise à jour corpus | ❌ Réentraînement complet | ✅ Régénérer `gemini_corpus.txt` |
-| Fenêtre de contexte | Limitée | ✅ 1M tokens |
+Le RAG n'apporte un gain que si le corpus dépasse la fenêtre de contexte. Ici (~50k tokens), il rentre largement → injection directe plus simple et plus efficace (cohérence de style globale vs retrieval thématique).
 
-### Pourquoi Gemini 1.5 Flash ?
+### Comparaison des approches
 
-- Gratuit dans les limites API actuelles.
-- Fenêtre de contexte 1M tokens : peut absorber tout le corpus + historique.
-- Latence faible (Flash) : adapté au chat temps réel.
-- `05_export_for_gemini.py` prépare le corpus dans le format attendu.
+| Critère | Fine-tuning | RAG | **Gemini Direct (V6)** |
+|---|---|---|---|
+| Hallucinations | ❌ Fréquentes | ✅ Ancrées | ✅ Ancrées |
+| Style | ✅ Parfait | ✅ Bon | ✅ Parfait |
+| Coût inférence | GPU local/loué | Gratuit | Gratuit* |
+| Mise à jour corpus | ❌ Réentraînement | ✅ Régénérer | ✅ Régénérer |
+| Complexité | Haute | Moyenne | **Faible** |
+
+_*Gratuit sous les limites du free tier Gemini (250k tokens/min). Voir limitation ci-dessous._
+
+### ⚠️ Limitation connue : quota free tier
+
+Le corpus injecté (~50k tokens) + historique conversation dépasse rapidement la limite **250k tokens/minute** du free tier Gemini 2.5 Flash.
+
+**Si quota dépassé** : remplacer Gemini par **Groq** (vraiment gratuit, `llama-3.3-70b`) et réduire `TOP_N` dans `02_build_gemini_corpus.py` de 300 → 50-100 exemples.
+
+---
+
+## Pipeline final
+
+```
+01_extract_corpus.py       → data/LLM_DATA/dataset_final.jsonl
+02_build_gemini_corpus.py  → data/LLM_DATA/gemini_corpus.txt + gemini_system.txt
+app/pages/clone.py         → API Gemini Flash (system + corpus + historique)
+```
 
 ---
 
@@ -106,11 +120,3 @@ Deux problèmes fondamentaux persistent même après correction du modèle de ba
 - Doublons massifs
 
 **Voir** : `docs/selection_corpus_clone.md` pour le guide complet de sélection.
-
----
-
-## Ce qui reste à faire
-
-- [ ] Finaliser l'indexation RAG (FAISS ou cosine similarity simple)
-- [ ] Connecter `/clone` du dashboard à l'API Gemini + RAG
-- [ ] Tester la cohérence conversationnelle en V5

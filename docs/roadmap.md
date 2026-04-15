@@ -10,10 +10,10 @@ src/scripts/
 ├── 01_exploration/          ✅ Ingestion + nettoyage Delta Lake
 ├── 02_clustering/           ✅ K-Means comportemental (6 profils) → /profils
 ├── 06_social/               ✅ Graphe social (Instagram) → /social
-├── 03_als/                  🔜 Recommandations ALS → /recommandations + /netflix + /spotify
-├── 04_clone/                🚀 Pivot V5 (RAG + Gemini) → /clone (Fine-tuning archivé)
+├── 04_clone/                ✅ Clone conversationnel (Gemini Flash) → /clone
 ├── 07_psy/                  ✅ Analyse Comportementale Numérique → /psy
-└── 05_CLIP/                 ✅ Clustering photos CLIP (UMAP + HDBSCAN) → /photos
+├── 05_CLIP/                 ✅ Clustering photos CLIP (UMAP + HDBSCAN) → /photos
+└── 03_als/                  🔜 Recommandations ALS → /recommandations + /netflix + /spotify
 ```
 
 ---
@@ -45,52 +45,48 @@ src/scripts/
 
 ---
 
-### 🔜 AXE 2 — Recommandations ALS *(priorité haute)*
-**Dossier** : `03_als/`  
+### ✅ AXE 1 — Clone conversationnel (V6 : Gemini Flash)
+**Dossier** : `04_clone/`
 
-**Objectif** : donner un titre → score "Arnaud aimera à X%"
-- ALS implicite sur interactions Spotify + Netflix + YouTube.
-- Dashboard : `/recommandations` (score + top suggestions) + `/netflix` + `/spotify`.
+**Pipeline** :
+- `01_extract_corpus.py` — extraction + scoring des DMs Instagram → `dataset_final.jsonl`
+- `02_build_gemini_corpus.py` — top 300 exemples → `gemini_corpus.txt`
+- `app/pages/clone.py` — appel API Gemini Flash (system prompt + corpus injecté)
 
----
+**⚠️ Limitation** : le corpus dépasse rapidement le free tier Gemini (250k tokens/min). Alternative : Groq (`llama-3.3-70b`) + réduire `TOP_N` à 50-100.
 
-### 🚀 AXE 1 — Clone conversationnel (V5 : RAG + Gemini)
-**Dossier** : `04_clone/`  
-**Statut** : Pivot effectué (Fine-tuning archivé en V3 voir `STATUS.md`)
-
-**Objectif** : Un clone qui imite le style (minimalisme, slang, rythme) sans hallucinations factuelles.
-- **Moteur RAG** : Indexation sémantique (sentence-transformers) de 300 dialogues réels.
-- **Inférence** : Gemini 1.5 Flash reçoit les 3 exemples les plus proches pour "injecter" le style dynamiquement.
-- **Dashboard** : Page `/clone` avec chat interactif.
+**Fine-tuning archivé** : `_outdated_03_finetune_runpod/` — voir `STATUS.md` pour l'historique V1-V3.
 
 ---
 
 ### ✅ AXE 5 — Analyse Comportementale Numérique
 **Dossier** : `src/scripts/07_psy/`
 
-**Objectif** : Générer un ZIP structuré (dossier comportemental + context éthique) à glisser-déposer dans un LLM pour une analyse de patterns numériques — **pas** un outil thérapeutique ou de psychanalyse clinique.
-
-**Ce qui est livré :**
 - Wizard 4 étapes sur `/psy` : période, sources, anonymisation, génération
 - ZIP généré : `Analyse_Comportementale_XXXX.zip`
   - `DOSSIER_COMPORTEMENTAL.md` : stats dynamiques (messages, recherches, Spotify, Amazon)
   - `CONSIGNE_ANALYSTE.md` : posture "Digital Twin Analyst" (neutre, pas de diagnostic)
-  - `context/` : fichiers statiques (`System_Prompt`, `Garde_Fous_Securite`, `Disclaimer`, `README`)
-- Sources analysées : TikTok messages, Instagram messages (warehouse + fallback LLM_DATA), Google/YouTube searches, Spotify, Netflix, Amazon
-- Anonymisation : remplacement des prénoms connus
-
-**Note** : Pour inclure les conversations Instagram complètes, l'utilisateur doit les exporter depuis Instagram (Settings → Privacy → Download Your Information).
 
 ---
 
 ### ✅ AXE 4 — Clustering photos CLIP
 **Dossier** : `05_CLIP/`
 
-- Embeddings CLIP ViT-L/14 (768 dims) via `CLIPVisionModelWithProjection` + Spark `mapInPandas`
-- V1 PCA+KMeans abandonnée (clusters fourre-tout, Silhouette 0.14, k fixé)
-- V2 UMAP (cosine, 768D→50D) + HDBSCAN (k automatique, outliers = -1) → 6 clusters + bruit
-- Labels manuels après inspection visuelle : soirées, enfance, amis en voyage, memes, quotidien, divers
-- Dashboard : page `/photos` — scatter UMAP 2D interactif + galerie complète par cluster
+- Embeddings CLIP ViT-L/14 (768 dims) + UMAP (cosine) + HDBSCAN
+- 6 clusters + bruit — labels manuels après inspection visuelle
+- Dashboard : page `/photos` — scatter UMAP 2D interactif + galerie par cluster
+
+---
+
+### 🔜 AXE 2 — Recommandations ALS *(prochaine étape)*
+**Dossier** : `03_als/`
+
+**Objectif** : donner un titre → score "Arnaud aimera à X%"
+- ALS Spark ML sur **MovieLens 32M** + données personnelles Netflix/Spotify
+- Bridge TMDB pour les affiches films
+- Dashboard : `/recommandations` + `/netflix` + `/spotify`
+
+**Voir** : `docs/nouvelle_als.md` pour l'architecture détaillée.
 
 ---
 
@@ -102,9 +98,9 @@ src/scripts/
 | `/profils` | ✅ Live | K-Means comportemental |
 | `/social` | ✅ Live | Instagram graph |
 | `/psy` | ✅ Live | Analyse Comportementale Numérique (ZIP) |
-| `/clone` | 🚀 V5 RAG | Gemini 1.5 Flash + RAG engine |
+| `/clone` | ✅ Live | Gemini Flash + corpus DMs |
+| `/photos` | ✅ Live | CLIP clusters (UMAP + HDBSCAN) |
+| `/timeline` | ✅ Live | Vue agrégée (volume) |
 | `/netflix` | 🔜 AXE 2 | ALS scores |
 | `/spotify` | 🔜 AXE 2 | ALS scores |
 | `/recommandations` | 🔜 AXE 2 | ALS output |
-| `/timeline` | ✅ Live | Vue agrégée (volume) |
-| `/photos` | ✅ Live | CLIP clusters (UMAP + HDBSCAN) |

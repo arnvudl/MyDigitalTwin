@@ -10,17 +10,22 @@ Sorties :
 """
 
 import json
+import os
 import re
+import sys
 from pathlib import Path
 
 # ─── CONFIG ────────────────────────────────────────────────────────────────────
 
-BASE_DIR = Path("C:/Users/arnau/Documents/MyDigitalTwin")
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "../../..")))
+from config import LLM_DATA
 
-INPUT         = BASE_DIR / "data/LLM_DATA/dataset_final.jsonl"
-SYS_PROMPT    = BASE_DIR / "data/LLM_DATA/SYS_PROMPT_ARNAUD"
-OUTPUT_CORPUS = BASE_DIR / "data/LLM_DATA/gemini_corpus.txt"
-OUTPUT_SYSTEM = BASE_DIR / "data/LLM_DATA/gemini_system.txt"
+LLM_DATA = Path(LLM_DATA)
+
+INPUT         = LLM_DATA / "dataset_final.jsonl"
+SYS_PROMPT    = LLM_DATA / "SYS_PROMPT_ARNAUD"
+OUTPUT_CORPUS = LLM_DATA / "gemini_corpus.txt"
+OUTPUT_SYSTEM = LLM_DATA / "gemini_system.txt"
 
 TOP_N = 300   # Nombre d'exemples à garder (Gemini supporte ~500k tokens)
 

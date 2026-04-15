@@ -13,39 +13,19 @@ import glob
 import os
 import re
 import random
+import sys
 from pathlib import Path
 
 # ─── CONFIG ────────────────────────────────────────────────────────────────────
 
-BASE_DIR = Path("C:/Users/arnau/Documents/MyDigitalTwin")
-INBOX = BASE_DIR / "data/raw/INSTAGRAM/your_instagram_activity/messages/inbox"
-OUTPUT = BASE_DIR / "data/LLM_DATA/dataset_final.jsonl"
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "../../..")))
+from config import LLM_DATA, INSTAGRAM_INBOX, INSTAGRAM_SENDER_NAME, CLONE_CONVERSATIONS
 
-ARNAUD = "A R N A U D"
+INBOX  = Path(INSTAGRAM_INBOX)
+OUTPUT = Path(LLM_DATA) / "dataset_final.jsonl"
 
-CONVERSATIONS = {
-    "djyoyo":    ["djyoyo_489918669070722"],
-    "evan":      ["evan_17940018788164627"],
-    "lou":       ["lou_1085673686153338"],
-    "maelle":    ["maelle_17935615418472883"],
-    "nana":      ["nana_18068525429472883"],
-    "pilou":     ["pilou_519116326140721"],
-    "laura":     ["laura_994708765285921"],
-    "jen":       ["jen_945836883473151"],
-    "alice":     ["alice_1204248657633025"],
-    "loulou":    ["loulou_1188711339191134"],
-    "laure":     ["laure_1094343585289278"],
-    "fafie":     ["fafie_1121444139243508"],
-    "gabi":      ["gabi_1275393733851743"],
-    "manonvandy":["manonvandy_1292074112190912"],
-    "mylene":    ["mylene_802792480745084"],
-    "ama":       ["ama_17970077582700199"],
-    "eliott":    ["3li0tttt_17939266904472883"],
-    "paulina":   ["_paulinalambin_824971795573896"],
-    "celia":     ["celia_1366428128080987"],
-    "vic":       ["vic_1114899529906843"],
-    "romane":    ["romane_1357028805748638"],
-}
+ARNAUD        = INSTAGRAM_SENDER_NAME
+CONVERSATIONS = CLONE_CONVERSATIONS
 
 # Paramètres v2
 CONTEXT_SIZES = [2, 5, 12, 25, 40]  # Nombre de blocs (tours de parole) en arrière
