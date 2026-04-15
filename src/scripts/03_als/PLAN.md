@@ -1,95 +1,103 @@
-# AXE 2 — Recommandations ALS
-_Priorité : haute — données déjà disponibles dans le warehouse_
+# AXE 2 — Recommandations ALS (MovieLens 32M)
+_Mis à jour : 2026-04-15_
 
 ---
 
 ## Objectif
 
-Donner un titre de film ou de musique → obtenir un score **"Arnaud aimera à X%"**.
+Donner un titre de film → score **"Arnaud aimera à X%"** + top recommandations non vus.
 
-Modèle : **ALS** (Alternating Least Squares) de `pyspark.ml.recommendation`.  
-ALS apprend des patterns implicites à partir de l'historique de consommation.  
-Il prédit un score de préférence pour tout item non encore consommé.
+Modèle : **ALS** (Alternating Least Squares) de `pyspark.ml.recommendation`, entraîné sur MovieLens 32M + données personnelles Netflix.
 
 ---
 
-## Données sources (warehouse)
+## Pourquoi MovieLens 32M ?
 
-| Table | Items | Signal implicite |
+Les données personnelles seules (~4 288 vues Netflix) sont insuffisantes pour entraîner un ALS robuste — pas assez de signal inter-items. En fusionnant avec les 32M de notes MovieLens, l'ALS apprend des similarités entre films à grande échelle, puis le profil personnel ancre les recommandations.
+
+---
+
+## Données sources
+
+### Externes — MovieLens 32M (à télécharger sur grouplens.org)
+| Fichier source | → Warehouse | Contenu |
 |---|---|---|
-| `spotify_streams` | artistName + trackName | msPlayed → weight |
-| `netflix_views` | show_title | interaction_weight |
-| `youtube_watch` | title | interaction_weight |
-| `instagram_likes` | — | like = signal faible |
-| `tiktok_watch` | — | watch = signal faible |
+| `ml-32m/ratings.csv` | `warehouse/movielens_ratings/` | 32M notes (userId, movieId, rating, timestamp) |
+| `ml-32m/movies.csv` | `warehouse/movielens_movies/` | Catalogue mondial (movieId, title, genres) |
+| `ml-32m/links.csv` | `warehouse/movielens_links/` | movieId ↔ imdbId ↔ tmdbId |
 
-Signal implicite = on ne sait pas si l'item a été aimé, seulement consommé.  
-→ Pondération : écoute complète > écoute partielle, visionnage > scroll.
+### Personnelles — Warehouse existant
+| Table | Items | Signal |
+|---|---|---|
+| `netflix_views` | show_title (films uniquement) | interaction implicite |
 
 ---
 
 ## Pipeline
 
 ```
-warehouse/spotify_streams + netflix_views + youtube_watch
-        ↓
-01_build_interactions.ipynb
-  - Unification : (user_id=0, item_id, weight)
-  - item_id = hash(platform + title)
-  - Filtrage : items vus < 3 fois exclus (bruit)
-        ↓
-warehouse/interactions.parquet
-        ↓
-02_als_model.ipynb
-  - ALS(rank=50, maxIter=20, regParam=0.1, implicitPrefs=True)
-  - Split train/test (80/20 par timestamp)
-  - Évaluation : NDCG@10
-        ↓
-warehouse/als_scores.parquet
-  (item_id, item_title, platform, predicted_score, rank)
-        ↓
-03_dashboard_pages.ipynb  (optionnel — ou directement dans app/)
-  - Top recommandations par catégorie
-  - Wrapped custom par période
+[ml-32m CSVs]
+    ↓
+src/scripts/01_exploration/ingest_movielens.ipynb   [À CRÉER]
+  - Lecture CSV Spark → écriture Parquet partitionné
+  - Cible : content_type == 'movie' uniquement
+  → warehouse/movielens_ratings/ + movielens_movies/ + movielens_links/
+
+warehouse/movielens_* + netflix_views
+    ↓
+01_build_interactions.ipynb                          [À METTRE À JOUR]
+  - Normalisation titres Netflix → matching MovieLens
+  - Fusion : notes explicites (0.5-5.0) + vues Netflix (poids implicite)
+  - StringIndexer sur movieId (ALS exige des entiers)
+  → warehouse/als_interactions.parquet
+
+    ↓
+02_als_model.ipynb                                   [À METTRE À JOUR]
+  - Spark ALS : rank=10, maxIter=15, regParam=0.1, implicitPrefs=True
+  - Filtrage : films déjà vus exclus
+  - Top 50 recommandations
+  → warehouse/movie_recommendations.parquet
+
+    ↓
+app/pages/netflix.py + recommandations.py            [À CRÉER]
+  - Enrichissement affiches + résumés via API TMDB (tmdbId depuis links)
 ```
+
+---
+
+## Contraintes techniques
+
+- ALS nécessite des IDs entiers → `StringIndexer` sur movieId
+- `implicitPrefs=True` pour les vues Netflix (feedback implicite)
+- Cold start : nouveaux films sans notes MovieLens → pas de prédiction
+- Un seul utilisateur réel → ALS utilisé en **item-based similarity** (pas collaborative inter-users)
+- Spark config locale : `spark.sql.shuffle.partitions=8`, `spark.driver.memory=8g` (32M lignes)
 
 ---
 
 ## Dashboard — pages concernées
 
 ### `/recommandations`
-- Input : titre libre (musique ou film)
-- Output : score 0–100% + top 10 recommandations similaires
-- Bonus : "Tu n'as pas encore vu/écouté…" avec score prédit
+- Top films recommandés non vus, avec affiche TMDB + score prédit
+- Input : titre → score "Arnaud aimera à X%"
 
 ### `/netflix`
 - Timeline des visionnages
-- Top genres, top séries, top films
-- Streak de visionnage, heure moyenne
-
-### `/spotify`
-- **Wrapped custom** : choisir une période → top artistes, top titres, minutes écoutées
-- Évolution mensuelle des artistes favoris
-- Distribution horaire d'écoute
+- Top genres, top films, top séries
+- Stats : streak, heure moyenne, durée totale
 
 ---
 
-## Contraintes techniques
+## Fichiers
 
-- ALS nécessite des IDs entiers (StringIndexer sur item_title)
-- `implicitPrefs=True` → feedback implicite (pas de rating explicite)
-- Cold start : nouveaux items sans historique → pas de prédiction possible
-- Un seul utilisateur (toi) → ALS n'a pas de "collaborative filtering" inter-users  
-  → On utilise ALS comme **item-based similarity** : items co-consommés → proches
+| Fichier | Statut | Contenu |
+|---|---|---|
+| `top.md` | ✅ Référence | Films/séries favoris (ancres profil) |
+| `01_build_interactions.ipynb` | 🔜 À mettre à jour | Fusion MovieLens + Netflix local |
+| `02_als_model.ipynb` | 🔜 À mettre à jour | Entraînement ALS 32M |
+| `01_exploration/ingest_movielens.ipynb` | 🔜 À créer | Ingestion CSV → Parquet |
+| `app/pages/netflix.py` | 🔜 À créer | Page dashboard Netflix |
+| `app/pages/recommandations.py` | 🔜 À créer | Page scores ALS + affiches |
+| `_outdated/01b_semantic_enrichment.py` | ❌ Archivé | Enrichissement Ollama (remplacé par TMDB) |
 
----
-
-## Fichiers à créer
-
-| Fichier | Contenu |
-|---|---|
-| `01_build_interactions.ipynb` | Unification + nettoyage interactions |
-| `02_als_model.ipynb` | Entraînement ALS + évaluation |
-| `app/pages/netflix.py` | Page dashboard Netflix |
-| `app/pages/spotify.py` | Page dashboard Spotify + Wrapped |
-| `app/pages/recommandations.py` | Page scores ALS |
+**Voir aussi** : `docs/nouvelle_als.md` pour l'architecture détaillée.
