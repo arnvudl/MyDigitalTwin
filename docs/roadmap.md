@@ -1,5 +1,5 @@
 # MyDigitalTwin — Roadmap ML & Dashboard
-_Mis à jour : 2026-04-14_
+_Mis à jour : 2026-04-15_
 
 ---
 
@@ -13,7 +13,7 @@ src/scripts/
 ├── 03_als/                  🔜 Recommandations ALS → /recommandations + /netflix + /spotify
 ├── 04_clone/                🚀 Pivot V5 (RAG + Gemini) → /clone (Fine-tuning archivé)
 ├── 07_psy/                  ✅ Analyse Comportementale Numérique → /psy
-└── 05_CLIP/                 ⏳ Clustering photos CLIP → /photos  (après 10 mai)
+└── 05_CLIP/                 ✅ Clustering photos CLIP (UMAP + HDBSCAN) → /photos
 ```
 
 ---
@@ -83,8 +83,14 @@ src/scripts/
 
 ---
 
-### ⏳ AXE 4 — Clustering photos CLIP *(après 10 mai)*
-**Dossier** : `05_CLIP/`  
+### ✅ AXE 4 — Clustering photos CLIP
+**Dossier** : `05_CLIP/`
+
+- Embeddings CLIP ViT-L/14 (768 dims) via `CLIPVisionModelWithProjection` + Spark `mapInPandas`
+- V1 PCA+KMeans abandonnée (clusters fourre-tout, Silhouette 0.14, k fixé)
+- V2 UMAP (cosine, 768D→50D) + HDBSCAN (k automatique, outliers = -1) → 6 clusters + bruit
+- Labels manuels après inspection visuelle : soirées, enfance, amis en voyage, memes, quotidien, divers
+- Dashboard : page `/photos` — scatter UMAP 2D interactif + galerie complète par cluster
 
 ---
 
@@ -101,4 +107,4 @@ src/scripts/
 | `/spotify` | 🔜 AXE 2 | ALS scores |
 | `/recommandations` | 🔜 AXE 2 | ALS output |
 | `/timeline` | ✅ Live | Vue agrégée (volume) |
-| `/photos` | ⏳ Après 10 mai | CLIP clusters |
+| `/photos` | ✅ Live | CLIP clusters (UMAP + HDBSCAN) |

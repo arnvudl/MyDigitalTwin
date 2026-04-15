@@ -60,7 +60,13 @@ COPY requirements.txt .
 RUN pip3 install -r requirements.txt
 
 
-FROM pyspark AS pyspark-runner
+FROM pyspark AS pyspark-clip
+
+# PyTorch CPU-only (évite ~1.5 Go de binaires CUDA inutiles en container)
+RUN pip3 install torch --index-url https://download.pytorch.org/whl/cpu && \
+    pip3 install transformers accelerate Pillow umap-learn hdbscan scikit-learn
+
+FROM pyspark-clip AS pyspark-runner
 
 # Download iceberg spark runtime
 RUN curl https://repo1.maven.org/maven2/org/apache/iceberg/iceberg-spark-runtime-3.4_2.12/1.4.3/iceberg-spark-runtime-3.4_2.12-1.4.3.jar -Lo /opt/spark/jars/iceberg-spark-runtime-3.4_2.12-1.4.3.jar

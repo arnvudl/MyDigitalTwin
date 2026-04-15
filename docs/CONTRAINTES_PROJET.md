@@ -90,9 +90,28 @@ Tout ce qui pourrait changer selon l'utilisateur (chemins, listes d'amis, artist
 
 ```python
 import sys, os
-sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname("__file__"), "../../..")))
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname('__file__'), '../../..')))
 from config import WAREHOUSE, RAW_DATA, CLOSE_FRIENDS, SPOTIFY_ANCHOR_ARTISTS
 ```
+
+> **Pourquoi `os.path.dirname('__file__')` et pas `__file__` ?**  
+> Dans un notebook Jupyter, `__file__` n'existe pas. La chaîne littérale `'__file__'` retourne `""`,  
+> ce qui fait que `os.path.abspath("../../..")` remonte 3 niveaux depuis le CWD du kernel.  
+> En Docker, le CWD est `/opt/spark` et les notebooks sont dans `/opt/spark/scripts/XX_phase/`.  
+> Jupyter change le CWD vers le dossier du notebook à l'ouverture → `../../..` donne `/opt/spark` ✓  
+> En local (hors Docker), même comportement depuis le dossier du notebook.
+
+### ✅ `config.py` doit être monté dans tous les containers Spark
+
+`config.py` n'est pas dans `./src/scripts/` donc il n'est pas couvert par le volume scripts.  
+Il est monté **explicitement** dans `docker-compose.yml` pour chaque container Spark :
+
+```yaml
+- ./config.py:/opt/spark/config.py
+```
+
+**Ne pas supprimer ces lignes du docker-compose** — sans elles, tous les notebooks échouent  
+au démarrage avec `ModuleNotFoundError: No module named 'config'`.
 
 **Contenu actuel de `config.py`** :
 - `WAREHOUSE` / `RAW_DATA` — chemins auto-calculés depuis la racine

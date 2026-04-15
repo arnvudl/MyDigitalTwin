@@ -9,7 +9,7 @@ PAGES = [
     {"label": "Timeline", "href": "/timeline"},
     {"label": "Social", "href": "/social"},
     {"label": "Photos", "href": "/photos"},
-    {"label": "Psy", "href": "/psy"},
+    {"label": "Analyse", "href": "/psy"},
 ]
 
 def create_navbar(current_path="/"):
