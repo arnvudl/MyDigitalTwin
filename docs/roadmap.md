@@ -81,12 +81,17 @@ src/scripts/
 ### 🔜 AXE 2 — Recommandations ALS *(prochaine étape)*
 **Dossier** : `03_als/`
 
-**Objectif** : donner un titre → score "Arnaud aimera à X%"
-- ALS Spark ML sur **MovieLens 32M** + données personnelles Netflix/Spotify
-- Bridge TMDB pour les affiches films
-- Dashboard : `/recommandations` + `/netflix` + `/spotify`
+**Objectif** : donner un titre de film → score "Arnaud aimera à X%"
 
-**Voir** : `docs/nouvelle_als.md` pour l'architecture détaillée.
+**Pipeline** :
+1. `01_exploration/ingest_movielens.ipynb` *(à créer)* — MovieLens 32M CSV → Parquet warehouse
+2. `01_build_interactions.ipynb` *(à mettre à jour)* — fusion MovieLens 32M + Netflix local
+3. `02_als_model.ipynb` *(à mettre à jour)* — Spark ALS, top 50 reco
+4. Bridge TMDB (tmdbId → affiches + résumés)
+
+**Dashboard** : `/recommandations` + `/netflix`
+
+**Voir** : `docs/nouvelle_als.md` + `src/scripts/03_als/PLAN.md`
 
 ---
 
@@ -102,5 +107,4 @@ src/scripts/
 | `/photos` | ✅ Live | CLIP clusters (UMAP + HDBSCAN) |
 | `/timeline` | ✅ Live | Vue agrégée (volume) |
 | `/netflix` | 🔜 AXE 2 | ALS scores |
-| `/spotify` | 🔜 AXE 2 | ALS scores |
-| `/recommandations` | 🔜 AXE 2 | ALS output |
+| `/recommandations` | 🔜 AXE 2 | ALS output + affiches TMDB |
