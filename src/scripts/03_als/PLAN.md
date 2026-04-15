@@ -38,29 +38,32 @@ Les données personnelles seules (~4 288 vues Netflix) sont insuffisantes pour e
 ```
 [ml-32m CSVs]
     ↓
-src/scripts/01_exploration/ingest_movielens.ipynb   [À CRÉER]
-  - Lecture CSV Spark → écriture Parquet partitionné
-  - Cible : content_type == 'movie' uniquement
-  → warehouse/movielens_ratings/ + movielens_movies/ + movielens_links/
+src/scripts/01_exploration/ingest_movielens.ipynb   ✅ CRÉÉ
+  - Lecture CSV Spark (schémas explicites, pas de UDF)
+  - title_norm calculé via Column expressions (F.regexp_replace)
+  → warehouse/movielens_movies/ + movielens_ratings/ + movielens_links/
 
 warehouse/movielens_* + netflix_views
     ↓
-01_build_interactions.ipynb                          [À METTRE À JOUR]
-  - Normalisation titres Netflix → matching MovieLens
-  - Fusion : notes explicites (0.5-5.0) + vues Netflix (poids implicite)
-  - StringIndexer sur movieId (ALS exige des entiers)
-  → warehouse/als_interactions.parquet
-
-    ↓
-02_als_model.ipynb                                   [À METTRE À JOUR]
-  - Spark ALS : rank=10, maxIter=15, regParam=0.1, implicitPrefs=True
-  - Filtrage : films déjà vus exclus
-  - Top 50 recommandations
+03_als/03_movie_recommendations.ipynb               ✅ CRÉÉ
+  - Match Netflix titles → movieId via title_norm (join Spark, pas de UDF)
+  - Injection utilisateur personnel (userId=0, rating=4.5)
+  - ALS sur matrice 32M + perso : rank=10, maxIter=15, regParam=0.1
+  - Filtrage films déjà vus (left_anti join)
+  - Top 50 non vus + enrichissement movieId/title/genres/tmdbId
   → warehouse/movie_recommendations.parquet
 
+NOTE : 01_build_interactions.ipynb et 02_als_model.ipynb sont intacts —
+       ils produisent als_scores.parquet (Spotify + Netflix scores perso)
+       utilisé par /netflix pour les stats de consommation.
+
     ↓
-app/pages/netflix.py + recommandations.py            [À CRÉER]
-  - Enrichissement affiches + résumés via API TMDB (tmdbId depuis links)
+app/pages/recommandations.py                        🔜 À CRÉER
+  - Lit movie_recommendations.parquet
+  - Affiches via API TMDB (tmdbId disponible)
+app/pages/netflix.py                                🔜 À CRÉER
+  - Lit als_scores.parquet (scores Netflix perso)
+  - Stats : top films, genres, timeline
 ```
 
 ---
@@ -93,11 +96,12 @@ app/pages/netflix.py + recommandations.py            [À CRÉER]
 | Fichier | Statut | Contenu |
 |---|---|---|
 | `top.md` | ✅ Référence | Films/séries favoris (ancres profil) |
-| `01_build_interactions.ipynb` | 🔜 À mettre à jour | Fusion MovieLens + Netflix local |
-| `02_als_model.ipynb` | 🔜 À mettre à jour | Entraînement ALS 32M |
-| `01_exploration/ingest_movielens.ipynb` | 🔜 À créer | Ingestion CSV → Parquet |
+| `01_build_interactions.ipynb` | ✅ Intact | Spotify + Netflix perso → als_scores.parquet |
+| `02_als_model.ipynb` | ✅ Intact | ALS scores perso (virtual users) |
+| `01_exploration/ingest_movielens.ipynb` | ✅ Créé | MovieLens 32M CSV → Parquet warehouse |
+| `03_movie_recommendations.ipynb` | ✅ Créé | MovieLens + Netflix → movie_recommendations.parquet |
 | `app/pages/netflix.py` | 🔜 À créer | Page dashboard Netflix |
-| `app/pages/recommandations.py` | 🔜 À créer | Page scores ALS + affiches |
+| `app/pages/recommandations.py` | 🔜 À créer | Top films + affiches TMDB |
 | `_outdated/01b_semantic_enrichment.py` | ❌ Archivé | Enrichissement Ollama (remplacé par TMDB) |
 
 **Voir aussi** : `docs/nouvelle_als.md` pour l'architecture détaillée.

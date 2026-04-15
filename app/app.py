@@ -74,36 +74,6 @@ def display_page(pathname):
     if pathname == "/clone":
         return clone.layout(), navbar
 
-    # Pages à venir — placeholder élégant
-    page_names = {
-        "/recommandations": ("🎬", "Recommandations", "Films & musiques recommandés"),
-    }
-
-    if pathname in page_names:
-        icon, name, desc = page_names[pathname]
-        placeholder = html.Div(
-            style={
-                "display": "flex",
-                "flexDirection": "column",
-                "alignItems": "center",
-                "justifyContent": "center",
-                "height": "calc(100vh - 64px)",
-                "paddingTop": "64px",
-                "gap": "16px",
-                "color": "var(--text-muted)",
-                "fontFamily": "var(--font-display)",
-            },
-            children=[
-                html.Div(icon, style={"fontSize": "56px"}),
-                html.H2(name, style={"fontSize": "32px", "fontWeight": "800", "color": "var(--text-primary)"}),
-                html.P(desc, style={"fontSize": "15px", "color": "var(--text-secondary)"}),
-                html.P("🚧 En cours de développement",
-                       style={"fontSize": "12px", "letterSpacing": "2px", "textTransform": "uppercase",
-                              "color": "var(--violet-bright)"}),
-            ],
-        )
-        return placeholder, navbar
-
     # 404
     return html.Div("404 — Page introuvable",
                     style={"color": "var(--text-muted)", "padding": "100px", "textAlign": "center"}), navbar
