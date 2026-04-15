@@ -14,23 +14,28 @@ Format de sortie : chaque ligne JSONL contient :
 """
 
 import json
+import os
+import sys
 import pathlib
 import random
 
 # ─── CONFIG ────────────────────────────────────────────────────────────────────
 
-BASE_DIR  = pathlib.Path("C:/Users/arnau/Documents/MyDigitalTwin")
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "../../..")))
+from config import LLM_DATA
+
+LLM_DATA = pathlib.Path(LLM_DATA)
 
 # ─── SYSTEM PROMPT ─────────────────────────────────────────────────────────────
 # Lu depuis data/LLM_DATA/SYS_PROMPT_ARNAUD — modifie ce fichier pour mettre à jour.
 
-SYSTEM_PROMPT = (BASE_DIR / "data/LLM_DATA/SYS_PROMPT_ARNAUD").read_text(encoding="utf-8").strip()
-INPUT     = BASE_DIR / "data/LLM_DATA/dataset_final.jsonl"
-OUTPUT    = BASE_DIR / "data/LLM_DATA/dataset_chatml.jsonl"
+SYSTEM_PROMPT = (LLM_DATA / "SYS_PROMPT_ARNAUD").read_text(encoding="utf-8").strip()
+INPUT        = LLM_DATA / "dataset_final.jsonl"
+OUTPUT       = LLM_DATA / "dataset_chatml.jsonl"
 
-SPLIT_RATIO = 0.95   # 95% train, 5% validation
-OUTPUT_TRAIN = BASE_DIR / "data/LLM_DATA/train.jsonl"
-OUTPUT_VAL   = BASE_DIR / "data/LLM_DATA/val.jsonl"
+SPLIT_RATIO  = 0.95   # 95% train, 5% validation
+OUTPUT_TRAIN = LLM_DATA / "train.jsonl"
+OUTPUT_VAL   = LLM_DATA / "val.jsonl"
 
 
 # ─── CONVERSION ────────────────────────────────────────────────────────────────
