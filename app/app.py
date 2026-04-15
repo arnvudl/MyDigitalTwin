@@ -2,7 +2,7 @@ import dash
 from dash import Input, Output, callback, dcc, html
 
 from app.components import create_navbar
-from app.pages import home, clusters, netflix, spotify, social, timeline, psy
+from app.pages import home, clusters, netflix, spotify, social, timeline, psy, photos
 
 # ─── APP INIT ─────────────────────────────────────────────────────────────────
 app = dash.Dash(
@@ -12,6 +12,19 @@ app = dash.Dash(
     title="MyDigitalTwin",
 )
 server = app.server
+
+# ─── ROUTE FLASK — SERVIR LES PHOTOS ─────────────────────────────────────────
+import os as _os
+from flask import send_file as _send_file, abort as _abort
+
+_DATA_ROOT = "/app/data" if _os.path.exists("/app/data") else "data"
+
+@server.route("/photo/<path:filepath>")
+def serve_photo(filepath):
+    full_path = _os.path.join(_DATA_ROOT, filepath)
+    if not _os.path.isfile(full_path):
+        _abort(404)
+    return _send_file(full_path)
 
 # ─── ROOT LAYOUT ──────────────────────────────────────────────────────────────
 app.layout = html.Div(
@@ -55,9 +68,11 @@ def display_page(pathname):
     if pathname == "/psy":
         return psy.layout(), navbar
 
+    if pathname == "/photos":
+        return photos.layout(), navbar
+
     # Pages à venir — placeholder élégant
     page_names = {
-        "/photos": ("🖼️", "Photos", "Tes photos & médias sauvegardés"),
         "/clone": ("🤖", "Clone", "Chatbot conversationnel — style Arnaud"),
         "/recommandations": ("🎬", "Recommandations", "Films & musiques recommandés"),
     }

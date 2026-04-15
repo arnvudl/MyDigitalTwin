@@ -14,6 +14,7 @@ services:
       - ./data:/opt/spark/data
       - ./spark-logs:/opt/spark/spark-events
       - ./warehouse:/opt/spark/warehouse
+      - ./config.py:/opt/spark/config.py
     env_file:
       - .env.spark
     ports:
@@ -35,6 +36,7 @@ services:
       - ./data:/opt/spark/data
       - ./spark-logs:/opt/spark/spark-events
       - ./warehouse:/opt/spark/warehouse
+      - ./config.py:/opt/spark/config.py
     ports:
       - '18080:18080'
 
@@ -51,6 +53,7 @@ services:
       - ./data:/opt/spark/data
       - ./spark-logs:/opt/spark/spark-events
       - ./warehouse:/opt/spark/warehouse
+      - ./config.py:/opt/spark/config.py
 
   dashboard:
     container_name: dashboard
