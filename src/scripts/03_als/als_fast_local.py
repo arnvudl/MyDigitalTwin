@@ -14,24 +14,24 @@ sys.path.insert(0, ROOT_DIR)
 try:
     from config import WAREHOUSE
 except ImportError:
-    print(f"❌ Erreur : Impossible d'importer config.py depuis {ROOT_DIR}")
+    print(f"Erreur : Impossible d'importer config.py depuis {ROOT_DIR}")
     exit()
 
 OUTPUT_PATH = os.path.join(WAREHOUSE, "movie_recommendations.parquet")
 TMP_MATRIX_PATH = os.path.join(WAREHOUSE, "tmp_als_matrix")
 
-print(f"🚀 Option C (SVD) - Root: {ROOT_DIR} - Warehouse: {WAREHOUSE}")
+print(f"ption C (SVD) - Root: {ROOT_DIR} - Warehouse: {WAREHOUSE}")
 
 # 1. Chargement des données
-print("📥 Chargement des interactions...")
+print("Chargement des interactions...")
 if not os.path.exists(TMP_MATRIX_PATH):
-    print(f"❌ Erreur : {TMP_MATRIX_PATH} introuvable. Relance la cellule 4 du notebook.")
+    print(f"Erreur : {TMP_MATRIX_PATH} introuvable. Relance la cellule 4 du notebook.")
     exit()
 
 df = pd.read_parquet(TMP_MATRIX_PATH)
 
 # 2. Préparation des IDs
-print("📊 Préparation de la matrice...")
+print("Préparation de la matrice...")
 df['u_idx'] = df['userId'].astype("category").cat.codes
 df['m_idx'] = df['movieId'].astype("category").cat.codes
 
@@ -42,19 +42,19 @@ movie_map = dict(enumerate(df['movieId'].astype("category").cat.categories))
 try:
     arnaud_idx = list(user_map.values()).index(0)
 except ValueError:
-    print("❌ Erreur : Arnaud (userId 0) n'est pas dans la matrice.")
+    print("Erreur : Arnaud (userId 0) n'est pas dans la matrice.")
     exit()
 
 # 3. Création de la Matrice Sparse
-print("🏗️ Création de la matrice creuse...")
+print("Création de la matrice creuse...")
 rating_matrix = csr_matrix((df['rating'].astype(np.float32), (df['u_idx'], df['m_idx'])))
 
 # 4. Décomposition SVD
-print(f"🧠 Calcul SVD (Rang 50) sur {df.shape[0]:,} interactions...")
+print(f"Calcul SVD (Rang 50) sur {df.shape[0]:,} interactions...")
 u, s, vt = svds(rating_matrix, k=50)
 
 # 5. Reconstruction des scores pour Arnaud
-print("🎯 Génération des recommandations...")
+print("Génération des recommandations...")
 s_diag_matrix = np.diag(s)
 arnaud_scores = np.dot(np.dot(u[arnaud_idx, :], s_diag_matrix), vt)
 
@@ -67,7 +67,7 @@ recos = pd.DataFrame({
 })
 
 # 7. Enrichissement
-print("📝 Enrichissement des métadonnées...")
+print("Enrichissement des métadonnées...")
 movies = pd.read_parquet(os.path.join(WAREHOUSE, "movielens_movies"))
 links = pd.read_parquet(os.path.join(WAREHOUSE, "movielens_links"))
 
@@ -81,7 +81,7 @@ final['rank'] = range(1, len(final) + 1)
 
 # 8. Sauvegarde
 final.head(50).to_parquet(OUTPUT_PATH)
-print(f"✅ Succès ! Recommandations écrites dans {OUTPUT_PATH}")
+print(f"Succès ! Recommandations écrites dans {OUTPUT_PATH}")
 
 print("\n--- TES 10 MEILLEURES RECOMMANDATIONS ---")
 print(final[['rank', 'title', 'predicted_score']].head(10).to_string(index=False))
