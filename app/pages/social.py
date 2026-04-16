@@ -10,8 +10,8 @@ import pandas as pd
 from dash import html, dash_table
 
 # ─── PATHS ───────────────────────────────────────────────────────────────────
-WAREHOUSE = "/app/data/warehouse" if os.path.exists("/app/data/warehouse") else "warehouse"
-PARQUET   = os.path.join(WAREHOUSE, "social_graph.parquet")
+WAREHOUSE   = "/app/data/warehouse" if os.path.exists("/app/data/warehouse") else "warehouse"
+SOCIAL_DIR  = os.path.join(WAREHOUSE, "social_graph")
 
 _HERE      = os.path.dirname(os.path.abspath(__file__))
 ASSETS_DIR = os.path.join(_HERE, "..", "assets")
@@ -59,9 +59,17 @@ MONTH_FR = {
 
 # ─── DATA ────────────────────────────────────────────────────────────────────
 def _load():
-    if not os.path.exists(PARQUET):
+    """Lit social_graph depuis le dossier parquet (cohérent avec les autres tables warehouse)."""
+    if not os.path.exists(SOCIAL_DIR):
         return pd.DataFrame()
-    return pd.read_parquet(PARQUET)
+    files = [
+        os.path.join(SOCIAL_DIR, f)
+        for f in os.listdir(SOCIAL_DIR)
+        if f.endswith(".parquet") and not f.startswith(".")
+    ]
+    if not files:
+        return pd.DataFrame()
+    return pd.concat([pd.read_parquet(f) for f in files], ignore_index=True)
 
 
 def _conv_stats(node_id: str, my_name: str = "A R N A U D") -> dict:

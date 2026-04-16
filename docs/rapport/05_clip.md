@@ -2,7 +2,7 @@
 
 _Dossier_ : `src/scripts/05_CLIP/`  
 _Statut_ : ✅ Terminé (V1 PCA+KMeans → V2 UMAP+HDBSCAN, labels manuels)  
-_Dernière mise à jour_ : 2026-04-15
+_Dernière mise à jour_ : 2026-04-16
 
 ---
 
@@ -41,7 +41,7 @@ photos Instagram (JPG)
     Spark : lecture embeddings → .collect() → numpy
     UMAP (n_components=50) → réduction dimensionnelle non-linéaire
     HDBSCAN → clustering densité, outliers = -1
-    Labelling : CLIPTextModelWithProjection sur centroïdes → text similarity
+    Labelling manuel via inspection visuelle des clusters
     → data/warehouse/photo_clusters/ (Parquet)
     ↓
 Dashboard /photos
@@ -52,9 +52,44 @@ Dashboard /photos
 
 ## Embeddings — `01_clip_embeddings.ipynb`
 
+### Config Spark
+
+```python
+spark.driver.memory              = "4g"
+spark.sql.shuffle.partitions     = "8"
+spark.sql.parquet.compression.codec = "snappy"
+```
+
+- **`driver.memory = 4g`** : les embeddings finaux (2 419 × 768 floats) pèsent ~7 Mo — la mémoire est largement suffisante. La vraie pression vient du modèle CLIP (~1.7 Go par worker chargé dans `embed_partition`), pas du DataFrame Spark lui-même.
+- **`shuffle.partitions = 8`** : `mapInPandas` ne génère pas de shuffle — ce paramètre est sans effet dans ce pipeline. Conservé par cohérence avec les autres notebooks.
+- **`snappy`** : codec de compression Parquet. Rapide en lecture et écriture, bon rapport vitesse/taux pour des données float. Préféré à `gzip` (meilleur taux mais plus lent) ou à aucune compression.
+
+### BATCH_SIZE et N_PARTITIONS
+
+```python
+BATCH_SIZE   = 32   # images par appel modèle
+N_PARTITIONS = 4    # workers Spark = chargements du modèle
+```
+
+- **`BATCH_SIZE = 32`** : bon équilibre mémoire GPU/CPU vs overhead de chargement image. Monter à 64 sur GPU avec >8 Go VRAM ; descendre à 16 si OOM.
+- **`N_PARTITIONS = 4`** : le modèle CLIP est chargé **une fois par partition**. 4 partitions = 4 chargements du modèle (~1.7 Go chacun). Augmenter si cluster multi-nœuds ; garder bas en local pour éviter l'OOM.
+
+### CUDA vs CPU
+
+```python
+device = "cuda" if torch.cuda.is_available() else "cpu"
+```
+
+- **CUDA** : si un GPU est disponible (ex : cluster avec GPU), l'inférence est ~10x plus rapide qu'en CPU. Sur 2 419 photos en batch 32, ça passe de ~20 min à ~2 min.
+- **CPU** : fallback automatique pour Docker sans GPU ou machine locale. Aucune configuration manuelle nécessaire — `torch.cuda.is_available()` détecte l'environnement au runtime.
+- La détection se fait **à l'intérieur de `embed_partition`** (exécuté sur le worker), pas sur le driver — chaque worker choisit son device indépendamment.
+
+### Pourquoi `mapInPandas` et non une Column expression
+
+`mapInPandas` est l'exception justifiée à la règle no-UDF : le modèle PyTorch doit être chargé en Python pur, il n'existe pas d'équivalent JVM. Le gain est que le modèle est chargé **une fois par partition** (pas par ligne) — 4 chargements pour 2 419 photos.
+
 - **Input** : `data/raw/INSTAGRAM/CLIP_SORTING/` — 2 419 photos triées manuellement
 - **Modèle** : `CLIPVisionModelWithProjection` + `CLIPImageProcessor`
-- **Spark** : `mapInPandas` — exception justifiée à la règle no-UDF : le modèle PyTorch doit être chargé une fois par partition en Python pur, sans équivalent JVM
 - **Output** : `data/warehouse/photo_embeddings/` — 2 419 lignes, schema `(path, filename, embedding: Array<float>)`
 
 ---
@@ -92,11 +127,18 @@ Dashboard /photos
 
 ## Clustering — V2 : UMAP + HDBSCAN ✅
 
+### Config Spark (`02_clip_clustering`)
+
+```python
+spark.driver.memory          = "4g"
+spark.sql.shuffle.partitions = "8"
+```
+
+UMAP et HDBSCAN tournent entièrement sur le **driver en numpy** — Spark sert uniquement à lire le Parquet et à sauvegarder le résultat. Les 4g sont suffisants pour les embeddings (7 Mo) et les structures intermédiaires UMAP/HDBSCAN (~50 Mo).
+
 ### Pourquoi UMAP
 
-UMAP (Uniform Manifold Approximation and Projection) est une réduction **non-linéaire** qui préserve la structure locale et globale du manifold. Sur des embeddings CLIP (distribuition sur une hypersphère), UMAP avec `metric="cosine"` respecte la géométrie naturelle des embeddings — deux photos similaires restent proches après réduction.
-
-Comparaison directe :
+UMAP (Uniform Manifold Approximation and Projection) est une réduction **non-linéaire** qui préserve la structure locale et globale du manifold. Sur des embeddings CLIP (distribution sur une hypersphère), UMAP avec `metric="cosine"` respecte la géométrie naturelle des embeddings — deux photos similaires restent proches après réduction.
 
 | | PCA | UMAP |
 |---|---|---|
@@ -104,6 +146,21 @@ Comparaison directe :
 | Structure préservée | Variance globale | Voisinage local + global |
 | Métrique | Euclidienne | Cosine (paramétrable) |
 | Adapté aux hypersphères | Non | Oui |
+
+### Paramètres UMAP
+
+```python
+umap.UMAP(n_components=50, n_neighbors=15, min_dist=0.1, metric='cosine')
+```
+
+| Paramètre | Valeur | Justification |
+|---|---|---|
+| `n_components` | 50 | Espace intermédiaire pour HDBSCAN. 768D→50D réduit le bruit dimensionnel sans écraser la structure locale. Trop bas (2D) = perte d'info pour le clustering ; trop haut (200D) = malédiction de la dimensionnalité pour HDBSCAN. |
+| `n_neighbors` | 15 | Taille du voisinage local pour construire le graphe de similarité. Petit (5) = structure fine, sensible au bruit. Grand (50) = structure globale, clusters larges. 15 est le défaut UMAP, bon équilibre sur ~2400 points. |
+| `min_dist` | 0.1 | Distance minimale entre points dans l'espace réduit. 0.0 = clusters très compressés. 1.0 = distribution uniforme, structure locale perdue. 0.1 préserve la structure sans sur-comprimer. |
+| `metric` | `cosine` | Distance dans l'espace original (768D). Embeddings L2-normalisés → cosine distance ≡ euclidienne sur l'hypersphère, mais utiliser `cosine` explicitement est plus correct. |
+
+Un deuxième UMAP 2D (mêmes paramètres) est calculé séparément pour la **visualisation dashboard** — les 2D de visualisation ne sont pas utilisées pour HDBSCAN car trop compressées.
 
 ### Pourquoi HDBSCAN
 
@@ -116,16 +173,18 @@ HDBSCAN (Hierarchical Density-Based Spatial Clustering) ne requiert pas de `k` f
 | Outliers | Forcés dans un cluster | Marqués -1 |
 | Adapté aux embeddings | Non | Oui |
 
-### Paramètres retenus
+### Paramètres HDBSCAN
 
 ```python
-umap.UMAP(n_components=50, n_neighbors=15, min_dist=0.1, metric="cosine")
-hdbscan.HDBSCAN(min_cluster_size=30, min_samples=5, metric="euclidean")
+hdbscan.HDBSCAN(min_cluster_size=50, min_samples=5, metric='euclidean', cluster_selection_method='eom')
 ```
 
-- `n_components=50` : espace intermédiaire avant HDBSCAN (compromis qualité/vitesse)
-- `min_cluster_size=30` : évite les micro-clusters parasites sur 2 419 photos
-- `metric="cosine"` dans UMAP car embeddings L2-normalisés → distance cosine = distance euclidienne, mais expliciter la métrique améliore la qualité
+| Paramètre | Valeur | Justification |
+|---|---|---|
+| `min_cluster_size` | 50 | Taille minimale d'un cluster (≈ 2% des 2419 photos). Trop petit (10) → micro-clusters parasites, testé avec 30 : trop fragmenté. Trop grand (200) → clusters fusionnés. |
+| `min_samples` | 5 | Nombre de voisins requis pour qu'un point soit "core point". Petit (1) = moins de bruit. Grand (20) = clusters plus denses, plus de photos classées bruit. 5 : compromis — les photos atypiques vont en bruit sans sur-peupler le cluster -1. |
+| `metric` | `euclidean` | Distance sur l'espace UMAP 50D. UMAP produit des coordonnées cartésiennes (pas des embeddings normalisés) → euclidean est correct ici, contrairement à la métrique cosine utilisée dans UMAP. |
+| `cluster_selection_method` | `eom` | Excess of Mass — favorise les clusters stables de tailles inégales (réaliste : soirées = 1295 photos vs enfance = 67). L'alternative `leaf` donnerait des clusters plus petits et équilibrés, moins adaptée à ce corpus. |
 
 ### Labelling automatique → abandonné, labels manuels
 
