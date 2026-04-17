@@ -1,7 +1,9 @@
 import os
 import pandas as pd
 import plotly.graph_objects as go
+from functools import lru_cache
 from dash import ALL, Input, Output, State, callback, dcc, html
+from app.icons import svg_icon, MUSIC, CLOCK, MIC
 
 # ─── CONFIG ──────────────────────────────────────────────────────────────────
 DELTA_BASE = "/app/data/warehouse" if os.path.exists("/app/data/warehouse") else "warehouse"
@@ -26,6 +28,7 @@ _DEFAULT_SEL = {"year": None, "months": [], "weeks": []}
 
 
 # ─── DATA ────────────────────────────────────────────────────────────────────
+@lru_cache(maxsize=1)
 def _load_spotify() -> pd.DataFrame:
     path = os.path.join(DELTA_BASE, "spotify_streams")
     if not os.path.exists(path):
@@ -237,10 +240,12 @@ def _render_top_artists_visual(df: pd.DataFrame, n: int = 6) -> html.Div:
         
         # Fallback visuel local si pas d'image
         img_component = html.Img(src=img_url, style={"width": "100%", "height": "100%", "objectFit": "cover"}) if img_url else \
-                        html.Div("🎤", style={
-                            "display": "flex", "alignItems": "center", "justifyContent": "center",
-                            "width": "100%", "height": "100%", "fontSize": "32px", "background": "linear-gradient(135deg, #282828, #121212)"
-                        })
+                        html.Div(
+                            svg_icon(MIC, size="32"),
+                            style={
+                                "display": "flex", "alignItems": "center", "justifyContent": "center",
+                                "width": "100%", "height": "100%", "color": "#888", "background": "linear-gradient(135deg, #282828, #121212)"
+                            })
 
         cards.append(html.Div(
             style={
@@ -459,10 +464,10 @@ def _build_content(df: pd.DataFrame, sel: dict) -> list:
 
     return [
         html.Div(className="stats-row", style={"marginBottom": "24px", "marginLeft": "auto", "marginRight": "auto"}, children=[
-            _stat("🎵", f"{total_streams:,}", "Streams"),
-            _stat("⏱️", f"{total_hours:,}h",  "Écoutées"),
-            _stat("🎤", f"{n_artists:,}",      "Artistes"),
-            _stat("🎼", f"{n_tracks:,}",        "Titres distincts"),
+            _stat(svg_icon(MUSIC), f"{total_streams:,}", "Streams"),
+            _stat(svg_icon(CLOCK), f"{total_hours:,}h",  "Écoutées"),
+            _stat(svg_icon(MIC),   f"{n_artists:,}",     "Artistes"),
+            _stat(svg_icon(MUSIC), f"{n_tracks:,}",      "Titres distincts"),
         ]),
 
         # --- TOP ARTISTES VISUEL ---
@@ -507,7 +512,7 @@ def layout():
                 style={"display": "flex", "flexDirection": "column", "alignItems": "center",
                        "justifyContent": "center", "height": "calc(100vh - 52px)", "gap": "16px"},
                 children=[
-                    html.Div("🎵", style={"fontSize": "56px"}),
+                    html.Div(svg_icon(MUSIC, size="56"), style={"color": "var(--text-secondary)"}),
                     html.H2("Spotify", style={"fontSize": "28px", "fontWeight": "700",
                                               "color": "var(--text-primary)"}),
                     html.P("Lance d'abord 01_exploration/spotify.ipynb.",

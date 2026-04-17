@@ -3,6 +3,7 @@ import re
 import pandas as pd
 from difflib import SequenceMatcher
 from dash import Input, Output, State, callback, clientside_callback, dcc, html, no_update
+from app.icons import svg_icon, TARGET, SEARCH
 
 # ─── CONFIG ──────────────────────────────────────────────────────────────────
 DELTA_BASE = "/app/data/warehouse" if os.path.exists("/app/data/warehouse") else "warehouse"
@@ -12,7 +13,6 @@ PLATFORM_CFG = {
         "color":  "#e50914",
         "dim":    "rgba(229,9,20,0.15)",
         "bar":    "rgba(229,9,20,0.8)",
-        "emoji":  "🎬",
         "label":  "Netflix",
         "noun":   "film / série",
         "verb":   "regardé",
@@ -22,7 +22,6 @@ PLATFORM_CFG = {
         "color":  "#1db954",
         "dim":    "rgba(29,185,84,0.15)",
         "bar":    "rgba(29,185,84,0.8)",
-        "emoji":  "🎵",
         "label":  "Spotify",
         "noun":   "titre / artiste",
         "verb":   "écouté",
@@ -162,13 +161,13 @@ def layout():
                                 "justifyContent": "center"},
                          children=[
                     html.Button(
-                        "🎬  Netflix",
+                        "Netflix",
                         id="reco-btn-netflix",
                         n_clicks=0,
                         style=_toggle_btn_style("#e50914", active=True),
                     ),
                     html.Button(
-                        "🎵  Spotify",
+                        "Spotify",
                         id="reco-btn-spotify",
                         n_clicks=0,
                         style=_toggle_btn_style("#1db954", active=False),
@@ -392,7 +391,7 @@ def _empty_state():
     return html.Div(
         style={"textAlign": "center", "padding": "60px 0", "color": "var(--text-muted)"},
         children=[
-            html.Div("🎯", style={"fontSize": "48px", "marginBottom": "12px"}),
+            html.Div(svg_icon(TARGET, size="48"), style={"marginBottom": "12px", "color": "var(--text-muted)"}),
             html.P("Lance une recherche pour voir ton score d'affinité.",
                    style={"fontSize": "15px"}),
         ],
@@ -552,7 +551,7 @@ def _render_not_found(result: dict, cfg: dict):
                 "display": "flex", "gap": "16px", "alignItems": "center",
             },
             children=[
-                html.Span("🔍", style={"fontSize": "28px"}),
+                html.Span(svg_icon(SEARCH, size="28")),
                 html.Div(children=[
                     html.Div(f'"{query}" n\'est pas dans ton historique {cfg["label"]}.',
                              style={"fontSize": "15px", "color": "var(--text-primary)",

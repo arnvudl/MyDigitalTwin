@@ -7,6 +7,7 @@ import re
 
 import pandas as pd
 from dash import Input, Output, callback, html, dcc, ALL
+from app.icons import svg_icon, MUSIC, FILM, SEARCH, TWITTER, PHONE
 
 # ─── CONFIG ──────────────────────────────────────────────────────────────────
 # On vérifie si on est dans Docker (où les dossiers sont montés à la racine /app/data et /app/data/warehouse)
@@ -21,14 +22,14 @@ else:
     X_PERSONALIZATION_PATH = "data/raw/X/data/personalization.js"
 
 CATEGORY_KEYWORDS = {
-    "⚽ Sport": [
+    "Sport": [
         "football", "soccer", "nba", "match", "goal", "player", "arsenal", "champions",
         "fifa", "ligue", "rugby", "tennis", "basketball", "sport", "ballon d'or", "ucl",
         "premier league", "ufc", "mma", "boxing", "gym", "fitness", "workout", "calisthenics",
         "training", "nfl", "olympics", "swimming", "cycling", "padel", "volleyball",
         "champions league", "ligue 1"
     ],
-    "🏎️ Auto/Moto": [
+    "Auto/Moto": [
         "car", "auto", "voiture", "porsche", "ferrari", "lamborghini", "bmw", "mercedes",
         "audi", "tesla", "f1", "formula 1", "supercar", "hypercar", "drift", "tuning",
         "engine", "v8", "v12", "electric vehicle", "motorsport", "motorcycle", "moto",
@@ -36,7 +37,7 @@ CATEGORY_KEYWORDS = {
         "toyota", "supra", "rb26", "porsche 911", "rs6", "amg", "m performance", "ducati",
         "harley", "grand prix"
     ],
-    "🎵 Musique": [
+    "Musique": [
         "music", "song", "artist", "rap", "album", "track", "beat", "drill", "trap",
         "afrobeat", "afropop", "rnb", "r&b", "hip", "hop", "streaming", "spotify",
         "playlist", "concert", "festival", "lyrics", "producer", "instrumental", "pop",
@@ -46,7 +47,7 @@ CATEGORY_KEYWORDS = {
         "travis scott", "bad bunny", "deejay", "frank ocean", "blaiz fayah", "mister v",
         "team bs", "sexion", "shatta", "bouyon", "soca", "gouyad", "zouk"
     ],
-    "💻 Tech": [
+    "Tech": [
         "python", "code", "data", "dev", "javascript", "api", "ai", "software", "tech",
         "developer", "engineering", "science", "consumer tech", "technology", "equipment",
         "artificial intelligence", "machine learning", "deep learning", "nlp", "llm",
@@ -55,7 +56,7 @@ CATEGORY_KEYWORDS = {
         "startup", "computer science", "rust", "typescript", "chatgpt", "openai", "gpu",
         "nvidia", "cuda", "mac"
     ],
-    "🎬 Cinéma/Séries": [
+    "Cinéma/Séries": [
         "netflix", "film", "série", "movie", "episode", "cinema", "watch", "trailer",
         "season", "tv", "show", "streaming", "anime", "manga", "crunchyroll", "hbo",
         "prime video", "disney+", "marvel", "dc comics", "star wars", "oscars",
@@ -64,26 +65,26 @@ CATEGORY_KEYWORDS = {
         "baki", "boruto", "fullmetal", "one piece", "hunter", "demon slayer",
         "attack on titan", "fullmetal alchemist", "rick morty"
     ],
-    "🎮 Gaming": [
+    "Gaming": [
         "game", "gaming", "play", "xbox", "ps5", "steam", "minecraft", "fortnite", "esport",
         "gamer", "action game", "video game", "ar/vr", "nintendo", "switch", "twitch",
         "discord", "multiplayer", "rpg", "fps", "roblox", "league of legends", "valorant",
         "warzone", "gta", "elden ring", "zelda", "playstation", "controller",
         "pc master race", "casino"
     ],
-    "🌍 Actu/Société": [
+    "Actu/Société": [
         "news", "actu", "society", "monde", "france", "afrique", "africa", "senegal",
         "belgique", "politique", "cup of nations", "environment", "ecology", "climate",
         "space", "nasa", "spacex", "economy", "finance", "crypto", "bitcoin", "ethereum",
         "blockchain", "stock market", "history", "philosophy", "culture", "university"
     ],
-    "🛍️ Shopping": [
+    "Shopping": [
         "amazon", "shop", "product", "électronique", "brand", "adidas", "nike", "fashion",
         "streetwear", "sneakers", "yeezy", "jordan", "clothes", "outfit", "ecommerce",
         "unboxing", "skincare", "watches", "apple", "iphone", "samsung", "gadget",
         "deals", "dior", "louis vuitton", "stussy", "vintage", "airpods pro", "ralph lauren"
     ],
-    "📸 Photo/Créa": [
+    "Photo/Créa": [
         "photo", "photography", "design", "creative", "art", "visual", "camera", "image",
         "graphic", "illustration", "photoshop", "lightroom", "editing", "video production",
         "content creation", "youtube", "tiktok", "reels", "architecture", "interior design",
@@ -378,11 +379,11 @@ def layout():
     tags  = build_orbit_tags(data)
 
     stats_cards = [
-        {"icon": "🎵", "value": f"{stats['artistes']:,}",    "label": "Artistes écoutés"},
-        {"icon": "🎬", "value": f"{stats['films']:,}",        "label": "Contenus Netflix"},
-        {"icon": "🔍", "value": f"{stats['recherches']:,}",   "label": "Recherches Google"},
-        {"icon": "🐦", "value": f"{stats['tweets']:,}",       "label": "Tweets postés"},
-        {"icon": "📱", "value": str(len(data["scores"])),     "label": "Centres d'intérêt"},
+        {"icon": svg_icon(MUSIC),   "value": f"{stats['artistes']:,}", "label": "Artistes écoutés"},
+        {"icon": svg_icon(FILM),    "value": f"{stats['films']:,}",    "label": "Contenus Netflix"},
+        {"icon": svg_icon(SEARCH),  "value": f"{stats['recherches']:,}", "label": "Recherches Google"},
+        {"icon": svg_icon(TWITTER), "value": f"{stats['tweets']:,}",   "label": "Tweets postés"},
+        {"icon": svg_icon(PHONE),   "value": str(len(data["scores"])), "label": "Centres d'intérêt"},
     ]
 
     return html.Div(className="page-wrapper", children=[
@@ -435,7 +436,7 @@ def update_detail_panel(tag_id):
     examples = data["examples"]
     is_kmeans = data.get("source") == "kmeans"
     
-    # 1. Si on a cliqué sur une CATEGORIE (ex: "🎵 Musique")
+    # 1. Si on a cliqué sur une CATEGORIE (ex: "Musique")
     if tag_id in examples:
         cat     = tag_id
         ex_list = examples[cat]

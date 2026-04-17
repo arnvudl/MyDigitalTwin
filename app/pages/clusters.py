@@ -1,8 +1,10 @@
 import os
 import re
+from functools import lru_cache
 
 import pandas as pd
 from dash import ALL, Input, Output, State, callback, dcc, html
+from app.icons import svg_icon, PUZZLE
 
 # ─── FILTRE ANTI-PUB / BRUIT ─────────────────────────────────────────────────
 # Patterns communs : campagnes YouTube (INH, VID 16x9), Chrome promos,
@@ -108,6 +110,7 @@ def _to_list(val) -> list:
         return []
 
 
+@lru_cache(maxsize=1)
 def _read_profiles() -> pd.DataFrame:
     df = _read_delta("interest_profiles", [
         "cluster_id", "label", "emoji", "keywords",
@@ -310,7 +313,7 @@ def layout():
                     "fontFamily": "var(--font-family)",
                 },
                 children=[
-                    html.Div("🧩", style={"fontSize": "56px"}),
+                    html.Div(svg_icon(PUZZLE, size="56"), style={"color": "var(--text-secondary)"}),
                     html.H2("Profils comportementaux",
                             style={"fontSize": "28px", "fontWeight": "700",
                                    "color": "var(--text-primary)"}),

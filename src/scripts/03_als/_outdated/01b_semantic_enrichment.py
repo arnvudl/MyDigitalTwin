@@ -55,14 +55,14 @@ if __name__ == "__main__":
     output_path = os.path.join(WAREHOUSE, "item_metadata.parquet")
 
     if not os.path.exists(input_path):
-        print(f"❌ Erreur : Le dossier {input_path} n'existe pas.")
+        print(f"[ERREUR] Le dossier {input_path} n'existe pas.")
         exit(1)
 
-    print(f"📥 Lecture des titres...")
+    print(f"Lecture des titres...")
     df_all = pd.read_parquet(input_path, engine='pyarrow')
     unique_items = df_all[["item_title", "platform"]].drop_duplicates().to_dict('records')
     
-    print(f"🚀 Traitement de {len(unique_items)} items avec {MAX_WORKERS} threads (Modèle: {OLLAMA_MODEL})...")
+    print(f"Traitement de {len(unique_items)} items avec {MAX_WORKERS} threads (Modèle: {OLLAMA_MODEL})...")
 
     results = []
     with ThreadPoolExecutor(max_workers=MAX_WORKERS) as executor:
@@ -75,4 +75,4 @@ if __name__ == "__main__":
 
     if results:
         pd.DataFrame(results).to_parquet(output_path, index=False)
-        print(f"✅ Terminé ! Stocké dans {output_path}")
+        print(f"Terminé. Stocké dans {output_path}")
