@@ -2,10 +2,12 @@ import os
 import re
 import requests
 import pandas as pd
+from functools import lru_cache
 from dotenv import load_dotenv
 load_dotenv()
 import plotly.graph_objects as go
 from dash import ALL, Input, Output, State, callback, dcc, html, no_update, clientside_callback
+from app.icons import svg_icon, FILM, TV, VIDEO
 from difflib import SequenceMatcher
 
 # ─── CONFIG ──────────────────────────────────────────────────────────────────
@@ -40,6 +42,7 @@ def _get_poster_url(tmdb_id) -> str:
     return ""
 
 # ─── DATA ────────────────────────────────────────────────────────────────────
+@lru_cache(maxsize=1)
 def _load_recos() -> pd.DataFrame:
     # Supporte fichier unique (als_fast_local.py) ou dossier (notebook Spark)
     single = os.path.join(DELTA_BASE, "movie_recommendations.parquet")
@@ -74,6 +77,7 @@ _DEFAULT_SEL = {"year": None, "months": [], "weeks": []}
 
 
 # ─── DATA ────────────────────────────────────────────────────────────────────
+@lru_cache(maxsize=1)
 def _load_netflix() -> pd.DataFrame:
     path = os.path.join(DELTA_BASE, "netflix_views")
     if not os.path.exists(path):
@@ -296,7 +300,7 @@ def _reco_section():
                     style={"height": "220px", "background": "rgba(255,255,255,0.04)", "position": "relative", "overflow": "hidden"},
                     children=[
                         html.Img(src=poster_url, style={"width": "100%", "height": "100%", "objectFit": "cover"}) if poster_url
-                        else html.Div("🎬", style={"fontSize": "48px", "display": "flex", "alignItems": "center", "justifyContent": "center", "height": "100%"}),
+                        else html.Div(svg_icon(FILM, size="48"), style={"display": "flex", "alignItems": "center", "justifyContent": "center", "height": "100%", "color": "#555"}),
                         html.Span(f"#{r['rank']}", style={
                             "position": "absolute", "top": "8px", "left": "8px",
                             "background": "rgba(0,0,0,0.75)", "color": NETFLIX_RED if r["rank"] <= 3 else "#fff",
@@ -513,9 +517,9 @@ def _build_content(df: pd.DataFrame, sel: dict) -> list:
 
     return [
         html.Div(className="stats-row", style={"marginBottom": "24px", "marginLeft": "auto", "marginRight": "auto"}, children=[
-            _stat("🎬", f"{total:,}",    "Épisodes / Films"),
-            _stat("📺", f"{n_series:,}", "Séries distinctes"),
-            _stat("🎥", f"{n_movies:,}", "Films regardés"),
+            _stat(svg_icon(FILM),  f"{total:,}",    "Épisodes / Films"),
+            _stat(svg_icon(TV),    f"{n_series:,}", "Séries distinctes"),
+            _stat(svg_icon(VIDEO), f"{n_movies:,}", "Films regardés"),
         ]),
 
         html.Div(style={"display": "flex", "gap": "16px", "flexWrap": "wrap", "marginTop": "24px"},
@@ -552,7 +556,7 @@ def layout():
                 style={"display": "flex", "flexDirection": "column", "alignItems": "center",
                        "justifyContent": "center", "height": "calc(100vh - 52px)", "gap": "16px"},
                 children=[
-                    html.Div("🎬", style={"fontSize": "56px"}),
+                    html.Div(svg_icon(FILM, size="56"), style={"color": "var(--text-secondary)"}),
                     html.H2("Netflix", style={"fontSize": "28px", "fontWeight": "700",
                                               "color": "var(--text-primary)"}),
                     html.P("Lance d'abord 01_exploration/netflix.ipynb.",

@@ -5,6 +5,7 @@ import os
 import re
 from collections import Counter
 from datetime import datetime
+from functools import lru_cache
 
 import pandas as pd
 from dash import html, dash_table
@@ -58,6 +59,7 @@ MONTH_FR = {
 }
 
 # ─── DATA ────────────────────────────────────────────────────────────────────
+@lru_cache(maxsize=1)
 def _load():
     """Lit social_graph depuis le dossier parquet (cohérent avec les autres tables warehouse)."""
     if not os.path.exists(SOCIAL_DIR):
@@ -390,9 +392,9 @@ def _build_3d_html(df: pd.DataFrame, stats_map: dict) -> str:
   <div id="card">
     <div id="card-avatar">AB</div>
     <div id="card-name">@username</div>
-    <div id="card-badge" class="cf">⭐ Close Friend</div>
+    <div id="card-badge" class="cf">Close Friend</div>
     <div class="card-row">
-      <span class="card-row-lbl">💬 Messages</span>
+      <span class="card-row-lbl">Messages</span>
       <span class="card-row-val" id="card-msgs">—</span>
     </div>
   </div>
@@ -427,7 +429,7 @@ def _build_3d_html(df: pd.DataFrame, stats_map: dict) -> str:
   <div id="detail">
     <button id="detail-close" onclick="closeDetail()">✕</button>
     <div id="detail-name">—</div>
-    <div id="detail-badge" class="cf">⭐ Close Friend</div>
+    <div id="detail-badge" class="cf">Close Friend</div>
     <hr id="detail-sep"/>
     <div id="detail-stats" class="d-section"></div>
     <div id="detail-msgs-section" class="d-section" style="display:none">
@@ -470,10 +472,10 @@ def _build_3d_html(df: pd.DataFrame, stats_map: dict) -> str:
       .linkDirectionalParticleSpeed(l => l.is_close ? 0.005 : 0.003)
       .nodeLabel(node => {{
         const badge = node.is_close
-          ? '<span style="background:rgba(168,85,247,.25);color:#c084fc;padding:2px 8px;border-radius:12px;font-size:10px;font-weight:700;letter-spacing:.8px;text-transform:uppercase">⭐ Close Friend</span>'
+          ? '<span style="background:rgba(168,85,247,.25);color:#c084fc;padding:2px 8px;border-radius:12px;font-size:10px;font-weight:700;letter-spacing:.8px;text-transform:uppercase">Close Friend</span>'
           : (node.id === 'arnaud' ? '' : '<span style="background:rgba(59,79,160,.2);color:#93a8d4;padding:2px 8px;border-radius:12px;font-size:10px;font-weight:700;letter-spacing:.8px;text-transform:uppercase">Follower</span>');
         const msgs = node.msg_count > 0
-          ? `<div style="margin-top:6px;font-size:12px;color:rgba(255,255,255,.45)">💬 ${{node.msg_count.toLocaleString()}} messages</div>`
+          ? `<div style="margin-top:6px;font-size:12px;color:rgba(255,255,255,.45)">${{node.msg_count.toLocaleString()}} messages</div>`
           : '';
         return `<div style="
           background:rgba(10,7,26,.88);
@@ -615,12 +617,12 @@ def _build_3d_html(df: pd.DataFrame, stats_map: dict) -> str:
       const statsEl = document.getElementById('detail-stats');
       statsEl.innerHTML = '';
       const rows = [
-        ['💬 Messages', node.msg_count.toLocaleString()],
-        ['📤 Envoyés',  s.sent   != null ? s.sent.toLocaleString()     : '—'],
-        ['📥 Reçus',    s.received != null ? s.received.toLocaleString() : '—'],
-        ['📅 Première conv', s.first || '—'],
-        ['🕐 Dernière conv', s.last  || '—'],
-        ['\U0001F525 Pic activit\u00e9', s.peak ? s.peak + ' (' + (s.peak_count||0).toLocaleString() + ' msgs)' : '\u2014'],
+        ['Messages', node.msg_count.toLocaleString()],
+        ['Envoyés',  s.sent   != null ? s.sent.toLocaleString()     : '—'],
+        ['Reçus',    s.received != null ? s.received.toLocaleString() : '—'],
+        ['Première conv', s.first || '—'],
+        ['Dernière conv', s.last  || '—'],
+        ['Pic activité', s.peak ? s.peak + ' (' + (s.peak_count||0).toLocaleString() + ' msgs)' : '—'],
       ];
       rows.forEach(([k, v]) => {{
         const row = document.createElement('div');

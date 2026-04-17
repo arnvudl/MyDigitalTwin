@@ -3,6 +3,7 @@ import pandas as pd
 import plotly.express as px
 import dash
 from dash import dcc, html, Input, Output, callback, State, ALL
+from app.icons import svg_icon, FOLDER
 from dash.exceptions import PreventUpdate
 from functools import lru_cache
 
@@ -131,7 +132,7 @@ def render_page(year, month_idx):
                 id={"type": "month-card", "index": i}, className="profile-card",
                 style={"cursor": "pointer", "padding": "40px 20px", "textAlign": "center"},
                 children=[
-                    html.Div("📂", style={"fontSize": "56px", "marginBottom": "15px"}),
+                    html.Div(svg_icon(FOLDER, size="56"), style={"color": "var(--text-secondary)", "marginBottom": "15px"}),
                     html.Div(name, className="profile-platform-name", style={"fontSize": "20px"}),
                     html.Div(f"{count:,} act.".replace(',', ' '), className="profile-count")
                 ]

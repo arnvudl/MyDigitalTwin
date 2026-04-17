@@ -1,8 +1,10 @@
 import os
+from functools import lru_cache
 
 import pandas as pd
 import plotly.express as px
 from dash import Input, Output, callback, dcc, html
+from app.icons import svg_icon, IMAGE
 
 # ─── CONFIG ──────────────────────────────────────────────────────────────────
 if os.path.exists("/app/data/warehouse"):
@@ -24,6 +26,7 @@ def _spark_to_local(spark_path: str) -> str:
     return spark_path
 
 
+@lru_cache(maxsize=1)
 def _read_clusters() -> pd.DataFrame:
     if not os.path.exists(CLUSTERS_DIR):
         return pd.DataFrame()
@@ -83,10 +86,11 @@ def _photo_grid(rows: pd.DataFrame) -> html.Div:
                 html.Img(
                     src=_photo_url(local),
                     title=row["filename"],
+                    className="photo-item",
                     style={
                         "width": "100%", "aspectRatio": "1/1",
                         "objectFit": "cover", "borderRadius": "6px",
-                        "display": "block",
+                        "display": "block", "cursor": "pointer",
                     },
                 )
             )
@@ -115,7 +119,7 @@ def layout():
                     "height": "calc(100vh - 52px)", "gap": "16px",
                 },
                 children=[
-                    html.Div("🖼️", style={"fontSize": "56px"}),
+                    html.Div(svg_icon(IMAGE, size="56"), style={"color": "var(--text-secondary)"}),
                     html.H2("Clustering Photos",
                             style={"fontSize": "28px", "fontWeight": "700",
                                    "color": "var(--text-primary)"}),
@@ -193,7 +197,76 @@ def layout():
 
             # Grille de photos (toutes)
             html.Div(id="photo-grid-container"),
-        ])
+        ]),
+
+        # ─── Lightbox overlay ─────────────────────────────────────────────────
+        html.Div(
+            id="lightbox-overlay",
+            style={
+                "display": "none",
+                "position": "fixed", "inset": "0", "zIndex": "9999",
+                "background": "rgba(0,0,0,0.93)",
+                "alignItems": "center", "justifyContent": "center",
+            },
+            children=[
+                # Close button
+                html.Button(
+                    "×",
+                    id="lightbox-close",
+                    style={
+                        "position": "absolute", "top": "16px", "right": "20px",
+                        "background": "none", "border": "none", "color": "#fff",
+                        "fontSize": "36px", "cursor": "pointer", "lineHeight": "1",
+                        "opacity": "0.8",
+                    },
+                ),
+                # Prev
+                html.Button(
+                    "‹",
+                    id="lightbox-prev",
+                    style={
+                        "position": "absolute", "left": "16px",
+                        "background": "rgba(255,255,255,0.1)", "border": "none",
+                        "color": "#fff", "fontSize": "40px", "cursor": "pointer",
+                        "borderRadius": "50%", "width": "52px", "height": "52px",
+                        "display": "flex", "alignItems": "center", "justifyContent": "center",
+                        "lineHeight": "1",
+                    },
+                ),
+                # Image
+                html.Img(
+                    id="lightbox-img",
+                    src="",
+                    style={
+                        "maxWidth": "90vw", "maxHeight": "85vh",
+                        "objectFit": "contain", "borderRadius": "4px",
+                        "boxShadow": "0 8px 48px rgba(0,0,0,0.6)",
+                    },
+                ),
+                # Next
+                html.Button(
+                    "›",
+                    id="lightbox-next",
+                    style={
+                        "position": "absolute", "right": "16px",
+                        "background": "rgba(255,255,255,0.1)", "border": "none",
+                        "color": "#fff", "fontSize": "40px", "cursor": "pointer",
+                        "borderRadius": "50%", "width": "52px", "height": "52px",
+                        "display": "flex", "alignItems": "center", "justifyContent": "center",
+                        "lineHeight": "1",
+                    },
+                ),
+                # Counter
+                html.Div(
+                    id="lightbox-counter",
+                    style={
+                        "position": "absolute", "bottom": "20px",
+                        "color": "rgba(255,255,255,0.55)", "fontSize": "13px",
+                        "letterSpacing": "1px",
+                    },
+                ),
+            ],
+        ),
     ])
 
 

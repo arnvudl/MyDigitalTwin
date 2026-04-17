@@ -15,11 +15,16 @@ from dash import Input, Output, State, callback, dcc, html, no_update, ALL
 # ─── CONFIG ──────────────────────────────────────────────────────────────────
 DELTA_BASE = "/app/data/warehouse" if os.path.exists("/app/data/warehouse") else "data/warehouse"
 
+from app.icons import svg_icon, CHAT, SEARCH, MUSIC, BOX
+_svg_chat   = svg_icon(CHAT)
+_svg_search = svg_icon(SEARCH)
+_svg_music  = svg_icon(MUSIC)
+_svg_box    = svg_icon(BOX)
 SOURCES_OPTIONS = [
-    {"id": "verbe",       "label": "Le Verbe",      "desc": "Messages TikTok + Instagram",           "icon": "💬"},
-    {"id": "inconscient", "label": "L'Inconscient",  "desc": "Recherches Google & YouTube",           "icon": "🔍"},
-    {"id": "emotionnel",  "label": "L'Émotionnel",   "desc": "Spotify, Netflix, TikTok Watch",        "icon": "🎵"},
-    {"id": "materiel",    "label": "Le Matériel",    "desc": "Commandes Amazon",                      "icon": "📦"},
+    {"id": "verbe",       "label": "Le Verbe",      "desc": "Messages TikTok + Instagram",           "icon": _svg_chat},
+    {"id": "inconscient", "label": "L'Inconscient",  "desc": "Recherches Google & YouTube",           "icon": _svg_search},
+    {"id": "emotionnel",  "label": "L'Émotionnel",   "desc": "Spotify, Netflix, TikTok Watch",        "icon": _svg_music},
+    {"id": "materiel",    "label": "Le Matériel",    "desc": "Commandes Amazon",                      "icon": _svg_box},
 ]
 
 

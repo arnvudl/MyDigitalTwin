@@ -34,7 +34,7 @@ def collect_photos(dry_run=True):
 
     for src_path in SOURCE_DIRS:
         if not src_path.exists():
-            print(f"⚠️  Dossier introuvable (ignoré) : {src_path}")
+            print(f"[!] Dossier introuvable (ignoré) : {src_path}")
             continue
 
         print(f"Exploration de : {src_path}...")

@@ -5,7 +5,8 @@ Chat conversationnel propulsé par Gemini Flash + corpus de DMs réels.
 
 import os
 
-import google.generativeai as genai
+from google import genai
+from google.genai import types
 from dash import Input, Output, State, callback, dcc, html, no_update
 
 # ─── PATHS ───────────────────────────────────────────────────────────────────
@@ -41,35 +42,37 @@ Voici des exemples réels de tes conversations passées. Imite ce style exacteme
 
 # ─── GEMINI ──────────────────────────────────────────────────────────────────
 _GEMINI_KEY = os.environ.get("GEMINI_API_KEY", "")
-if _GEMINI_KEY:
-    genai.configure(api_key=_GEMINI_KEY)
-    _gemini_model = genai.GenerativeModel(
-        model_name="gemini-2.5-flash",
-        system_instruction=_FULL_SYSTEM,
-        # ⚠️  Le corpus injecté (~50k tokens) + historique dépasse rapidement
-        # la limite free tier de 250k tokens/min sur Gemini 2.5 Flash.
-        # Alternative : passer sur Groq (llama-3.3-70b, vraiment gratuit)
-        # et réduire TOP_N dans 02_build_gemini_corpus.py de 300 → 50-100.
-    )
-else:
-    _gemini_model = None
+_gemini_client = genai.Client(api_key=_GEMINI_KEY) if _GEMINI_KEY else None
+
+_GEMINI_CONFIG = types.GenerateContentConfig(
+    system_instruction=_FULL_SYSTEM,
+    # Le corpus injecté (~50k tokens) + historique dépasse rapidement
+    # la limite free tier de 250k tokens/min sur Gemini 2.5 Flash.
+    # Alternative : passer sur Groq (llama-3.3-70b, vraiment gratuit)
+    # et réduire TOP_N dans 02_build_gemini_corpus.py de 300 → 50-100.
+)
 
 
 def _call_gemini(history: list[dict]) -> str:
     """Envoie l'historique complet à Gemini et retourne la réponse."""
-    if not _gemini_model:
-        return "⚠️ GEMINI_API_KEY manquante — définis la variable d'environnement."
+    if not _gemini_client:
+        return "[!] GEMINI_API_KEY manquante — définis la variable d'environnement."
 
-    # Convertir l'historique Dash → format Gemini
-    gemini_history = []
-    for msg in history[:-1]:  # tout sauf le dernier (= message en cours)
-        gemini_history.append({
-            "role": "user" if msg["role"] == "user" else "model",
-            "parts": [msg["content"]],
-        })
+    # Convertir l'historique Dash → format google.genai
+    gemini_history = [
+        types.Content(
+            role="user" if msg["role"] == "user" else "model",
+            parts=[types.Part(text=msg["content"])],
+        )
+        for msg in history[:-1]  # tout sauf le dernier (= message en cours)
+    ]
 
-    chat = _gemini_model.start_chat(history=gemini_history)
     try:
+        chat = _gemini_client.chats.create(
+            model="gemini-2.5-flash",
+            config=_GEMINI_CONFIG,
+            history=gemini_history,
+        )
         response = chat.send_message(history[-1]["content"])
         return response.text
     except Exception as e:
@@ -105,11 +108,11 @@ def layout():
             # Alertes si config manquante
             html.Div([
                 html.Div(
-                    "⚠️ Corpus introuvable — lance src/scripts/04_clone/02_build_gemini_corpus.py",
+                    "[!] Corpus introuvable — lance src/scripts/04_clone/02_build_gemini_corpus.py",
                     className="clone-alert",
                 ) if not corpus_ok else None,
                 html.Div(
-                    "⚠️ Variable GEMINI_API_KEY manquante",
+                    "[!] Variable GEMINI_API_KEY manquante",
                     className="clone-alert",
                 ) if not api_ok else None,
             ]),
