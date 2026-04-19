@@ -2,7 +2,7 @@ import dash
 from dash import Input, Output, callback, dcc, html
 
 from app.components import create_navbar
-from app.pages import home, clusters, netflix, spotify, social, timeline, psy, photos, clone
+from app.pages import home, clusters, netflix, spotify, social, timeline, psy, photos, clone, inventory
 
 # ─── APP INIT ─────────────────────────────────────────────────────────────────
 app = dash.Dash(
@@ -73,6 +73,9 @@ def display_page(pathname):
 
     if pathname == "/clone":
         return clone.layout(), navbar
+
+    if pathname == "/inventaire":
+        return inventory.layout(), navbar
 
     # 404
     return html.Div("404 — Page introuvable",
