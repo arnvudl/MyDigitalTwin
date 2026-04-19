@@ -1,0 +1,62 @@
+1. Démarrer les conteneurs
+
+make up
+# ou : docker compose up -d --build
+
+Attend que spark-master soit healthy (vérifie sur http://localhost:8080).
+
+---
+2. Ingestion — lancer les notebooks dans le conteneur
+
+docker exec -it spark-master bash
+# puis dans le conteneur :
+cd /opt/spark/scripts/01_exploration
+
+Lancer dans cet ordre (chacun écrit directement en Delta dans /opt/spark/warehouse/) :
+
+jupyter nbconvert --to notebook --execute google_youtube.ipynb --inplace
+jupyter nbconvert --to notebook --execute netflix.ipynb          --inplace
+jupyter nbconvert --to notebook --execute spotify.ipynb          --inplace
+jupyter nbconvert --to notebook --execute tiktok.ipynb           --inplace
+jupyter nbconvert --to notebook --execute twitter.ipynb          --inplace
+jupyter nbconvert --to notebook --execute instagram.ipynb        --inplace
+jupyter nbconvert --to notebook --execute amazon.ipynb           --inplace
+jupyter nbconvert --to notebook --execute apple.ipynb            --inplace
+
+▎ parquet_to_delta.ipynb n'est plus nécessaire — les notebooks écrivent directement en Delta.
+
+---
+3. Clustering comportemental
+
+cd /opt/spark/scripts/02_clustering
+jupyter nbconvert --to notebook --execute 02_behavioral_clustering.ipynb --inplace
+jupyter nbconvert --to notebook --execute 03_fusion_visualization.ipynb  --inplace
+
+---
+4. ALS (recommandations)
+
+cd /opt/spark/scripts/03_als
+jupyter nbconvert --to notebook --execute 01_build_interactions.ipynb --inplace
+jupyter nbconvert --to notebook --execute 02_als_model.ipynb          --inplace
+jupyter nbconvert --to notebook --execute 03_movie_recommendations.ipynb --inplace
+
+---
+5. Social graph
+
+cd /opt/spark/scripts/06_social
+jupyter nbconvert --to notebook --execute 01_social_graph.ipynb --inplace
+
+---
+6. Dashboard
+
+Le conteneur dashboard tourne déjà sur http://localhost:8050 grâce au make up. Si tu modifies des fichiers dans app/, il se recharge automatiquement (volume monté).
+
+---
+Résumé rapide
+
+make up
+→ étape 2 : ingestion (01_exploration/)
+→ étape 3 : clustering (02_clustering/)
+→ étape 4 : ALS (03_als/)
+→ étape 5 : social (06_social/)
+→ http://localhost:8050

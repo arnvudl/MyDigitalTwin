@@ -202,17 +202,21 @@ def load_all_keywords() -> dict:
     all_topics = ig_topics + x_interests
 
     # ── Chargement des données Delta (scoring réel) ───────────────────────────
-    df_google   = _read_delta("google_searches", ["query"])
-    df_youtube  = _read_delta("youtube_watch",   ["title"])
-    df_chrome   = _read_delta("google_chrome",   ["title"])
-    df_spotify  = _read_delta("spotify_streams", ["artistName"])
-    df_netflix  = _read_delta("netflix_views",   ["show_title"])
+    df_google        = _read_delta("google_searches",    ["query"])
+    df_youtube       = _read_delta("youtube_watch",      ["title"])
+    df_chrome        = _read_delta("google_chrome",      ["title"])
+    df_spotify       = _read_delta("spotify_streams",    ["artistName"])
+    df_netflix       = _read_delta("netflix_views",      ["show_title"])
+    df_tiktok_s      = _read_delta("tiktok_searches",    ["query"])
+    df_ig_searches   = _read_delta("instagram_searches", ["query"])
 
-    s_google  = df_google["query"]      if not df_google.empty  else None
-    s_youtube = df_youtube["title"]     if not df_youtube.empty else None
-    s_chrome  = df_chrome["title"]      if not df_chrome.empty  else None
-    s_spotify = df_spotify["artistName"] if not df_spotify.empty else None
-    s_netflix = df_netflix["show_title"] if not df_netflix.empty else None
+    s_google       = df_google["query"]         if not df_google.empty       else None
+    s_youtube      = df_youtube["title"]        if not df_youtube.empty      else None
+    s_chrome       = df_chrome["title"]         if not df_chrome.empty       else None
+    s_spotify      = df_spotify["artistName"]   if not df_spotify.empty      else None
+    s_netflix      = df_netflix["show_title"]   if not df_netflix.empty      else None
+    s_tiktok_s     = df_tiktok_s["query"]       if not df_tiktok_s.empty     else None
+    s_ig_searches  = df_ig_searches["query"]    if not df_ig_searches.empty  else None
 
     category_scores   = {}
     category_examples = {}
@@ -246,11 +250,13 @@ def load_all_keywords() -> dict:
 
         # ── Score Delta (données réelles) ─────────────────────────────────────
         delta_score = (
-            _delta_score(s_google,  pattern) +
-            _delta_score(s_youtube, pattern) +
-            _delta_score(s_chrome,  pattern) +
-            _delta_score(s_spotify, pattern) +
-            _delta_score(s_netflix, pattern)
+            _delta_score(s_google,      pattern) +
+            _delta_score(s_youtube,     pattern) +
+            _delta_score(s_chrome,      pattern) +
+            _delta_score(s_spotify,     pattern) +
+            _delta_score(s_netflix,     pattern) +
+            _delta_score(s_tiktok_s,    pattern) +
+            _delta_score(s_ig_searches, pattern)
         )
 
         category_scores[cat]   = topic_score + delta_score
