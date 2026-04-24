@@ -1,0 +1,34 @@
+{
+  "platforms": {
+    "instagram": {
+      "last_export_date": null,
+      "last_ingested": null,
+      "notes": "Télécharger via : Paramètres → Ton activité → Télécharger tes informations (format JSON)"
+    },
+    "netflix": {
+      "last_export_date": null,
+      "last_ingested": null,
+      "notes": "Télécharger via : account.netflix.com → Compte → Télécharger vos données personnelles (délai ~30j)"
+    },
+    "spotify": {
+      "last_export_date": null,
+      "last_ingested": null,
+      "notes": "Télécharger via : account.spotify.com → Privacy → Download your data (délai ~5-14j)"
+    },
+    "google": {
+      "last_export_date": null,
+      "last_ingested": null,
+      "notes": "Télécharger via : takeout.google.com — sélectionner : Chrome, YouTube, Search (délai ~1-3j)"
+    },
+    "tiktok": {
+      "last_export_date": null,
+      "last_ingested": null,
+      "notes": "Télécharger via : Paramètres → Confidentialité → Télécharger tes données (JSON, délai ~7-15j)"
+    },
+    "twitter": {
+      "last_export_date": null,
+      "last_ingested": null,
+      "notes": "Télécharger via : Paramètres → Ton compte → Télécharger une archive (délai ~1-3j)"
+    }
+  }
+}

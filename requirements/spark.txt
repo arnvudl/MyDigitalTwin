@@ -1,0 +1,5 @@
+# ── PySpark + Delta Lake ──────────────────────────────────────────────────────
+# Java 11+ requis séparément
+pyspark==3.5.1
+delta-spark==3.2.0
+fastparquet==2026.3.0
