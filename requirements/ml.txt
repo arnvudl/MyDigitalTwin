@@ -1,0 +1,9 @@
+# ── ML lourd (CLIP, embeddings, ALS) ─────────────────────────────────────────
+# torch installé en CPU-only via Dockerfile pour éviter les ~2 Go GPU
+# pip install torch==2.11.0 --index-url https://download.pytorch.org/whl/cpu
+torch==2.11.0
+transformers==5.5.4
+sentence-transformers==5.4.0
+huggingface_hub==1.10.1
+safetensors==0.7.0
+tokenizers==0.22.2
