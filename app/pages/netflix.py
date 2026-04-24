@@ -6,7 +6,7 @@ from functools import lru_cache
 from dotenv import load_dotenv
 load_dotenv()
 import plotly.graph_objects as go
-from dash import ALL, Input, Output, State, callback, dcc, html, no_update, clientside_callback
+from dash import ALL, Input, Output, State, callback, dcc, html, no_update, clientside_callback, ClientsideFunction
 from app.icons import svg_icon, FILM, TV, VIDEO
 from difflib import SequenceMatcher
 
@@ -156,11 +156,7 @@ def _chip_row(row_label: str, chip_type: str, items: list, active_vals: list) ->
     return html.Div(
         style={"display": "flex", "alignItems": "center", "gap": "8px", "flexWrap": "wrap"},
         children=[
-            html.Span(f"{row_label} :", style={
-                "fontSize": "11px", "fontWeight": "600",
-                "color": "var(--text-muted)", "textTransform": "uppercase",
-                "letterSpacing": "1.5px", "minWidth": "60px",
-            }),
+            html.Span(f"{row_label} :", className="filter-row-label"),
             _chip("Tout", chip_type, None, tout_active),
             *[_chip(lbl, chip_type, val, val in active_vals) for val, lbl in items],
         ],
@@ -456,14 +452,6 @@ def _build_content(df: pd.DataFrame, sel: dict) -> list:
     n_series = df[df["content_type"] == "series"]["show_title"].nunique() if "content_type" in df.columns else 0
     n_movies = df[df["content_type"] == "movie"]["show_title"].nunique()  if "content_type" in df.columns else 0
 
-    panel = {
-        "background": "rgba(28,28,30,0.5)",
-        "backdropFilter": "blur(40px)",
-        "border": "1px solid rgba(255,255,255,0.06)",
-        "borderRadius": "14px",
-        "padding": "20px",
-    }
-
     def _stat(icon, value, label):
         return html.Div(className="stat-card", children=[
             html.Div(icon,  className="stat-icon"),
@@ -504,7 +492,8 @@ def _build_content(df: pd.DataFrame, sel: dict) -> list:
 
     def _section_card(title, children):
         return html.Div(
-            style={**panel, "borderTop": f"2px solid {NETFLIX_RED}", "flex": "1", "minWidth": "280px"},
+            className="data-panel",
+            style={"borderTop": f"2px solid {NETFLIX_RED}", "flex": "1", "minWidth": "280px"},
             children=[
                 html.H3(title, style={"fontFamily": "var(--font-serif)", "fontSize": "18px",
                                       "color": "var(--text-primary)", "marginBottom": "16px"}),
@@ -524,15 +513,15 @@ def _build_content(df: pd.DataFrame, sel: dict) -> list:
 
         html.Div(style={"display": "flex", "gap": "16px", "flexWrap": "wrap", "marginTop": "24px"},
                  children=[
-            html.Div(style={**panel, "flex": "2", "minWidth": "340px"},
+            html.Div(className="data-panel", style={"flex": "2", "minWidth": "340px"},
                      children=[dcc.Graph(figure=_chart_activity(df, sel),
                                          config={"displayModeBar": False})]),
-            html.Div(style={**panel, "flex": "1", "minWidth": "240px"},
+            html.Div(className="data-panel", style={"flex": "1", "minWidth": "240px"},
                      children=[dcc.Graph(figure=_chart_weekday(df),
                                          config={"displayModeBar": False})]),
         ]),
 
-        *([html.Div(style={**panel, "marginTop": "16px"},
+        *([html.Div(className="data-panel", style={"marginTop": "16px"},
                     children=[dcc.Graph(figure=_chart_by_year(df),
                                          config={"displayModeBar": False})])]
           if show_yearly else []),
@@ -552,17 +541,13 @@ def layout():
 
     if df.empty:
         return html.Div(className="page-wrapper", children=[
-            html.Div(
-                style={"display": "flex", "flexDirection": "column", "alignItems": "center",
-                       "justifyContent": "center", "height": "calc(100vh - 52px)", "gap": "16px"},
-                children=[
-                    html.Div(svg_icon(FILM, size="56"), style={"color": "var(--text-secondary)"}),
-                    html.H2("Netflix", style={"fontSize": "28px", "fontWeight": "700",
-                                              "color": "var(--text-primary)"}),
-                    html.P("Lance d'abord 01_exploration/netflix.ipynb.",
-                           style={"fontSize": "14px", "color": "var(--text-secondary)"}),
-                ],
-            )
+            html.Div(className="page-empty-state", children=[
+                html.Div(svg_icon(FILM, size="56"), style={"color": "var(--text-secondary)"}),
+                html.H2("Netflix", style={"fontSize": "28px", "fontWeight": "700",
+                                          "color": "var(--text-primary)"}),
+                html.P("Lance d'abord 01_exploration/netflix.ipynb.",
+                       style={"fontSize": "14px", "color": "var(--text-secondary)"}),
+            ])
         ])
 
     return html.Div(className="page-wrapper", children=[
@@ -673,17 +658,7 @@ def do_nf_search(n1, n2, query):
     return result, anim, False, 0
 
 clientside_callback(
-    """
-    function(n, store) {
-        if (!store || store.target === 0) return [window.dash_clientside.no_update, store, true];
-        var current = store.current || 0;
-        var target  = store.target  || 0;
-        if (current >= target) return [target + "%", store, true];
-        var step = Math.max(1, Math.ceil((target - current) / 12));
-        var next = Math.min(current + step, target);
-        return [next + "%", {target: target, current: next}, next >= target];
-    }
-    """,
+    ClientsideFunction(namespace="netflix", function_name="animateScoreCounter"),
     Output("nf-reco-score-counter", "children"),
     Output("nf-reco-anim-store",    "data"),
     Output("nf-reco-anim-interval", "disabled"),

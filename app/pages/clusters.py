@@ -305,22 +305,14 @@ def layout():
 
     if df.empty:
         return html.Div(className="page-wrapper", children=[
-            html.Div(
-                style={
-                    "display": "flex", "flexDirection": "column",
-                    "alignItems": "center", "justifyContent": "center",
-                    "height": "calc(100vh - 52px)", "gap": "16px",
-                    "fontFamily": "var(--font-family)",
-                },
-                children=[
-                    html.Div(svg_icon(PUZZLE, size="56"), style={"color": "var(--text-secondary)"}),
-                    html.H2("Profils comportementaux",
-                            style={"fontSize": "28px", "fontWeight": "700",
-                                   "color": "var(--text-primary)"}),
-                    html.P("Lance d'abord 03_fusion_visualization.ipynb.",
-                           style={"fontSize": "14px", "color": "var(--text-secondary)"}),
-                ],
-            )
+            html.Div(className="page-empty-state", children=[
+                html.Div(svg_icon(PUZZLE, size="56"), style={"color": "var(--text-secondary)"}),
+                html.H2("Profils comportementaux",
+                        style={"fontSize": "28px", "fontWeight": "700",
+                               "color": "var(--text-primary)"}),
+                html.P("Lance d'abord 03_fusion_visualization.ipynb.",
+                       style={"fontSize": "14px", "color": "var(--text-secondary)"}),
+            ])
         ])
 
     return html.Div(className="page-wrapper", children=[

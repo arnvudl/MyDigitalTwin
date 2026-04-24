@@ -1,8 +1,32 @@
+import threading
 import dash
 from dash import Input, Output, callback, dcc, html
 
 from app.components import create_navbar
 from app.pages import home, clusters, netflix, spotify, social, timeline, psy, photos, clone, inventory
+
+
+def _prewarm_caches():
+    """Load all heavy data at startup so first page visits are instant."""
+    try: home.load_interest_profiles()
+    except Exception: pass
+    try: home.load_all_keywords()
+    except Exception: pass
+    try: home.compute_stats()
+    except Exception: pass
+    try: spotify._load_spotify()
+    except Exception: pass
+    try: netflix._load_netflix()
+    except Exception: pass
+    try: netflix._load_recos()
+    except Exception: pass
+    try: social._load()
+    except Exception: pass
+    try: photos._read_clusters()
+    except Exception: pass
+
+
+threading.Thread(target=_prewarm_caches, daemon=True).start()
 
 # ─── APP INIT ─────────────────────────────────────────────────────────────────
 app = dash.Dash(
