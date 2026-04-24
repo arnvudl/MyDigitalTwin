@@ -1,4 +1,4 @@
-.PHONY: install install-dev install-spark install-ml app remind freeze-app up down dev
+.PHONY: install install-dev install-spark install-ml app freeze-app up down dev
 
 # ── Installation ──────────────────────────────────────────────────────────────
 install:
@@ -16,10 +16,6 @@ install-ml:
 # ── App locale ────────────────────────────────────────────────────────────────
 app:
 	python -m app.app
-
-# ── GDPR reminders ───────────────────────────────────────────────────────────
-remind:
-	python src/ingestion/remind.py
 
 # ── Pinning (mettre à jour les versions après un pip install) ─────────────────
 freeze-app:
