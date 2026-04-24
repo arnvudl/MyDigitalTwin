@@ -117,11 +117,7 @@ def _chip_row(row_label: str, chip_type: str, items: list, active_vals: list) ->
     return html.Div(
         style={"display": "flex", "alignItems": "center", "gap": "8px", "flexWrap": "wrap"},
         children=[
-            html.Span(f"{row_label} :", style={
-                "fontSize": "11px", "fontWeight": "600",
-                "color": "var(--text-muted)", "textTransform": "uppercase",
-                "letterSpacing": "1.5px", "minWidth": "60px",
-            }),
+            html.Span(f"{row_label} :", className="filter-row-label"),
             *chips,
         ],
     )
@@ -447,14 +443,6 @@ def _build_content(df: pd.DataFrame, sel: dict) -> list:
     n_artists     = df["artistName"].nunique()
     n_tracks      = df["trackName"].nunique()
 
-    panel = {
-        "background": "rgba(28,28,30,0.5)",
-        "backdropFilter": "blur(40px)",
-        "border": "1px solid rgba(255,255,255,0.06)",
-        "borderRadius": "14px",
-        "padding": "20px",
-    }
-
     def _stat(icon, value, label):
         return html.Div(className="stat-card", children=[
             html.Div(icon,  className="stat-icon"),
@@ -471,7 +459,7 @@ def _build_content(df: pd.DataFrame, sel: dict) -> list:
         ]),
 
         # --- TOP ARTISTES VISUEL ---
-        html.Div(style={**panel, "marginBottom": "24px"}, children=[
+        html.Div(className="data-panel", style={"marginBottom": "24px"}, children=[
             html.Div("Top Artistes", style={
                 "fontSize": "11px", "fontWeight": "700", "color": SPOTIFY_GREEN,
                 "textTransform": "uppercase", "letterSpacing": "2px", "marginBottom": "16px"
@@ -480,22 +468,22 @@ def _build_content(df: pd.DataFrame, sel: dict) -> list:
         ]),
 
         # --- PLAYLIST VISUELLE (FULL WIDTH) ---
-        html.Div(style={**panel, "marginBottom": "24px"},
+        html.Div(className="data-panel", style={"marginBottom": "24px"},
                  children=[
             html.Div("Ma Playlist du moment", style={
                 "fontSize": "11px", "fontWeight": "700", "color": SPOTIFY_GREEN,
                 "textTransform": "uppercase", "letterSpacing": "2px", "marginBottom": "16px"
             }),
-            _render_playlist_visual(df, n=12) # Augmenté à 12 pour remplir l'espace
+            _render_playlist_visual(df, n=12)
         ]),
 
         # --- GRAPHIQUES DE VARIÉTÉ ET ACTIVITÉ ---
         html.Div(style={"display": "flex", "gap": "16px", "flexWrap": "wrap"},
                  children=[
-            html.Div(style={**panel, "flex": "1.5", "minWidth": "340px"},
+            html.Div(className="data-panel", style={"flex": "1.5", "minWidth": "340px"},
                      children=[dcc.Graph(figure=_chart_activity(df, sel),
                                          config={"displayModeBar": False})]),
-            html.Div(style={**panel, "flex": "1", "minWidth": "300px"},
+            html.Div(className="data-panel", style={"flex": "1", "minWidth": "300px"},
                      children=[dcc.Graph(figure=_chart_hourly(df),
                                          config={"displayModeBar": False})]),
         ]),
@@ -508,17 +496,13 @@ def layout():
 
     if df.empty:
         return html.Div(className="page-wrapper", children=[
-            html.Div(
-                style={"display": "flex", "flexDirection": "column", "alignItems": "center",
-                       "justifyContent": "center", "height": "calc(100vh - 52px)", "gap": "16px"},
-                children=[
-                    html.Div(svg_icon(MUSIC, size="56"), style={"color": "var(--text-secondary)"}),
-                    html.H2("Spotify", style={"fontSize": "28px", "fontWeight": "700",
-                                              "color": "var(--text-primary)"}),
-                    html.P("Lance d'abord 01_exploration/spotify.ipynb.",
-                           style={"fontSize": "14px", "color": "var(--text-secondary)"}),
-                ],
-            )
+            html.Div(className="page-empty-state", children=[
+                html.Div(svg_icon(MUSIC, size="56"), style={"color": "var(--text-secondary)"}),
+                html.H2("Spotify", style={"fontSize": "28px", "fontWeight": "700",
+                                          "color": "var(--text-primary)"}),
+                html.P("Lance d'abord 01_exploration/spotify.ipynb.",
+                       style={"fontSize": "14px", "color": "var(--text-secondary)"}),
+            ])
         ])
 
     return html.Div(className="page-wrapper", children=[

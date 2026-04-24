@@ -205,8 +205,7 @@ def render_page(year, month_idx, week_start_str):
         header = html.Div(className="home-hero",
                           style={"textAlign": "left", "marginBottom": "40px"}, children=[
             html.Div("← Retour", id={"type": "nav-btn", "index": "back-year"},
-                     style={"cursor": "pointer", "color": "var(--violet-bright)",
-                            "marginBottom": "20px", "fontWeight": "600", "display": "inline-block"}),
+                     className="nav-back-link"),
             html.H1([html.Em(month_name), f" {year}"], className="home-hero-title"),
         ])
 
@@ -294,8 +293,7 @@ def render_page(year, month_idx, week_start_str):
     header = html.Div(className="home-hero",
                       style={"textAlign": "left", "marginBottom": "40px"}, children=[
         html.Div("← Retour au mois", id={"type": "nav-btn", "index": "back-month"},
-                 style={"cursor": "pointer", "color": "var(--violet-bright)",
-                        "marginBottom": "20px", "fontWeight": "600", "display": "inline-block"}),
+                 className="nav-back-link"),
         html.H1([html.Em(label)], className="home-hero-title"),
     ])
 

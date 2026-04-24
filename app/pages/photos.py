@@ -112,21 +112,14 @@ def layout():
 
     if df.empty:
         return html.Div(className="page-wrapper", children=[
-            html.Div(
-                style={
-                    "display": "flex", "flexDirection": "column",
-                    "alignItems": "center", "justifyContent": "center",
-                    "height": "calc(100vh - 52px)", "gap": "16px",
-                },
-                children=[
-                    html.Div(svg_icon(IMAGE, size="56"), style={"color": "var(--text-secondary)"}),
-                    html.H2("Clustering Photos",
-                            style={"fontSize": "28px", "fontWeight": "700",
-                                   "color": "var(--text-primary)"}),
-                    html.P("Lance d'abord 05_CLIP/02_clip_clustering.ipynb.",
-                           style={"fontSize": "14px", "color": "var(--text-secondary)"}),
-                ],
-            )
+            html.Div(className="page-empty-state", children=[
+                html.Div(svg_icon(IMAGE, size="56"), style={"color": "var(--text-secondary)"}),
+                html.H2("Clustering Photos",
+                        style={"fontSize": "28px", "fontWeight": "700",
+                               "color": "var(--text-primary)"}),
+                html.P("Lance d'abord 05_CLIP/02_clip_clustering.ipynb.",
+                       style={"fontSize": "14px", "color": "var(--text-secondary)"}),
+            ])
         ])
 
     cluster_ids = sorted(df["cluster"].unique())
@@ -170,10 +163,7 @@ def layout():
 
             # Scatter PCA
             html.Div(children=[
-                html.Div("Carte visuelle UMAP 2D", style={
-                    "fontSize": "12px", "color": "#888", "marginBottom": "8px",
-                    "textTransform": "uppercase", "letterSpacing": "1px",
-                }),
+                html.P("Carte visuelle UMAP 2D", className="section-label"),
                 dcc.Graph(
                     id="photo-scatter",
                     figure=_scatter_fig(df),

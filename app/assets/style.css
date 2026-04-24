@@ -979,3 +979,65 @@ html, body {
 }
 
 .clone-send-btn:hover { opacity: 0.85; }
+
+/* ── Utility: section label (uppercase overline) ─────────────────────────── */
+.section-label {
+  font-size: 11px; font-weight: 600; letter-spacing: 3px;
+  text-transform: uppercase; color: var(--text-muted);
+  font-family: var(--font-family);
+}
+
+/* ── Utility: page empty state (no data) ─────────────────────────────────── */
+.page-empty-state {
+  display: flex; flex-direction: column;
+  align-items: center; justify-content: center;
+  height: calc(100vh - 52px); gap: 16px;
+}
+
+/* ── Utility: frosted glass data panel ───────────────────────────────────── */
+.data-panel {
+  background: rgba(28,28,30,0.5);
+  backdrop-filter: blur(40px);
+  border: 1px solid rgba(255,255,255,0.06);
+  border-radius: 14px;
+  padding: 20px;
+}
+
+/* ── Utility: chip row label (Année :, Mois :, ...) ─────────────────────── */
+.filter-row-label {
+  font-size: 11px; font-weight: 600;
+  color: var(--text-muted); text-transform: uppercase;
+  letter-spacing: 1.5px; min-width: 60px;
+}
+
+/* ── Utility: back navigation link ───────────────────────────────────────── */
+.nav-back-link {
+  cursor: pointer; color: var(--violet-bright);
+  margin-bottom: 20px; font-weight: 600; display: inline-block;
+}
+
+/* ── Utility: search input field ─────────────────────────────────────────── */
+.search-input {
+  flex: 1;
+  background: rgba(28,28,30,0.7);
+  border: 1px solid rgba(255,255,255,0.12);
+  border-radius: 12px;
+  padding: 14px 20px;
+  font-size: 16px;
+  color: #fff;
+  outline: none;
+  font-family: var(--font-family);
+}
+
+/* ── Utility: primary action button ──────────────────────────────────────── */
+.search-btn {
+  border: none;
+  border-radius: 12px;
+  padding: 14px 24px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  font-family: var(--font-family);
+  white-space: nowrap;
+  color: #fff;
+}

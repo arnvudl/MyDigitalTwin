@@ -2,7 +2,7 @@ import os
 import re
 import pandas as pd
 from difflib import SequenceMatcher
-from dash import Input, Output, State, callback, clientside_callback, dcc, html, no_update
+from dash import Input, Output, State, callback, clientside_callback, ClientsideFunction, dcc, html, no_update
 from app.icons import svg_icon, TARGET, SEARCH
 
 # ─── CONFIG ──────────────────────────────────────────────────────────────────
@@ -186,34 +186,14 @@ def layout():
                         placeholder="ex: Breaking Bad, Interstellar…",
                         debounce=False,
                         n_submit=0,
-                        style={
-                            "flex": "1",
-                            "background": "rgba(28,28,30,0.7)",
-                            "border": "1px solid rgba(255,255,255,0.12)",
-                            "borderRadius": "12px",
-                            "padding": "14px 20px",
-                            "fontSize": "16px",
-                            "color": "#fff",
-                            "outline": "none",
-                            "fontFamily": "var(--font-family)",
-                        },
+                        className="search-input",
                     ),
                     html.Button(
                         "Rechercher →",
                         id="reco-search-btn",
                         n_clicks=0,
-                        style={
-                            "background": "#e50914",
-                            "color": "#fff",
-                            "border": "none",
-                            "borderRadius": "12px",
-                            "padding": "14px 24px",
-                            "fontSize": "14px",
-                            "fontWeight": "600",
-                            "cursor": "pointer",
-                            "fontFamily": "var(--font-family)",
-                            "whiteSpace": "nowrap",
-                        },
+                        className="search-btn",
+                        style={"background": "#e50914"},
                     ),
                 ]),
 
@@ -274,18 +254,12 @@ def switch_platform(nc_netflix, nc_spotify, current):
 
     cfg   = PLATFORM_CFG[plat]
     color = cfg["color"]
-    btn_style = {
-        "background": color, "color": "#fff", "border": "none",
-        "borderRadius": "12px", "padding": "14px 24px",
-        "fontSize": "14px", "fontWeight": "600", "cursor": "pointer",
-        "fontFamily": "var(--font-family)", "whiteSpace": "nowrap",
-    }
     return (
         plat,
         _toggle_btn_style("#e50914", plat == "netflix"),
         _toggle_btn_style("#1db954", plat == "spotify"),
         cfg["placeholder"],
-        btn_style,
+        {"background": color},
     )
 
 
@@ -344,21 +318,7 @@ def do_search(n_clicks, n_submit, query, platform):
 
 # Animation du compteur (clientside → pas de round-trip serveur)
 clientside_callback(
-    """
-    function(n, store) {
-        if (!store || store.target === 0) {
-            return [window.dash_clientside.no_update, store, true];
-        }
-        var current = store.current || 0;
-        var target  = store.target  || 0;
-        if (current >= target) {
-            return [target + "%", store, true];
-        }
-        var step = Math.max(1, Math.ceil((target - current) / 12));
-        var next = Math.min(current + step, target);
-        return [next + "%", {target: target, current: next}, next >= target];
-    }
-    """,
+    ClientsideFunction(namespace="reco", function_name="animateScoreCounter"),
     Output("reco-score-counter", "children"),
     Output("reco-anim-store",    "data"),
     Output("reco-anim-interval", "disabled"),
