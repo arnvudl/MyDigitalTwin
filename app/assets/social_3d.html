@@ -325,7 +325,6 @@
       })
 
       .onNodeClick(node => {
-        // Camera zoom
         const len = Math.hypot(node.x||.01, node.y||.01, node.z||.01);
         Graph.cameraPosition(
           { x: node.x*(len+150)/len, y: node.y*(len+150)/len, z: node.z*(len+150)/len },
@@ -380,7 +379,6 @@
         `;
         item.addEventListener('click', () => {
           closeSearch();
-          // Zoom to node
           const obj = Graph.graphData().nodes.find(x => x.id === n.id);
           if (obj) {
             const len = Math.hypot(obj.x||.01, obj.y||.01, obj.z||.01);
@@ -424,7 +422,6 @@
       badge.textContent = cf ? '⭐ Close Friend' : 'Follower';
       badge.className   = 'detail-badge ' + (cf ? 'cf' : 'fol');
 
-      // Stats rows
       const statsEl = document.getElementById('detail-stats');
       statsEl.innerHTML = '';
       const rows = [
@@ -442,7 +439,6 @@
         statsEl.appendChild(row);
       });
 
-      // Recent messages
       const msgsSection = document.getElementById('detail-msgs-section');
       const msgsEl      = document.getElementById('detail-msgs');
       msgsEl.innerHTML  = '';
