@@ -477,7 +477,7 @@ def update_detail_panel(tag_id):
             html.Span(e, className="detail-chip") for e in ex_list
         ]),
         html.Div(
-            "Sources : K-Means · YouTube · Google · Spotify · Netflix · Amazon"
+            "Sources : K-Means · YouTube · Google · Spotify · Netflix"
             if is_kmeans else
             "Sources : Instagram Topics · X Personalization",
             className="detail-source"

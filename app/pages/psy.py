@@ -15,16 +15,14 @@ from dash import Input, Output, State, callback, dcc, html, no_update, ALL
 # ─── CONFIG ──────────────────────────────────────────────────────────────────
 DELTA_BASE = "/app/data/warehouse" if os.path.exists("/app/data/warehouse") else "data/warehouse"
 
-from app.icons import svg_icon, CHAT, SEARCH, MUSIC, BOX
+from app.icons import svg_icon, CHAT, SEARCH, MUSIC
 _svg_chat   = svg_icon(CHAT)
 _svg_search = svg_icon(SEARCH)
 _svg_music  = svg_icon(MUSIC)
-_svg_box    = svg_icon(BOX)
 SOURCES_OPTIONS = [
     {"id": "verbe",       "label": "Le Verbe",      "desc": "Messages TikTok + Instagram",           "icon": _svg_chat},
     {"id": "inconscient", "label": "L'Inconscient",  "desc": "Recherches Google & YouTube",           "icon": _svg_search},
     {"id": "emotionnel",  "label": "L'Émotionnel",   "desc": "Spotify, Netflix, TikTok Watch",        "icon": _svg_music},
-    {"id": "materiel",    "label": "Le Matériel",    "desc": "Commandes Amazon",                      "icon": _svg_box},
 ]
 
 
@@ -36,7 +34,6 @@ def _data_volume(source_id: str) -> int:
         "verbe":       "tiktok_messages_text",
         "inconscient": "google_searches",
         "emotionnel":  "spotify_streams",
-        "materiel":    "amazon_orders",
     }
     table = mapping.get(source_id)
     if not table:
@@ -106,7 +103,7 @@ def _step1_layout(start_date, end_date) -> html.Div:
 
 def _step2_layout(selected_sources=None) -> html.Div:
     if selected_sources is None:
-        selected_sources = ["verbe", "inconscient", "emotionnel", "materiel"]
+        selected_sources = ["verbe", "inconscient", "emotionnel"]
 
     instagram_notice = html.Div(
         style={
@@ -262,7 +259,7 @@ def layout() -> html.Div:
             ),
 
             dcc.Store(id="psy-step", data=1),
-            dcc.Store(id="psy-selected-sources", data=["verbe", "inconscient", "emotionnel", "materiel"]),
+            dcc.Store(id="psy-selected-sources", data=["verbe", "inconscient", "emotionnel"]),
             dcc.Store(id="psy-store-start", data="2024-01-01"),
             dcc.Store(id="psy-store-end", data=now),
             dcc.Store(id="psy-store-anon", data=["anon"]),
@@ -309,7 +306,7 @@ def navigate_steps(next_clicks, prev_clicks, current_step):
 )
 def render_step(step, selected_sources, start, end, anon):
     step = step or 1
-    selected_sources = selected_sources or ["verbe", "inconscient", "emotionnel", "materiel"]
+    selected_sources = selected_sources or ["verbe", "inconscient", "emotionnel"]
     step_labels = ["Période", "Sources", "Confidentialité", "Génération"]
 
     indicator = [
@@ -383,8 +380,7 @@ def update_volume_preview(start, end):
             "verbe": "tiktok_messages_text",
             "inconscient": "google_searches",
             "emotionnel": "spotify_streams",
-            "materiel": "amazon_orders",
-        }
+            }
         table = table_map[src["id"]]
         path = os.path.join(DELTA_BASE, table)
         vol = 0
@@ -394,8 +390,7 @@ def update_volume_preview(start, end):
                 try:
                     date_cols = {"tiktok_messages_text": "timestamp_ms",
                                  "google_searches": "event_date",
-                                 "spotify_streams": "listen_ts",
-                                 "amazon_orders": "order_date"}
+                                 "spotify_streams": "listen_ts"}
                     df = pd.concat([pd.read_parquet(os.path.join(path, f)) for f in files])
                     dcol = date_cols.get(table)
                     if dcol and dcol in df.columns:
@@ -439,7 +434,7 @@ def generate_package(n_clicks, start, end, sources, anon_names_val):
 
     start = start or "2024-01-01"
     end = end or datetime.now().strftime("%Y-%m-%d")
-    sources = sources or ["verbe", "inconscient", "emotionnel", "materiel"]
+    sources = sources or ["verbe", "inconscient", "emotionnel"]
     anon = bool(anon_names_val and "anon" in anon_names_val)
 
     # Import the builder script from app/psy_utils.py

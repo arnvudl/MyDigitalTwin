@@ -11,6 +11,8 @@ services:
       retries: 3
     volumes:
       - ./src/scripts:/opt/spark/scripts
+      - ./src/ingestion:/opt/spark/src/ingestion
+      - ./src/__init__.py:/opt/spark/src/__init__.py
       - ./data:/opt/spark/data
       - ./spark-logs:/opt/spark/spark-events
       - ./warehouse:/opt/spark/warehouse
@@ -33,6 +35,8 @@ services:
       - .env.spark
     volumes:
       - ./src/scripts:/opt/spark/scripts
+      - ./src/ingestion:/opt/spark/src/ingestion
+      - ./src/__init__.py:/opt/spark/src/__init__.py
       - ./data:/opt/spark/data
       - ./spark-logs:/opt/spark/spark-events
       - ./warehouse:/opt/spark/warehouse
@@ -50,6 +54,8 @@ services:
       - .env.spark
     volumes:
       - ./src/scripts:/opt/spark/scripts
+      - ./src/ingestion:/opt/spark/src/ingestion
+      - ./src/__init__.py:/opt/spark/src/__init__.py
       - ./data:/opt/spark/data
       - ./spark-logs:/opt/spark/spark-events
       - ./warehouse:/opt/spark/warehouse

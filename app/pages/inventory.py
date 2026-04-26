@@ -89,16 +89,6 @@ PLATFORMS = [
         ],
     },
     {
-        "name": "Amazon",
-        "emoji": "📦",
-        "color": "#d97706",
-        "bg": "#fffbeb",
-        "sources": [
-            {"name": "Order History.csv",           "status": "partial",   "pages": ["Analyse (psy)"],         "note": "seulement comptage volume"},
-            {"name": "Digital Content Orders.csv",  "status": "missing",   "pages": [],                        "note": "non ingéré"},
-        ],
-    },
-    {
         "name": "Apple",
         "emoji": "🍎",
         "color": "#6b7280",
