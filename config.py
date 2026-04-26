@@ -1,17 +1,28 @@
 """
-config.py — Configuration centrale du projet MyDigitalTwin
-===========================================================
-Un ami qui veut refaire le projet ne doit modifier QUE ce fichier.
+config.py — Configuration centrale MyDigitalTwin
+=================================================
+Ce fichier ne contient PAS de données personnelles.
+Les données personnelles sont dans config.yaml (gitignored).
+Les secrets sont dans .env (gitignored).
 
 Usage dans les notebooks :
     import sys, os
-    sys.path.insert(0, os.path.abspath("../../.."))  # adapter selon la profondeur
-    from config import WAREHOUSE, PROCESSED_DATA, CLOSE_FRIENDS, SPOTIFY_ANCHOR_ARTISTS
+    _d = os.path.abspath('')
+    while not os.path.exists(os.path.join(_d, 'config.py')):
+        _p = os.path.dirname(_d)
+        if _p == _d: raise RuntimeError("config.py introuvable")
+        _d = _p
+    sys.path.insert(0, _d)
+    from config import WAREHOUSE, PROCESSED_DATA, CLOSE_FRIENDS, ...
 """
 
 import os
+import yaml
+from dotenv import load_dotenv
 
-# ── CHEMINS ────────────────────────────────────────────────────────────────────
+load_dotenv()
+
+# ── Chemins (génériques — identiques pour tous les utilisateurs) ───────────────
 PROJECT_ROOT = os.path.dirname(os.path.abspath(__file__))
 
 WAREHOUSE = "/opt/spark/data/warehouse" if os.path.exists("/opt/spark/data/warehouse") \
@@ -20,75 +31,42 @@ WAREHOUSE = "/opt/spark/data/warehouse" if os.path.exists("/opt/spark/data/wareh
 PROCESSED_DATA = os.path.join(PROJECT_ROOT, "data", "processed")
 RAW_DATA       = PROCESSED_DATA   # alias rétrocompatibilité notebooks
 
-# ── GRAPHE SOCIAL ──────────────────────────────────────────────────────────────
-CLOSE_FRIENDS = {
-    "_louange___",
-    "_paulinalambin",
-    "adamvdd",
-    "alice",
-    "clara",
-    "djyoyo",
-    "erwan",
-    "evan",
-    "fafie",
-    "fredfnmz",
-    "gabi",
-    "hugobernard",
-    "jen",
-    "jerome",
-    "laura",
-    "lenysoetaerts",
-    "lou",
-    "loulou",
-    "maelle",
-    "manonvandy",
-    "mylene",
-    "nana",
-    "pilou",
-    "romane",
-    "sachou",
-    "vic",
-    "zo",
-    "3li0tttt",
-}
+LLM_DATA          = os.path.join(PROJECT_ROOT, "data", "LLM_DATA")
+INSTAGRAM_INBOX   = os.path.join(PROCESSED_DATA, "INSTAGRAM",
+                                  "your_instagram_activity", "messages", "inbox")
 
-CLOSE_FRIENDS_MULTIPLIER = 2.0
-MIN_MESSAGES = 5
+# ── Chargement config.yaml (données personnelles) ─────────────────────────────
+_cfg_path = os.path.join(PROJECT_ROOT, "config.yaml")
 
-# ── ALS — ANCRES DE PROFIL ────────────────────────────────────────────────────
-SPOTIFY_ANCHOR_ARTISTS = [
-    "Damso", "Tiakola", "Travis Scott", "Bad Bunny",
-    "Ninho", "Metro Boomin", "Ziak", "Gazo", "Freeze Corleone",
-]
+if not os.path.exists(_cfg_path):
+    raise FileNotFoundError(
+        f"\nconfig.yaml introuvable : {_cfg_path}\n"
+        "→ Copier config.yaml.example → config.yaml et remplir vos données.\n"
+        "  cp config.yaml.example config.yaml"
+    )
 
-NETFLIX_ANCHOR_TITLES = []
+with open(_cfg_path, encoding="utf-8") as _f:
+    _cfg = yaml.safe_load(_f)
 
-# ── CLONE CONVERSATIONNEL (04_clone) ──────────────────────────────────────────
-LLM_DATA = os.path.join(PROJECT_ROOT, "data", "LLM_DATA")
+# ── Identité ──────────────────────────────────────────────────────────────────
+INSTAGRAM_SENDER_NAME = _cfg.get("user", {}).get("instagram_sender_name", "")
 
-INSTAGRAM_INBOX = os.path.join(PROCESSED_DATA, "INSTAGRAM", "your_instagram_activity", "messages", "inbox")
-INSTAGRAM_SENDER_NAME = "A R N A U D"
+# ── Graphe social ─────────────────────────────────────────────────────────────
+_social                 = _cfg.get("social", {})
+CLOSE_FRIENDS           = set(_social.get("close_friends", []))
+CLOSE_FRIENDS_MULTIPLIER = float(_social.get("close_friends_multiplier", 2.0))
+MIN_MESSAGES            = int(_social.get("min_messages", 5))
 
-CLONE_CONVERSATIONS = {
-    "djyoyo":     ["djyoyo_489918669070722"],
-    "evan":       ["evan_17940018788164627"],
-    "lou":        ["lou_1085673686153338"],
-    "maelle":     ["maelle_17935615418472883"],
-    "nana":       ["nana_18068525429472883"],
-    "pilou":      ["pilou_519116326140721"],
-    "laura":      ["laura_994708765285921"],
-    "jen":        ["jen_945836883473151"],
-    "alice":      ["alice_1204248657633025"],
-    "loulou":     ["loulou_1188711339191134"],
-    "laure":      ["laure_1094343585289278"],
-    "fafie":      ["fafie_1121444139243508"],
-    "gabi":       ["gabi_1275393733851743"],
-    "manonvandy": ["manonvandy_1292074112190912"],
-    "mylene":     ["mylene_802792480745084"],
-    "ama":        ["ama_17970077582700199"],
-    "eliott":     ["3li0tttt_17939266904472883"],
-    "paulina":    ["_paulinalambin_824971795573896"],
-    "celia":      ["celia_1366428128080987"],
-    "vic":        ["vic_1114899529906843"],
-    "romane":     ["romane_1357028805748638"],
-}
+# ── Spotify ───────────────────────────────────────────────────────────────────
+_spotify                   = _cfg.get("spotify", {})
+SPOTIFY_ANCHOR_ARTISTS     = _spotify.get("anchor_artists", [])
+SPOTIFY_TOPOLOGY_THRESHOLD = int(_spotify.get("topology_stream_threshold", 5))
+
+# ── Clone conversationnel ─────────────────────────────────────────────────────
+CLONE_CONVERSATIONS = _cfg.get("clone", {}).get("conversations", {})
+
+# ── Secrets (depuis .env) ─────────────────────────────────────────────────────
+TMDB_API_KEY         = os.getenv("TMDB_API_KEY", "")
+SPOTIFY_CLIENT_ID    = os.getenv("SPOTIFY_CLIENT_ID", "")
+SPOTIFY_CLIENT_SECRET = os.getenv("SPOTIFY_CLIENT_SECRET", "")
+GEMINI_API_KEY       = os.getenv("GEMINI_API_KEY", "")

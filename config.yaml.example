@@ -1,0 +1,28 @@
+# ══════════════════════════════════════════════════════════════════════════════
+# config.yaml.example — Template MyDigitalTwin
+# ══════════════════════════════════════════════════════════════════════════════
+# Copier ce fichier : cp config.yaml.example config.yaml
+# Puis remplacer les valeurs par vos propres données.
+
+user:
+  instagram_sender_name: "VOTRE NOM"   # Tel qu'il apparaît dans les exports Instagram
+
+social:
+  close_friends_multiplier: 2.0
+  min_messages: 5
+  close_friends:
+    - "pseudo_ami_1"
+    - "pseudo_ami_2"
+    # Ajouter les pseudos Instagram de vos proches
+
+spotify:
+  anchor_artists:
+    - "Artiste 1"
+    - "Artiste 2"
+  topology_stream_threshold: 5   # écoutes minimum pour apparaître dans le graphe
+
+clone:
+  conversations:
+    ami1: ["ami1_conversation_id"]
+    ami2: ["ami2_conversation_id"]
+    # IDs trouvés dans data/processed/INSTAGRAM/.../messages/inbox/

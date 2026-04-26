@@ -19,6 +19,7 @@ data/warehouse/
 contacts_map.json
 .env
 .env.spark
+config.yaml
 spark-logs
 
 # Jupyter

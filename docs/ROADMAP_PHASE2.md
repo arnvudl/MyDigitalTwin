@@ -117,6 +117,47 @@ Extended History couvre 2020 → 2025-05-03. Account Data couvre 2025-03 → 202
 
 ---
 
+### Bonnes pratiques incrémentales — deux niveaux
+
+#### Niveau 1 — Audit log · à faire maintenant
+
+`data/ingestion_log.json` mis à jour automatiquement par `run_all.py` après chaque exécution.
+
+```json
+{
+  "spotify":   { "last_run": "2026-04-26", "files_moved": 3 },
+  "netflix":   { "last_run": "2026-04-26", "files_moved": 1 },
+  "instagram": { "last_run": "2026-04-25", "files_moved": 0 }
+}
+```
+
+Rend visible l'historique d'ingestion. Convention standard data engineering.
+
+- [ ] Écrire `data/ingestion_log.json` dans `run_all.py` après chaque `parser.run()`
+
+#### Niveau 2 — Delta MERGE INTO · après stabilisation des schémas
+
+Remplacer l'approche actuelle (`read all → dropDuplicates → overwrite`) par un vrai upsert Delta.
+
+```sql
+-- Exemple Spotify
+MERGE INTO warehouse.spotify_streams AS target
+USING new_batch AS source
+ON target.artistName = source.artistName
+   AND target.trackName = source.trackName
+   AND target.listen_ts  = source.listen_ts
+WHEN NOT MATCHED THEN INSERT *
+```
+
+Avantages : ne lit que les nouvelles données (watermark), n'écrit que les deltas, audit natif Delta (`DESCRIBE HISTORY`).
+
+**Pourquoi attendre** : les schémas évoluent encore (Phase 2G va ajouter des tables). Refactoriser les MERGE avant que les schémas soient figés = refaire le travail deux fois. L'approche actuelle est **déjà idempotente et correcte** — le MERGE est une optimisation de performance, pas une correction.
+
+- [ ] Définir les clés primaires par table (`ingestion_keys.md`)
+- [ ] Migrer les notebooks vers `MERGE INTO` une fois Phase 2G terminée
+
+---
+
 ## 2C — Reproductibilité & Structure du repo
 
 ### Objectif
@@ -371,14 +412,16 @@ Pistes à explorer :
 
 | Priorité | Tâche | Statut |
 |---|---|---|
-| ✅ FAIT | Parsers tous les sources (inbox → processed/) | Fait |
-| ✅ FAIT | Ingestion incrémentale Spotify (Extended + Account, dedup) | Fait |
+| ✅ FAIT | Parsers toutes sources (inbox → processed/) | Fait |
+| ✅ FAIT | Ingestion incrémentale Spotify (Extended + Account, dedup idempotent) | Fait |
 | ✅ FAIT | `tiktok_saves`, `spotify_liked_songs`, `spotify_searches` | Fait |
 | ✅ FAIT | Fix paths app (`data/raw/` → `data/processed/`) | Fait |
 | ✅ FAIT | Fix `sys.path` notebooks (walk-up config.py) | Fait |
+| 🔴 NEXT | `ingestion_log.json` dans `run_all.py` (audit trail, niveau 1) | À faire |
 | 🔴 NEXT | Notebook topologie `04_topology/01_topology_graph.ipynb` | À faire |
 | 🔴 NEXT | `graph.html` + `topology.py` (Phase 2G app) | À faire |
 | 🟠 P1 | R2 cloud storage | À faire |
+| 🟡 P2 | Delta `MERGE INTO` par table (niveau 2, post-stabilisation schémas) | Après Phase 2G |
 | 🟡 P2 | Unit tests + GitHub Actions CI | À faire |
 | 🟡 P2 | Memory Album (clustering musique + UI) | À faire |
 | 🟢 P3 | Navbar réorganisation (Explore / Analyse) | À faire |
@@ -387,4 +430,4 @@ Pistes à explorer :
 
 ---
 
-*Roadmap rédigée le 2026-04-24 — mise à jour le 2026-04-26 (ingestion complète, topology data ready).*
+*Roadmap rédigée le 2026-04-24 — mise à jour le 2026-04-26 (ingestion complète, topology data ready, stratégie incrémentale niveau 1/2 documentée).*
