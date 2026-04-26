@@ -21,6 +21,8 @@ from src.ingestion.parsers.instagram import InstagramParser
 from src.ingestion.parsers.google    import GoogleParser
 from src.ingestion.parsers.tiktok    import TikTokParser
 from src.ingestion.parsers.twitter   import TwitterParser
+from src.ingestion.parsers.spotify   import SpotifyParser
+from src.ingestion.parsers.netflix   import NetflixParser
 
 
 ALL_PARSERS = {
@@ -28,6 +30,8 @@ ALL_PARSERS = {
     "google":    GoogleParser,
     "tiktok":    TikTokParser,
     "twitter":   TwitterParser,
+    "spotify":   SpotifyParser,
+    "netflix":   NetflixParser,
 }
 
 

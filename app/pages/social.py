@@ -20,7 +20,7 @@ ASSETS_DIR = os.path.join(_HERE, "..", "assets")
 _PROJECT_ROOT = os.path.dirname(os.path.dirname(_HERE))  # pages -> app -> project root
 
 if os.path.exists("/app/data"):
-    INBOX = "/app/data/raw/INSTAGRAM/your_instagram_activity/messages/inbox"
+    INBOX = "/app/data/processed/INSTAGRAM/your_instagram_activity/messages/inbox"
 else:
     INBOX = os.path.join(_PROJECT_ROOT, "data", "raw", "INSTAGRAM",
                          "your_instagram_activity", "messages", "inbox")

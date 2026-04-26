@@ -14,12 +14,12 @@ from app.icons import svg_icon, MUSIC, FILM, SEARCH, TWITTER, PHONE
 # ou en local (où les dossiers sont dans le répertoire courant).
 if os.path.exists("/app/data/warehouse"):
     DELTA_BASE = "/app/data/warehouse"
-    IG_TOPICS_PATH = "/app/data/raw/INSTAGRAM/preferences/your_topics/recommended_topics.json"
-    X_PERSONALIZATION_PATH = "/app/data/raw/X/data/personalization.js"
+    IG_TOPICS_PATH = "/app/data/processed/INSTAGRAM/preferences/your_topics/recommended_topics.json"
+    X_PERSONALIZATION_PATH = "/app/data/processed/X/data/personalization.js"
 else:
     DELTA_BASE = "data/warehouse"
-    IG_TOPICS_PATH = "data/raw/INSTAGRAM/preferences/your_topics/recommended_topics.json"
-    X_PERSONALIZATION_PATH = "data/raw/X/data/personalization.js"
+    IG_TOPICS_PATH = "data/processed/INSTAGRAM/preferences/your_topics/recommended_topics.json"
+    X_PERSONALIZATION_PATH = "data/processed/X/data/personalization.js"
 
 CATEGORY_KEYWORDS = {
     "Sport": [
