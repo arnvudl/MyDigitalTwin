@@ -30,10 +30,11 @@ from config import PROJECT_ROOT, PROCESSED_DATA
 INBOX_ROOT = os.path.join(PROJECT_ROOT, "data", "inbox")
 
 INBOX_PATTERNS = [
-    (re.compile(r"^instagram", re.IGNORECASE), "INSTAGRAM"),
-    (re.compile(r"^takeout",   re.IGNORECASE), "GOOGLE"),
-    (re.compile(r"^tiktok",    re.IGNORECASE), "TIKTOK"),
-    (re.compile(r"^twitter",   re.IGNORECASE), "X"),
+    (re.compile(r"^instagram",         re.IGNORECASE), "INSTAGRAM"),
+    (re.compile(r"^takeout",           re.IGNORECASE), "GOOGLE"),
+    (re.compile(r"^tiktok",            re.IGNORECASE), "TIKTOK"),
+    (re.compile(r"^twitter",           re.IGNORECASE), "X"),
+    (re.compile(r"^spotify",           re.IGNORECASE), "SPOTIFY"),
 ]
 
 
