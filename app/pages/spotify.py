@@ -223,13 +223,16 @@ def _fig_defaults(fig: go.Figure) -> go.Figure:
 def _render_top_artists_visual(df: pd.DataFrame, n: int = 6) -> html.Div:
     if df.empty:
         return html.Div()
-    
+
     top = (
         df.groupby("artistName")
         .agg(streams=("trackName", "count"))
         .reset_index().sort_values("streams", ascending=False).head(n)
     )
-    
+
+    # Pré-chargement parallèle des images manquantes, une seule sauvegarde cache
+    spotify_meta.prefetch_artists(top["artistName"].tolist())
+
     cards = []
     for _, row in top.iterrows():
         img_url = spotify_meta.get_artist_image(row["artistName"])
@@ -276,13 +279,18 @@ def _render_top_artists_visual(df: pd.DataFrame, n: int = 6) -> html.Div:
 def _render_playlist_visual(df: pd.DataFrame, n: int = 10) -> html.Div:
     if df.empty:
         return html.Div()
-    
+
     top = (
         df.groupby(["trackName", "artistName"])
         .agg(streams=("msPlayed", "count"), minutes=("minutes_played", "sum"))
         .reset_index().sort_values("streams", ascending=False).head(n)
     )
-    
+
+    # Pré-chargement parallèle des pochettes manquantes, une seule sauvegarde cache
+    spotify_meta.prefetch_tracks(
+        list(zip(top["trackName"].tolist(), top["artistName"].tolist()))
+    )
+
     rows = []
     for i, (_, row) in enumerate(top.iterrows()):
         img_url = spotify_meta.get_track_image(row["trackName"], row["artistName"])
