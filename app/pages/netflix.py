@@ -1,6 +1,8 @@
+import json
 import os
 import requests
 import pandas as pd
+from concurrent.futures import ThreadPoolExecutor
 from functools import lru_cache
 from dotenv import load_dotenv
 load_dotenv()
@@ -10,12 +12,37 @@ from app.icons import svg_icon, FILM, TV, VIDEO
 
 # ─── CONFIG ──────────────────────────────────────────────────────────────────
 DELTA_BASE = "/app/data/warehouse" if os.path.exists("/app/data/warehouse") else "warehouse"
+_DATA_BASE  = "/app/data"           if os.path.exists("/app/data")           else "data"
 
 NETFLIX_RED = "#e50914"
 _TMDB_KEY   = os.getenv("TMDB_API_KEY", "")
 
-# Cache mémoire titre → URL poster (évite les appels TMDB répétés pendant la session)
+# ─── CACHE TMDB PERSISTANT ───────────────────────────────────────────────────
+# Survit aux redémarrages : évite de refaire les appels TMDB à chaque restart.
+_POSTER_CACHE_PATH = os.path.join(_DATA_BASE, "warehouse", "tmdb_poster_cache.json")
 _poster_cache: dict = {}
+
+
+def _load_poster_cache() -> None:
+    global _poster_cache
+    if os.path.isfile(_POSTER_CACHE_PATH):
+        try:
+            with open(_POSTER_CACHE_PATH, encoding="utf-8") as f:
+                _poster_cache = json.load(f)
+        except Exception:
+            _poster_cache = {}
+
+
+def _save_poster_cache() -> None:
+    try:
+        os.makedirs(os.path.dirname(_POSTER_CACHE_PATH), exist_ok=True)
+        with open(_POSTER_CACHE_PATH, "w", encoding="utf-8") as f:
+            json.dump(_poster_cache, f, ensure_ascii=False)
+    except Exception:
+        pass
+
+
+_load_poster_cache()  # Chargé une seule fois au démarrage du module
 
 MONTH_NAMES = {
     1: "Jan", 2: "Fév", 3: "Mar", 4: "Avr",
@@ -59,6 +86,16 @@ def _get_poster_by_title(title: str) -> str:
         pass
     _poster_cache[key] = ""
     return ""
+
+
+def _prefetch_posters(titles: list) -> None:
+    """Récupère les posters TMDB manquants en parallèle, puis flush le cache disque."""
+    missing = [t for t in titles if t and t.lower().strip() not in _poster_cache]
+    if not missing:
+        return
+    with ThreadPoolExecutor(max_workers=10) as pool:
+        pool.map(_get_poster_by_title, missing)
+    _save_poster_cache()
 
 
 # ─── DATA ────────────────────────────────────────────────────────────────────
@@ -232,7 +269,6 @@ def _poster_card(title: str, count: int, rank: int) -> html.Div:
             "width": "140px", "flexShrink": "0",
         },
         children=[
-            # Affiche
             html.Div(
                 style={
                     "width": "140px", "height": "210px",
@@ -289,31 +325,77 @@ def _poster_card(title: str, count: int, rank: int) -> html.Div:
     )
 
 
-def _poster_section(df: pd.DataFrame) -> list:
-    """Section affiches : top séries + top films avec posters TMDB."""
+def _expand_btn(ctype: str, total: int, is_expanded: bool) -> html.Button:
+    """Bouton 'Voir tout / Réduire' pour une section poster."""
+    label = "Réduire" if is_expanded else f"Voir tout · {total} titres"
+    return html.Button(
+        label,
+        id={"type": "netflix-expand-poster", "index": ctype},
+        n_clicks=0,
+        style={
+            "background": "none",
+            "border": f"1px solid {NETFLIX_RED}",
+            "color": NETFLIX_RED,
+            "borderRadius": "20px",
+            "padding": "5px 16px",
+            "fontSize": "12px",
+            "fontWeight": "600",
+            "cursor": "pointer",
+            "marginTop": "12px",
+            "letterSpacing": "0.5px",
+        },
+    )
+
+
+def _poster_section(df: pd.DataFrame, expanded: dict) -> list:
+    """Section affiches : séries + films avec posters TMDB.
+
+    expanded = {"series": bool, "movie": bool}
+    Quand expanded[ctype] est True → grille complète (flex-wrap).
+    Quand False → scrolling horizontal top-16 / top-12.
+    """
     if df.empty or "content_type" not in df.columns:
         return []
 
+    TOP_N = {"series": 16, "movie": 12}
+
     sections = []
 
-    for ctype, label, icon, n in [
-        ("series", "Tes Séries", TV,   16),
-        ("movie",  "Tes Films",  FILM, 12),
+    for ctype, label, icon in [
+        ("series", "Tes Séries", TV),
+        ("movie",  "Tes Films",  FILM),
     ]:
         sub = df[df["content_type"] == ctype]
         if sub.empty:
             continue
-        top = (
+
+        ranked = (
             sub.groupby("show_title").size()
             .reset_index(name="count")
             .sort_values("count", ascending=False)
-            .head(n)
+            .reset_index(drop=True)
         )
+        total_n   = len(ranked)
+        is_exp    = bool((expanded or {}).get(ctype, False))
+        display   = ranked if is_exp else ranked.head(TOP_N[ctype])
+
+        # Pré-chargement parallèle des posters manquants
+        _prefetch_posters(display["show_title"].tolist())
 
         cards = [
             _poster_card(row["show_title"], row["count"], i + 1)
-            for i, (_, row) in enumerate(top.iterrows())
+            for i, (_, row) in enumerate(display.iterrows())
         ]
+
+        grid_style = {
+            "display": "flex", "gap": "14px",
+            "padding": "8px 0 16px",
+            "scrollbarWidth": "thin",
+        }
+        if is_exp:
+            grid_style["flexWrap"] = "wrap"
+        else:
+            grid_style["overflowX"] = "auto"
 
         sections.append(html.Div(
             style={"marginTop": "48px"},
@@ -327,19 +409,14 @@ def _poster_section(df: pd.DataFrame) -> list:
                             "color": "var(--text-primary)", "margin": "0",
                         }),
                         html.Span(
-                            f"{sub['show_title'].nunique()} titres distincts",
+                            f"{total_n} titres distincts",
                             style={"fontSize": "12px", "color": "var(--text-muted)", "marginLeft": "8px"},
                         ),
                     ],
                 ),
-                html.Div(
-                    style={
-                        "display": "flex", "gap": "14px",
-                        "overflowX": "auto", "padding": "8px 0 16px",
-                        "scrollbarWidth": "thin",
-                    },
-                    children=cards,
-                ),
+                html.Div(style=grid_style, children=cards),
+                # Bouton expand uniquement si plus d'items que le top-N
+                _expand_btn(ctype, total_n, is_exp) if total_n > TOP_N[ctype] else html.Div(),
             ],
         ))
 
@@ -437,6 +514,7 @@ def _chart_by_year(df: pd.DataFrame) -> go.Figure:
 
 # ─── CONTENT BUILDER ─────────────────────────────────────────────────────────
 def _build_content(df: pd.DataFrame, sel: dict) -> list:
+    """Stats + graphiques. Les affiches TMDB sont dans netflix-poster-section (callback séparé)."""
     if df.empty:
         return [html.P("Aucune donnée pour cette période.",
                        style={"color": "var(--text-muted)", "padding": "20px 0"})]
@@ -483,9 +561,6 @@ def _build_content(df: pd.DataFrame, sel: dict) -> list:
                     children=[dcc.Graph(figure=_chart_by_year(df),
                                         config={"displayModeBar": False})])]
           if show_yearly else []),
-
-        # Affiches TMDB (sur l'ensemble du catalogue, pas filtré par période)
-        *_poster_section(_load_netflix()),
     ]
 
 
@@ -516,13 +591,21 @@ def layout():
                     html.P("Timeline de tes visionnages, tes séries et films favoris.",
                            className="home-hero-sub"),
                 ]),
-                dcc.Store(id="netflix-sel-store", data=_DEFAULT_SEL),
 
+                # Stores
+                dcc.Store(id="netflix-sel-store",       data=_DEFAULT_SEL),
+                dcc.Store(id="netflix-poster-expanded", data={"series": False, "movie": False}),
+
+                # Sélecteur de période
                 html.Div(id="netflix-period-selector",
                          children=_period_selector(df, _DEFAULT_SEL)),
 
+                # Stats + graphiques (filtré par période)
                 html.Div(id="netflix-content",
                          children=_build_content(df, _DEFAULT_SEL)),
+
+                # Affiches TMDB (tout l'historique, callback séparé)
+                html.Div(id="netflix-poster-section"),
             ],
         )
     ])
@@ -588,3 +671,30 @@ def refresh_view(sel):
     df       = _load_netflix()
     filtered = _apply_filter(df, sel)
     return _period_selector(df, sel), _build_content(filtered, sel)
+
+
+@callback(
+    Output("netflix-poster-expanded", "data"),
+    Input({"type": "netflix-expand-poster", "index": ALL}, "n_clicks"),
+    State({"type": "netflix-expand-poster", "index": ALL}, "id"),
+    State("netflix-poster-expanded", "data"),
+    prevent_initial_call=True,
+)
+def toggle_poster_expand(n_clicks_list, ids, current):
+    from dash import ctx
+    if not ctx.triggered_id or not isinstance(ctx.triggered_id, dict):
+        return current or {"series": False, "movie": False}
+    ctype   = ctx.triggered_id.get("index")
+    current = current or {"series": False, "movie": False}
+    return {**current, ctype: not current.get(ctype, False)}
+
+
+@callback(
+    Output("netflix-poster-section", "children"),
+    Input("netflix-poster-expanded", "data"),
+)
+def refresh_poster_section(expanded):
+    """Reconstruit la grille d'affiches TMDB (posters parallèles, cache disque)."""
+    expanded = expanded or {"series": False, "movie": False}
+    df = _load_netflix()
+    return _poster_section(df, expanded)

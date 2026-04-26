@@ -18,8 +18,6 @@ def _prewarm_caches():
     except Exception: pass
     try: netflix._load_netflix()
     except Exception: pass
-    try: netflix._load_recos()
-    except Exception: pass
     try: social._load()
     except Exception: pass
     try: photos._read_clusters()
