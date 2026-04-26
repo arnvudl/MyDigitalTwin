@@ -1,4 +1,4 @@
-.PHONY: install install-dev install-spark install-ml app freeze-app up down dev
+.PHONY: install install-dev install-spark install-ml app freeze-app up down dev ingest ingest-parse-only
 
 # ── Installation ──────────────────────────────────────────────────────────────
 install:
@@ -21,6 +21,15 @@ app:
 freeze-app:
 	pip freeze | grep -E "^(dash|Flask|plotly|pandas|pyarrow|requests|python-dotenv|spotipy|google-genai)==" > requirements/app.txt
 	@echo "✅  requirements/app.txt mis à jour"
+
+# ── Ingestion GDPR ───────────────────────────────────────────────────────────
+# Flux complet : inbox/ → raw/ → warehouse/  (overwrite)
+ingest:
+	python -m src.ingestion.run_all
+
+# Re-parser raw/ sans déplacer inbox/ (utile après fix d'un parser)
+ingest-parse-only:
+	python -m src.ingestion.run_all --parse-only
 
 # ── Docker ───────────────────────────────────────────────────────────────────
 up:

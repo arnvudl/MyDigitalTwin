@@ -268,29 +268,6 @@ def build_emotionnel(start: str, end: str):
     return "\n".join(md_parts), pd.DataFrame()
 
 
-def build_materiel(start: str, end: str):
-    df = _read_parquet("amazon_orders", "order_date", start, end)
-    if df.empty:
-        return "## D. Le Matériel\n\n*Aucune commande Amazon trouvée.*\n", pd.DataFrame()
-
-    total_spent = df["total_amount"].sum() if "total_amount" in df.columns else 0
-    by_cat = df["category"].value_counts().head(8).to_dict() if "category" in df.columns else {}
-    top_products = df["product_name"].value_counts().head(8).to_dict() if "product_name" in df.columns else {}
-
-    md = f"""## D. Le Matériel — Priorités & Investissements
-*Source : Amazon | Période : {start} → {end}*
-
-- **Commandes :** {len(df):,} — Dépenses totales : {total_spent:.2f} €
-
-### Par catégorie
-{chr(10).join(f"- **{cat}** : {n}" for cat, n in by_cat.items()) or "- Catégories non disponibles"}
-
-### Top produits
-{chr(10).join(f"- {p} ({n}×)" for p, n in list(top_products.items())[:8])}
-
-"""
-    return md, pd.DataFrame()
-
 
 # ─── PACKAGE BUILDER ─────────────────────────────────────────────────────────
 
@@ -302,8 +279,6 @@ def build_package(start: str, end: str, sources: list, anon_names: bool, output_
         sections_md.append(build_inconscient(start, end)[0])
     if "emotionnel" in sources:
         sections_md.append(build_emotionnel(start, end)[0])
-    if "materiel" in sources:
-        sections_md.append(build_materiel(start, end)[0])
 
     dossier = f"""# Analyse Comportementale Numérique
 *Généré le {datetime.now().strftime("%Y-%m-%d %H:%M")} | Période : {start} → {end}*

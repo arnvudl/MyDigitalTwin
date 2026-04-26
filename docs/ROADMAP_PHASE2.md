@@ -1,6 +1,6 @@
 # MyDigitalTwin — Roadmap Phase 2 : Data Engineering
 
-> **Contexte** : Le PoC (Phase 1) est terminé. Le dashboard tourne, les notebooks explorent les données Spotify, Instagram, Netflix, Apple, Amazon, YouTube, TikTok, Twitter. Phase 2 = industrialiser, pérenniser, enrichir.
+> **Contexte** : Le PoC (Phase 1) est terminé. Le dashboard tourne, les notebooks explorent les données Spotify, Instagram, Netflix, YouTube, TikTok, Twitter, Google. Phase 2 = industrialiser, pérenniser, enrichir.
 
 ---
 
@@ -9,11 +9,12 @@
 ```
 Phase 2
 ├── 2A  Infrastructure & Stockage cloud
-├── 2B  Ingestion incrémentale & GDPR reminders
+├── 2B  Ingestion & Stratégie de stockage
 ├── 2C  Qualité du code & Reproductibilité
 ├── 2D  Tests & CI
 ├── 2E  Dashboard — Performance & UX
-└── 2F  Memory Album (Photos × Musique)
+├── 2F  Memory Album (Photos × Musique)
+└── 2G  Topologie (Shape of Me)
 ```
 
 ---
@@ -49,43 +50,97 @@ R2 Bucket
 
 ---
 
-## 2B — Ingestion incrémentale & GDPR Reminders
+## 2B — Ingestion & Stratégie de stockage
 
-### Principe : ingestion incrémentale
-Chaque source de données a un cycle d'export différent. L'ingestion ne repart **jamais de zéro** — elle détecte ce qui est nouveau et l'ajoute au warehouse (merge Delta Lake ou append Parquet).
+### Stratégie pendant la phase de développement
 
-### Sources & fréquences conseillées
+**Principe : écrasement complet (overwrite-only)**
 
-| Source | Mécanisme export | Fréquence suggérée |
+Tant que le schéma des parquets évolue, les parsers changent et les transformations ne sont pas stables → on ne cherche pas à merger de façon incrémentale. Chaque ingestion réécrit entièrement les parquets concernés.
+
+```
+data/
+├── inbox/      ← zone de transit — fichiers reçus (GDPR exports décompressés)
+│                  → déplacés dans raw/ puis supprimés de inbox/
+├── raw/        ← ⚠️ TEMPORAIRE (dev uniquement) — archive locale brute
+│                  → sera remplacé par R2 cloud en production
+└── warehouse/  ← parquets générés (gitignored, toujours regénérables)
+                   → écrasés intégralement à chaque ingestion
+```
+
+**Flux d'ingestion (dev) :**
+1. Décompresser/déposer l'export dans `data/inbox/`
+2. Parser déplace le contenu vers `data/raw/<SOURCE>/` (conservation temporaire locale)
+3. Parser lit `data/raw/<SOURCE>/` et écrit/écrase `data/warehouse/<table>.parquet`
+4. `data/inbox/` est vidé après traitement
+
+> ⚠️ **`data/raw/` est temporaire** — ce dossier existe uniquement pendant la phase de développement pour conserver les exports GDPR localement sans stockage cloud. Il sera supprimé et remplacé par le bucket R2 (`raw/` distant) une fois la phase 2A déployée.
+
+### Migration vers R2 (cible post-dev)
+
+Quand `data/raw/` est remplacé par R2, **rien ne change dans les parsers** — c'est l'objectif de design :
+
+```python
+# Aujourd'hui (dev) :
+RAW_ROOT = Path("data/raw")          # local
+
+# Demain (prod) :
+RAW_ROOT = "s3a://my-bucket/raw"     # R2 via s3a://
+```
+
+La classe `IngestorBase` abstrait ce chemin via `config.py`. Passer en prod = changer une variable d'environnement, pas réécrire les parsers.
+
+**Checklist de migration :**
+- [ ] Créer bucket R2 + configurer `R2_ENDPOINT`, `R2_BUCKET` dans `.env`
+- [ ] Mettre `RAW_ROOT = s3a://...` dans `config.py` (conditionnel sur env `STORAGE_BACKEND`)
+- [ ] Upload `data/raw/` → R2 via `rclone` ou `aws s3 cp`
+- [ ] Supprimer `data/raw/` local
+- [ ] Vérifier que les parsers lisent/écrivent correctement depuis R2
+
+> L'ingestion incrémentale (merge dedup) sera également activée à ce moment : Delta Lake `MERGE INTO` une fois les schémas figés.
+
+### Sources GDPR reçues (2026-04-25)
+
+| Source | Statut | Fréquence future |
 |---|---|---|
+| **Instagram** | ✅ Reçu — dans `data/inbox/` | Mensuelle |
+| **Google** | ✅ Reçu — dans `data/inbox/` | Trimestrielle |
+| **TikTok** | ✅ Reçu — dans `data/inbox/` | Trimestrielle |
 | **Spotify** | API officielle (déjà connectée) | Hebdomadaire (automatisable) |
-| **Instagram** | GDPR export → email | Mensuelle |
 | **Netflix** | GDPR export → email | Trimestrielle |
-| **Apple / iCloud** | privacy.apple.com → email | Semestrielle |
-| **Amazon** | GDPR export → email | Semestrielle |
-| **YouTube** | Google Takeout → email | Trimestrielle |
-| **TikTok** | GDPR export → email | Trimestrielle |
+| **YouTube** | Google Takeout (dans export Google) | Trimestrielle |
 | **Twitter/X** | GDPR export → email | Trimestrielle |
+| **Apple / iCloud** | privacy.apple.com → email | Semestrielle (photos) |
 
-### GDPR Reminders (semi-automatique)
-Les plateformes envoient les données par email → impossible de tout automatiser proprement sans scraping fragile. Solution pragmatique :
+### Parsers à implémenter (`src/ingestion/`)
 
-- **Script `remind.py`** : affiche les sources dont le dernier export date de plus de N jours
-- **Optionnel** : reminder via email/notif (cron local ou GitHub Actions scheduled)
-- Chaque ingestion logge la date dans un fichier `data/ingestion_log.json`
+```
+src/ingestion/
+├── __init__.py
+├── base.py              ← IngestorBase (move inbox → raw, overwrite warehouse)
+└── parsers/
+    ├── __init__.py
+    ├── instagram.py     ← messages, likes, followers
+    ├── google.py        ← search history, location, YouTube watch
+    └── tiktok.py        ← watch history, likes
+```
+
+### GDPR Reminders
+Les plateformes envoient les données par email → les rappels sont gérés directement sur le téléphone (calendrier). Chaque ingestion logge la date dans `data/ingestion_log.json`.
 
 ```json
 {
   "spotify": {"last_run": "2026-04-20", "rows_added": 142},
-  "instagram": {"last_run": "2026-01-15", "rows_added": 0}
+  "instagram": {"last_run": "2026-04-25", "rows_added": 0}
 }
 ```
 
 ### Actions
-- [ ] Créer `src/ingest/` avec un module par source (`spotify.py`, `instagram.py`, ...)
-- [ ] Implémenter logique de merge incrémental (Delta Lake `MERGE INTO` ou pandas dedup)
-- [ ] Créer `ingestion_log.json` et `remind.py`
-- [ ] Ajouter iCloud Photos comme nouvelle source (export EXIF + sélection manuelle)
+- [ ] Créer `src/ingestion/base.py` (classe `IngestorBase`)
+- [ ] Parser Instagram (`messages`, `liked_posts`, `followers`)
+- [ ] Parser Google (`search_history`, `youtube_watch_history`)
+- [ ] Parser TikTok (`watch_history`, `liked_videos`)
+- [ ] Mettre à jour `ingestion_log.json` après chaque run
 
 ---
 
@@ -256,6 +311,72 @@ Si une photo date du 14/06/2024 et que Spotify montre une écoute intense ce soi
 
 ---
 
+## 2G — Topologie (Shape of Me) ✨
+
+### Vision
+Représenter le « moi » comme un **espace topologique** plutôt qu'une liste de statistiques. L'idée : trouver la *forme* cachée dans mes données comportementales — les ponts entre habitudes musicales et habitudes de recherche, les clusters d'humeur qui transcendent les plateformes.
+
+### Approche technique : TDA Mapper
+
+**Bibliothèque** : [`tda-mapper-python`](https://github.com/lucasimi/tda-mapper-python)
+
+TDA Mapper construit un graphe où :
+- Chaque **nœud** = un cluster d'instants/comportements similaires
+- Chaque **arête** = overlap entre clusters (≠ K-Means étanche)
+- La **forme** du graphe révèle des structures que le clustering classique masque
+
+```
+Sources textuelles
+├── spotify_streams     ──sentence-transformers──► embeddings 384D
+├── youtube_watch       ──(all-MiniLM-L6-v2)───► embeddings 384D
+└── google_searches                               embeddings 384D
+         │
+         ▼
+    UMAP 50D  ←── réduction dimensionnelle avant Mapper (pas 2D !)
+         │
+         ▼
+   TDA Mapper
+   ├── Vue 1 : filtre densité    (zones de haute activité)
+   ├── Vue 2 : filtre PCA        (axes de variance maximale)
+   └── Vue 3 : filtre centroïde  (distance au centre de gravité)
+         │
+         ▼
+  Export JSON graphe → page /topology (3d-force-graph.js)
+```
+
+**Autres sources à intégrer :**
+- `behavioral_clusters` (clusters K-Means existants comme metadata)
+- `photo_clusters` (CLIP embeddings — Phase 2F)
+- `social_graph` (graphe Instagram déjà existant)
+- `netflix_views` (titres regardés → embeddings)
+
+### Notebooks (`src/scripts/07_topology/`)
+
+| Notebook | Contenu |
+|---|---|
+| `01_embed_sources.ipynb` | Charger les sources, générer embeddings, réduire avec UMAP 50D |
+| `02_mapper_views.ipynb` | Appliquer TDA Mapper, 3 filtres, explorer la forme du graphe |
+| `03_export_dashboard.ipynb` | Exporter le graphe JSON pour la page /topology |
+
+### Dashboard — Page `/topology`
+
+Réutilise le pattern `3d-force-graph.js` déjà en place sur la page `/social` :
+- Graphe 3D interactif (nœuds = clusters, arêtes = overlap)
+- Couleur des nœuds = source dominante (Spotify / YouTube / Google / ...)
+- Taille des nœuds = densité (nb d'instants dans le cluster)
+- Tooltip au survol : top 3 titres/requêtes du cluster
+- Sélecteur de vue : Densité | PCA | Centroïde
+
+### Actions
+- [ ] `pip install tda-mapper-python sentence-transformers umap-learn` → ajouter à `requirements/ml.txt`
+- [ ] Notebook `01_embed_sources.ipynb` : embeddings Spotify + YouTube + Google
+- [ ] Notebook `02_mapper_views.ipynb` : 3 filtres Mapper
+- [ ] Notebook `03_export_dashboard.ipynb` : export JSON pour Dash
+- [ ] Page Dash `/topology` (réutiliser template `/social`)
+- [ ] Ajouter "Topologie" dans la navbar (section Explore)
+
+---
+
 ## Horizon inspirationnel — NeuroAI
 
 Ce projet touche à des thèmes au cœur du NeuroAI : représentation de la mémoire épisodique, association multimodale (visuel + auditif), reconstruction de souvenirs par l'émotion. La feature Memory Album est une implémentation concrète de ces concepts (mémoire associative, indexation par l'affect).
@@ -272,16 +393,17 @@ Pistes à explorer en parallèle :
 | Priorité | Tâche | Effort |
 |---|---|---|
 | 🔴 P0 | Fix dashboard lent + HTML dans strings | 1-2 jours |
-| 🔴 P0 | Structure repo + requirements pinnés | 0.5 jour |
-| 🟠 P1 | Ingestion incrémentale + ingestion_log | 3-4 jours |
-| 🟠 P1 | R2 cloud storage + DVC | 2-3 jours |
+| 🔴 P0 | Structure repo + requirements pinnés | ✅ Fait |
+| 🟠 P1 | Parsers Instagram / Google / TikTok (overwrite) | 3-4 jours |
+| 🟠 P1 | R2 cloud storage | 2-3 jours |
 | 🟡 P2 | Unit tests + GitHub Actions CI | 1-2 jours |
-| 🟡 P2 | MLflow pour ALS | 1 jour |
-| 🟢 P3 | Memory Album (clustering musique + UI) | 5-7 jours |
-| 🟢 P3 | Navbar réorganisation | 1 jour |
-| 🔵 P4 | Cookiecutter template | 2 jours |
+| 🟡 P2 | Memory Album (clustering musique + UI) | 5-7 jours |
+| 🟡 P2 | Topologie — TDA Mapper (Shape of Me) | 4-6 jours |
+| 🟢 P3 | Navbar réorganisation (Explore / Analyse) | 1 jour |
+| 🟢 P3 | Ingestion incrémentale (post-stabilisation) | 2-3 jours |
+| 🔵 P4 | Copier template | 2 jours |
 | 🔵 P4 | LangSmith pour le clone | 1 jour |
 
 ---
 
-*Roadmap rédigée le 2026-04-24 — à réviser à chaque fin de sprint.*
+*Roadmap rédigée le 2026-04-24 — mise à jour le 2026-04-25 (stratégie overwrite dev, Phase 2G Topologie, suppression Amazon).*
