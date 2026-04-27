@@ -22,6 +22,8 @@ def _prewarm_caches():
     except Exception: pass
     try: photos._read_clusters()
     except Exception: pass
+    try: clusters._read_profiles()
+    except Exception: pass
 
 
 threading.Thread(target=_prewarm_caches, daemon=True).start()
