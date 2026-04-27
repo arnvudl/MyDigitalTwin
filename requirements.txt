@@ -1,3 +1,55 @@
-# Point d'entrée principal — utilisé par Docker et `pip install -r requirements.txt`
-# Pour le détail des couches : voir requirements/
--r requirements/app.txt
+# ══════════════════════════════════════════════════════════════════════════════
+# requirements.txt — référence locale complète
+# pip install -r requirements.txt  (env local / Jupyter)
+#
+# Les Dockerfiles n'utilisent PAS ce fichier directement :
+#   Dockerfile     → installe ses deps en dur (Spark + ML)
+#   Dockerfile.app → installe ses deps en dur (Dash uniquement)
+# ══════════════════════════════════════════════════════════════════════════════
+
+# ── Runtime Dash app ──────────────────────────────────────────────────────────
+dash==4.1.0
+Flask==3.1.3
+plotly==6.6.0
+pandas==3.0.2
+pyarrow==16.1.0
+requests==2.33.1
+python-dotenv==1.2.2
+pyyaml==6.0.2
+spotipy==2.26.0
+google-genai==1.73.1
+
+# ── PySpark + Delta Lake ──────────────────────────────────────────────────────
+# Java 11+ requis séparément
+pyspark==3.5.1
+delta-spark==3.2.0
+fastparquet==2026.3.0
+
+# ── ML (embeddings, transformers) ────────────────────────────────────────────
+# torch installé en CPU-only via Dockerfile pour éviter les ~2 Go GPU
+# pip install torch==2.11.0 --index-url https://download.pytorch.org/whl/cpu
+torch==2.11.0
+transformers==5.5.4
+sentence-transformers==5.4.0
+huggingface_hub==1.10.1
+safetensors==0.7.0
+tokenizers==0.22.2
+
+# ── Topology / TDA Mapper ─────────────────────────────────────────────────────
+umap-learn
+tda-mapper
+
+# ── Notebooks & dev ───────────────────────────────────────────────────────────
+ipykernel==7.2.0
+ipython==9.12.0
+jupyter_client==8.8.0
+jupyter_core==5.9.1
+matplotlib==3.10.8
+scikit-learn==1.8.0
+scipy==1.17.1
+
+# ── Enrichissement topology (01_enrich.ipynb) ─────────────────────────────────
+aiohttp
+beautifulsoup4
+instaloader
+nest_asyncio

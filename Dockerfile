@@ -55,16 +55,28 @@ COPY infra/conf/spark-defaults.conf "$SPARK_HOME/conf/"
 
 FROM spark-base AS pyspark
 
-# Install python deps
-COPY requirements.txt .
-RUN pip3 install -r requirements.txt
+# ── Python deps PySpark + notebooks topology ──────────────────────────────────
+RUN pip3 install --no-cache-dir \
+    pyspark==3.5.1 \
+    delta-spark==3.2.0 \
+    fastparquet==2026.3.0 \
+    pandas==3.0.2 \
+    pyarrow==16.1.0 \
+    requests==2.33.1 \
+    python-dotenv==1.2.2 \
+    pyyaml==6.0.2 \
+    aiohttp \
+    beautifulsoup4 \
+    instaloader \
+    nest_asyncio \
+    tda-mapper
 
 
 FROM pyspark AS pyspark-clip
 
 # PyTorch CPU-only (évite ~1.5 Go de binaires CUDA inutiles en container)
 RUN pip3 install torch --index-url https://download.pytorch.org/whl/cpu && \
-    pip3 install transformers accelerate Pillow umap-learn hdbscan scikit-learn
+    pip3 install transformers accelerate Pillow umap-learn hdbscan scikit-learn sentence-transformers
 
 FROM pyspark-clip AS pyspark-runner
 

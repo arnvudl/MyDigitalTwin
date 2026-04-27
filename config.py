@@ -50,6 +50,7 @@ with open(_cfg_path, encoding="utf-8") as _f:
 
 # ── Identité ──────────────────────────────────────────────────────────────────
 INSTAGRAM_SENDER_NAME = _cfg.get("user", {}).get("instagram_sender_name", "")
+INSTAGRAM_USERNAME    = _cfg.get("user", {}).get("instagram_username", "")
 
 # ── Graphe social ─────────────────────────────────────────────────────────────
 _social                 = _cfg.get("social", {})
