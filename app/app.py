@@ -72,7 +72,7 @@ def display_page(pathname):
     if pathname == "/":
         return home.layout(), navbar
 
-    if pathname == "/profils":
+    if pathname == "/topology":
         return clusters.layout(), navbar
 
     if pathname == "/netflix":

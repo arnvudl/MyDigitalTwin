@@ -12,9 +12,14 @@ Phase 2
 ├── 2B  Ingestion & Stratégie de stockage          ✅ FAIT
 ├── 2C  Qualité du code & Reproductibilité
 ├── 2D  Tests & CI
-├── 2E  Dashboard — Performance & UX
+├── 2E  Dashboard — Performance & UX               ✅ FAIT (partiel)
 ├── 2F  Memory Album (Photos × Musique)
 └── 2G  Topologie (Shape of Me)                    🔄 EN COURS
+         ├── Infrastructure Docker + config         ✅ FAIT
+         ├── Enrichissement (01_enrich.ipynb)       ✅ FAIT (TikTok: beh, IG: instaloader)
+         ├── Dashboard page clusters.py             ✅ FAIT (topology_3d_template.html)
+         ├── 02_islands.ipynb — pipeline complet    🔄 EN COURS (remplace 02_graph)
+         └── Validation archipel + export JSON      ⬜ À faire
 ```
 
 ---
@@ -101,7 +106,7 @@ Extended History couvre 2020 → 2025-05-03. Account Data couvre 2025-03 → 202
 | `netflix.ipynb` | `netflix_views` | ✅ Prêt (CSV dans processed/NETFLIX/) |
 | `instagram.ipynb` | `instagram_likes`, `instagram_saved`, `instagram_comments`, `instagram_posts_viewed`, `instagram_videos_watched`, `instagram_story_likes`, `instagram_searches` | ✅ |
 | `google_youtube.ipynb` | `google_searches`, `google_chrome`, `youtube_watch` | ✅ |
-| `tiktok.ipynb` | `tiktok_watch`, `tiktok_likes`, `tiktok_saves`, `tiktok_searches` | ✅ (tiktok_saves ajouté) |
+| `tiktok.ipynb` | `tiktok_watch`, `tiktok_likes`, `tiktok_searches` | ✅ (`tiktok_saves` à ajouter — Phase 2G) |
 | `twitter.ipynb` | `twitter_tweets`, `twitter_likes` | ✅ |
 
 ### Sources GDPR — état
@@ -119,21 +124,20 @@ Extended History couvre 2020 → 2025-05-03. Account Data couvre 2025-03 → 202
 
 ### Bonnes pratiques incrémentales — deux niveaux
 
-#### Niveau 1 — Audit log · à faire maintenant
+#### Niveau 1 — Audit log ✅ FAIT (2026-04-27)
 
 `data/ingestion_log.json` mis à jour automatiquement par `run_all.py` après chaque exécution.
 
 ```json
 {
-  "spotify":   { "last_run": "2026-04-26", "files_moved": 3 },
-  "netflix":   { "last_run": "2026-04-26", "files_moved": 1 },
-  "instagram": { "last_run": "2026-04-25", "files_moved": 0 }
+  "last_run": "2026-04-27T...",
+  "sources": {
+    "spotify":   { "last_run": "2026-04-27T...", "files_moved": 3 },
+    "netflix":   { "last_run": "2026-04-27T...", "files_moved": 1 },
+    "instagram": { "last_run": "2026-04-27T...", "files_moved": 0 }
+  }
 }
 ```
-
-Rend visible l'historique d'ingestion. Convention standard data engineering.
-
-- [ ] Écrire `data/ingestion_log.json` dans `run_all.py` après chaque `parser.run()`
 
 #### Niveau 2 — Delta MERGE INTO · après stabilisation des schémas
 
@@ -149,9 +153,7 @@ ON target.artistName = source.artistName
 WHEN NOT MATCHED THEN INSERT *
 ```
 
-Avantages : ne lit que les nouvelles données (watermark), n'écrit que les deltas, audit natif Delta (`DESCRIBE HISTORY`).
-
-**Pourquoi attendre** : les schémas évoluent encore (Phase 2G va ajouter des tables). Refactoriser les MERGE avant que les schémas soient figés = refaire le travail deux fois. L'approche actuelle est **déjà idempotente et correcte** — le MERGE est une optimisation de performance, pas une correction.
+**Pourquoi attendre** : les schémas évoluent encore (Phase 2G va ajouter des tables). Refactoriser les MERGE avant que les schémas soient figés = refaire le travail deux fois.
 
 - [ ] Définir les clés primaires par table (`ingestion_keys.md`)
 - [ ] Migrer les notebooks vers `MERGE INTO` une fois Phase 2G terminée
@@ -200,7 +202,6 @@ MyDigitalTwin/
 - `copier copy gh:ton-repo` génère la structure + `.env.example` pré-rempli
 - L'utilisateur remplit `config.py` (ses amis Instagram, ses artistes Spotify)
 - **Copier > Cookiecutter** : `copier update` permet aux projets dérivés de récupérer les améliorations
-- GitHub Template = alternative simple mais sans personnalisation ni mise à jour
 
 ---
 
@@ -237,23 +238,32 @@ assert df["track_name"].nunique() > 100, "Trop peu de tracks"
 
 ---
 
-## 2E — Dashboard : Performance & UX
+## 2E — Dashboard : Performance & UX ✅ (partiel)
 
-### Problème 1 — Chargement lent
-- Lazy loading : ne charger les données qu'au premier accès (callbacks au lieu de layout statique)
-- Cache `@lru_cache` sur les fonctions de chargement (déjà fait sur `_load_spotify()`)
-- Pré-agréger les données dans des fichiers légers au moment de l'ingestion
+### Réalisé (2026-04-27)
+
+- **Netflix** : réécriture complète — plus d'ALS, posters TMDB via `search/multi`
+  - Cache TMDB persistant sur disque (`warehouse/tmdb_poster_cache.json`)
+  - Fetch parallèle (`ThreadPoolExecutor(max_workers=10)`) — ~1.5s au lieu de ~14s
+  - Bouton "Voir tout · N titres" par section (séries / films) — grille flex-wrap expandable
+  - Section posters séparée en callback indépendant (ne se rechargne pas au changement de période)
+- **Spotify** : `prefetch_artists()` / `prefetch_tracks()` parallèles, batch save (1 seule écriture disque)
+- **ALS/recommandations** : suppression complète de `interaction_weight` dans tous les notebooks + `recommandations.py` supprimé
+
+### Problème 1 — Chargement lent ✅ (résolu pour Netflix + Spotify)
+- Cache `@lru_cache` sur les fonctions de chargement ✅
+- Fetch API parallèle via `ThreadPoolExecutor` ✅
+- Cache disque persistant pour TMDB et Spotify metadata ✅
 
 ### Problème 2 — HTML/CSS dans des strings Python
-- Tout HTML → `app/assets/*.html` chargé via `open()`
-- Tout CSS → `app/assets/*.css` (Dash charge automatiquement)
 - Déjà partiellement fait (`social_3d.html`, `style.css`)
+- Topology suivra le même pattern (standalone HTML + Dash wrapper)
 
 ### Navbar — Réorganisation "Wow vs Tech"
 
 ```
 [ MyDigitalTwin ]   |  EXPLORE : Home · Timeline · Memory Album · Social · Clone
-                    |  ANALYSE : Profils · Netflix · Spotify · Psy · Inventaire
+                    |  ANALYSE : Shape of Me · Netflix · Spotify · Psy · Inventaire
 ```
 
 ---
@@ -273,9 +283,6 @@ Musiques ──Spotify Audio Features──► clusters musicaux (énergique, m�
               Mapping cluster photo → cluster musical
 ```
 
-**Association temporelle** : si une photo date du 14/06/2024 et que Spotify montre une
-écoute intense ce soir-là → lier directement. Sinon, fallback sur le cluster émotionnel.
-
 ### Actions
 - [ ] Script d'import photos iCloud + extraction EXIF (date, GPS)
 - [ ] Clustering musical via Spotify Audio Features
@@ -287,124 +294,82 @@ Musiques ──Spotify Audio Features──► clusters musicaux (énergique, m�
 ## 2G — Topology Graph (Shape of Me) ✨ 🔄 EN COURS
 
 ### Vision
-Graphe de connaissances 3D — contenus likés/sauvegardés cross-plateformes,
-spatialisés sémantiquement via embeddings + TDA. Chaque nœud = un contenu aimé.
-La forme révèle les clusters d'intérêt réels, sans keyword matching.
+Créer un archipel d'îles 3D ("Vice-Versa" style) représentant les centres d'intérêts.
+Chaque île est un amas sémantique et comportemental. Les items (tweets, vidéos, musiques)
+sont placés en 3D selon leurs similarités, puis regroupés par HDBSCAN.
+Les îles sont nommées automatiquement (TF-IDF / LLM) depuis leur contenu textuel.
 
 ---
 
-### Étape 1 — Données warehouse
-
-| Table | Champ texte | URL | Statut |
-|-------|-------------|-----|--------|
-| `instagram_likes` | — | `post_url` | ✅ warehouse |
-| `instagram_saved` | `account` | `post_href` | ✅ warehouse |
-| `twitter_likes` | `full_text` | reconstruit depuis `tweet_id` | ✅ warehouse |
-| `tiktok_likes` | `video_desc` | `video_url` | ✅ warehouse |
-| `tiktok_saves` | `video_desc` | `video_url` | ✅ warehouse |
-| `spotify_liked_songs` | `track + artist` | `trackUri` | ✅ warehouse |
-
-**Toutes les tables sources sont prêtes.** ✅
+### Évolution de la réflexion (2026-04-27)
+1. **Clustering classique (`02_clustering/_outdated`)** : Trop rigide et basé uniquement sur le temps.
+2. **TDA Mapper (`02_graph.ipynb`)** : Graphe mathématique puissant, mais complexe, abstrait et dur à calibrer (DBSCAN metric=precomputed issues). Moins lisible pour un utilisateur final.
+3. **Archipel 3D (UMAP + HDBSCAN)** : Le choix final. UMAP 3D transforme la matrice hybride ($D_{final}$) en un "océan" où les comportements et sémantiques similaires forment des îles. HDBSCAN les détecte sans hyperparamètres complexes. Très visuel ("Vice-Versa").
 
 ---
 
-### Étape 2 — Notebook topologie
+### Architecture technique — Distance hybride et Îles 3D
 
-**Fichier :** `src/scripts/04_topology/01_topology_graph.ipynb`
+La matrice de distance hybride $D_{final}$ est conservée, car elle permet de mixer parfaitement le sémantique et le comportemental.
 
 ```
-Tables warehouse
-├── instagram_likes / instagram_saved
-├── twitter_likes
-├── tiktok_likes / tiktok_saves
-└── spotify_liked_songs
-         │
-         ▼
-DataFrame unifié : (id, url, text, platform, action_type)
-         │
-         ▼
-Embedding texte  →  all-MiniLM-L6-v2  →  vecteurs 384D
-         │
-         ├── PCA 3D        →  x_pca,  y_pca,  z_pca
-         ├── UMAP 3D       →  x_umap, y_umap, z_umap   (Centroid mode)
-         └── Hiérarchique  →  structure arbre            (H3 Tree mode)
-         │
-         ▼
-TDA Mapper (KeplerMapper)  →  clusters + arêtes
-         │
-         ▼
-warehouse/topology_nodes   (id, url, platform, label, coords, cluster_id)
-warehouse/topology_edges   (source, target, weight)
+D_final(i,j) = α · D_sem(i,j) + (1-α) · D_beh(i,j)     α ≈ 0.5
 ```
+*(L'imputation contextuelle est conservée pour les données 100% comportementales comme TikTok ou les likes Insta)*
 
-- [ ] Notebook `01_topology_graph.ipynb`
-- [ ] `pip install keplerMapper sentence-transformers umap-learn` → `requirements/ml.txt`
-
----
-
-### Étape 3 — Page app
-
-**Fichiers :** `app/pages/topology.py` + `app/assets/topology/graph.html`
-
-#### Stack technique
-- Page HTML standalone dans `app/assets/topology/` — Three.js + `3d-force-graph`
-- Données injectées au build : warehouse → `app/assets/topology/data.json`
-- Intégrée dans Dash via `html.Iframe` plein écran
-
-#### Rendu visuel
-- Fond `#000000` — esthétique hologramme spatial
-- **Nœuds** : sphères colorées par plateforme + label blanc flottant
-- **Arêtes** : `rgba(255,255,255,0.08)` — très fines, translucides, constellation
-
-#### Couleurs plateformes
-| Plateforme | Couleur |
-|------------|---------|
-| Instagram | `#E1306C` |
-| Twitter/X | `#1DA1F2` |
-| TikTok | `#69C9D0` |
-| Spotify | `#1DB954` |
-
-#### Modes de layout
-| Mode | Algorithme | Esthétique |
-|------|-----------|------------|
-| **Force** | Force-directed 3D | Réseau neuronal, organique |
-| **PCA** | Coordonnées PCA3D | Galaxie plate |
-| **Centroid** | Distance au centroïde | Amas globulaire |
-
-#### Interaction clic
-- Orbite / zoom : clic + drag souris
-- Clic nœud → panneau latéral avec iframe embed officiel
-- Iframe selon la plateforme : Tweet, Instagram, TikTok, Spotify embed
-
-#### Actions
-- [ ] `app/assets/topology/graph.html` — Three.js + 3d-force-graph + 3 modes
-- [ ] `app/assets/topology/data.json` — export depuis le notebook
-- [ ] `app/pages/topology.py` — Dash wrapper (iframe + panneau latéral)
-- [ ] Ajouter "Topology" dans la navbar
-
----
-
-### Ordre d'exécution restant
-
+**Pipeline "Îles" :**
 ```
-1. ✅ tiktok_saves       → warehouse
-2. ✅ spotify_liked_songs → warehouse
-3. Notebook topologie   → topology_nodes + topology_edges  ← PROCHAIN
-4. graph.html           → Three.js + 3d-force-graph
-5. topology.py          → Dash wrapper
+D_final (precomputed)
+    ↓
+UMAP 3D  (metric="precomputed", n_components=3)
+    → Génère les coordonnées x, y, z dans "l'Océan"
+    ↓
+HDBSCAN  (sur l'espace 3D)
+    → Détecte les îles (clusters denses) et le bruit (l'océan)
+    ↓
+TF-IDF   (sur les items AVEC texte de chaque île)
+    → Nomme l'île (ex: "Dev Web, Python")
+    ↓
+Export JSON pour Plotly 3D ou 3d-force-graph (sans arêtes, juste les points/îles)
 ```
 
 ---
 
-## Horizon inspirationnel — NeuroAI
+### Dashboard — Page "Shape of Me" (`/topology`)
 
-Ce projet touche à des thèmes au cœur du NeuroAI : représentation de la mémoire épisodique,
-association multimodale (visuel + auditif), reconstruction de souvenirs par l'émotion.
+**Visuel cible :**
+- Nuage de points interactif 3D (Plotly 3D ou Three.js adapté).
+- L'espace est vide, on voit de grands amas de points = les îles.
+- Au centre des îles flotte un label (les mots-clés extraits).
+- Clic sur un point = vue de l'item (tweet, vidéo).
 
-Pistes à explorer :
-- Groupes : DeepMind (Neuroscience team), Meta AI (FAIR), Mila (Montréal), INRIA
-- Mots-clés : *episodic memory*, *multimodal memory consolidation*, *affective computing*
-- Stages : ce projet illustre exactement ces problèmes — bon portfolio concret
+**Fichiers :**
+- `app/pages/clusters.py` → à adapter pour l'archipel
+- `src/scripts/02_topology/02_islands.ipynb` → Remplacera `02_graph.ipynb`
+
+---
+
+## Historique des décisions techniques
+
+### 2026-04-24 — Phase 1 terminée
+Dashboard opérationnel. Notebooks exploration tous les sources.
+
+### 2026-04-25 → 2026-04-27 — Nettoyage ALS complet
+- Suppression de `interaction_weight` dans les 6 notebooks d'exploration
+- `recommandations.py` supprimé (page ALS orpheline)
+- `app/app.py` : `_load_recos()` retiré du prewarm
+- `run_all.py` : audit log `ingestion_log.json` ajouté
+
+### 2026-04-27 — Netflix & Spotify performance
+- Netflix : cache TMDB disque + fetch parallèle + "Voir tout" expandable
+- Spotify : prefetch parallèle + batch save
+- Suppression ALS → TMDB poster grid sans recommandations
+
+### 2026-04-27 — Décision : TDA Mapper archivé, passage à l'Archipel 3D
+TDA Mapper posait des problèmes de calibration et la notion de "graphe" s'avérait moins lisible pour l'utilisateur qu'une simple "carte d'îles" façon *Vice-Versa*.
+La matrice de distance hybride ($D_{final}$) et le système d'imputation contextuelle sont excellents et sont conservés.
+Nouveau pipeline : UMAP 3D sur $D_{final}$ → HDBSCAN → Extraction de mots-clés (TF-IDF).
+Le script `02_graph.ipynb` sera remplacé par `02_islands.ipynb`.
 
 ---
 
@@ -412,22 +377,21 @@ Pistes à explorer :
 
 | Priorité | Tâche | Statut |
 |---|---|---|
-| ✅ FAIT | Parsers toutes sources (inbox → processed/) | Fait |
-| ✅ FAIT | Ingestion incrémentale Spotify (Extended + Account, dedup idempotent) | Fait |
-| ✅ FAIT | `tiktok_saves`, `spotify_liked_songs`, `spotify_searches` | Fait |
-| ✅ FAIT | Fix paths app (`data/raw/` → `data/processed/`) | Fait |
-| ✅ FAIT | Fix `sys.path` notebooks (walk-up config.py) | Fait |
-| 🔴 NEXT | `ingestion_log.json` dans `run_all.py` (audit trail, niveau 1) | À faire |
-| 🔴 NEXT | Notebook topologie `04_topology/01_topology_graph.ipynb` | À faire |
-| 🔴 NEXT | `graph.html` + `topology.py` (Phase 2G app) | À faire |
+| ✅ FAIT | Nettoyage ALS complet (tous notebooks + pages) | Fait |
+| ✅ FAIT | Netflix : TMDB poster grid + cache disque + fetch parallèle | Fait |
+| ✅ FAIT | Spotify : prefetch parallèle + batch save | Fait |
+| ✅ FAIT | `01_enrich.ipynb` — TikTok (0%→beh) + Instagram bios | Fait |
+| ✅ FAIT | Docker : `config.yaml` monté, `instaloader` volume, consolidé | Fait |
+| 🔴 NEXT | **Remplacer `02_graph.ipynb` par `02_islands.ipynb` (UMAP 3D + HDBSCAN)** | À faire |
+| 🔴 NEXT | **Page Dash "Shape of Me" : Plotly 3D Archipel** | À faire |
 | 🟠 P1 | R2 cloud storage | À faire |
 | 🟡 P2 | Delta `MERGE INTO` par table (niveau 2, post-stabilisation schémas) | Après Phase 2G |
 | 🟡 P2 | Unit tests + GitHub Actions CI | À faire |
 | 🟡 P2 | Memory Album (clustering musique + UI) | À faire |
-| 🟢 P3 | Navbar réorganisation (Explore / Analyse) | À faire |
+| 🟢 P3 | Navbar réorganisation (Shape of Me · Explore / Analyse) | Après Phase 2G |
 | 🔵 P4 | Copier template | À faire |
 | 🔵 P4 | LangSmith pour le clone | À faire |
 
 ---
 
-*Roadmap rédigée le 2026-04-24 — mise à jour le 2026-04-26 (ingestion complète, topology data ready, stratégie incrémentale niveau 1/2 documentée).*
+*Roadmap rédigée le 2026-04-24 — mise à jour le 2026-04-27 (Passage de TDA Mapper à Archipel 3D).*

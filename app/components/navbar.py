@@ -2,7 +2,7 @@ from dash import html, dcc
 
 PAGES = [
     {"label": "Home",    "href": "/"},
-    {"label": "Profils", "href": "/profils"},
+    {"label": "Shape of Me", "href": "/topology"},
     {"label": "Netflix", "href": "/netflix"},
     {"label": "Spotify", "href": "/spotify"},
     {"label": "Clone", "href": "/clone"},
