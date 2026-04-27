@@ -22,6 +22,14 @@ contacts_map.json
 config.yaml
 spark-logs
 
+# Assets générés (contiennent données personnelles — jamais sur GitHub)
+app/assets/islands_data.json
+app/assets/topology_data.json
+app/assets/topology_3d.html
+app/assets/social_3d.html
+app/assets/behavioral_profiles.png
+app/assets/CENTRE_INTERET.png
+
 # Jupyter
 .ipynb_checkpoints/
 
