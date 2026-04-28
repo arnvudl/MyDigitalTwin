@@ -65,8 +65,6 @@ Le projet a migre vers un flux `inbox -> processed -> warehouse`, mais certains 
 
 Cas releves:
 
-- `config.py` maintient `RAW_DATA = PROCESSED_DATA` pour retrocompatibilite ;
-- le notebook social lit l'inbox Instagram via `RAW_DATA` ;
 - la page `social` utilisait un chemin `raw` en local ;
 - le script CLIP lisait dans `data/raw/INSTAGRAM/...`.
 

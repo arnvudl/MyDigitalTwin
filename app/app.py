@@ -15,7 +15,7 @@ def _prewarm_caches():
     except Exception: pass
     try: home.compute_stats()
     except Exception: pass
-    try: spotify._load_spotify()
+    try: spotify._load_spotify_streams()
     except Exception: pass
     try: netflix._load_netflix()
     except Exception: pass

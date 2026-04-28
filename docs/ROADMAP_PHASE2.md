@@ -10,7 +10,7 @@
 Phase 2
 ├── 2A - 2E : Fondations et Nettoyage         ✅ FAIT
 ├── 2F  Memory Album (Photos × Musique)       🔄 EN COURS
-└── 2G  Industrialisation & Qualité           ⬜ À FAIRE
+└── 2G  Industrialisation & Qualité           🔄 EN COURS
 ```
 
 ---
@@ -53,7 +53,7 @@ Un album photo interactif où des groupes de photos partageant une même ambianc
 
 ---
 
-## 2G — Industrialisation & Qualité ⬜ À FAIRE
+## 2G — Industrialisation & Qualité 🔄 EN COURS
 
 ### Objectif
 Transformer le projet d'un PoC local en un produit de données robuste, reproductible et maintenable, prêt à accepter des contributions externes.
@@ -62,35 +62,35 @@ Transformer le projet d'un PoC local en un produit de données robuste, reproduc
 - **Objectif** : Ne traiter que les nouvelles données au lieu de tout recalculer à chaque exécution.
 - **Action** : Remplacer `df.write.mode("overwrite")` par des opérations `MERGE INTO` de Delta Lake. Cela nécessite de définir une clé primaire unique pour chaque table.
 - **Tâches** :
-    - [ ] Documenter les clés primaires de chaque table dans `docs/ingestion_keys.md`.
+    - [x] Documenter les clés primaires de chaque table dans `docs/ingestion_keys.md`.
     - [ ] Refactoriser les notebooks du `warehouse` pour utiliser `MERGE INTO`.
 
 **2. Reproductibilité & Configuration**
 - **Objectif** : Permettre à un nouvel utilisateur de cloner le projet, remplir un fichier de configuration unique, et lancer tous les services sans erreur.
 - **Action** : Éliminer tout code "hardcodé" en centralisant les chemins et constantes projet dans `config.py`, les données personnelles non secrètes dans `config.yaml`, et les secrets dans `.env`.
 - **Tâches** :
-    - [ ] Auditer `src/scripts/`, `src/ingestion/` et `app/` pour repérer les chemins, constantes, ports et paramètres encore hardcodés.
-    - [ ] Déplacer les chemins et constantes partagés dans `config.py`.
-    - [ ] Déplacer les paramètres personnels non secrets dans `config.yaml`.
-    - [ ] Vérifier que le fichier `.env.example` est complet, que les secrets sont correctement chargés et que les erreurs de configuration sont explicites.
+    - [x] Auditer `src/scripts/`, `src/ingestion/` et `app/` pour repérer les chemins, constantes, ports et paramètres encore hardcodés.
+    - [x] Déplacer les chemins et constantes partagés dans `config.py`.
+    - [x] Déplacer les paramètres personnels non secrets dans `config.yaml`.
+    - [x] Vérifier que le fichier `.env.example` est complet, que les secrets sont correctement chargés et que les erreurs de configuration sont explicites.
     - [ ] Valider le parcours "nouvel utilisateur" : cloner, renseigner `config.yaml` et `.env`, puis lancer ingestion, notebooks et app sans modification du code.
 
 **3. Tests & Qualité des données**
 - **Objectif** : Mettre en place un filet de sécurité automatisé pour détecter les régressions et les problèmes de données.
 - **Action** : Intégrer `pytest` pour lancer à la fois des tests unitaires, des tests de qualité de données et des tests d'invariants utiles aux notebooks.
 - **Tâches** :
-    - [ ] Configurer `pytest` dans le projet.
-    - [ ] Écrire des **tests unitaires** pour les fonctions critiques (ex: les parsers d'ingestion, la détection des sources, les helpers de déplacement de fichiers).
-    - [ ] Écrire des **tests de qualité de données** qui valident les tables du `warehouse` et les jeux de données intermédiaires consommés par les notebooks.
-    - [ ] Vérifier les invariants les plus utiles : `nulls` sur colonnes critiques, types attendus, plages de dates cohérentes, unicité de clés logiques, volumes minimaux et cohérence simple entre tables.
+    - [x] Configurer `pytest` dans le projet (`pytest.ini`, `tests/conftest.py`).
+    - [x] Écrire des **tests unitaires** pour les fonctions critiques (ex: les parsers d'ingestion Google et Spotify).
+    - [x] Écrire des **tests de qualité de données** qui valident les tables du `warehouse` et les jeux de données intermédiaires consommés par les notebooks.
+    - [x] Vérifier les invariants les plus utiles : `nulls` sur colonnes critiques, types attendus, plages de dates cohérentes, unicité de clés logiques, volumes minimaux et cohérence simple entre tables.
 
 **4. CI/CD & Automatisation (Gestion des PRs)**
 - **Objectif** : Automatiser les vérifications de qualité et agir comme un garde-fou pour les contributions.
 - **Action** : Créer un workflow GitHub Actions qui s'exécute sur chaque `push` et chaque **Pull Request (PR)**.
 - **Tâches** :
-    - [ ] Créer le fichier `.github/workflows/ci.yml`.
-    - [ ] Configurer le workflow pour qu'il agisse comme un **"status check" obligatoire** pour les PRs.
-    - [ ] Le workflow doit lancer :
+    - [x] Créer le fichier `.github/workflows/ci.yml`.
+    - [x] Configurer le workflow pour qu'il agisse comme un **"status check" obligatoire** pour les PRs.
+    - [x] Le workflow doit lancer :
         1.  **Linting (`ruff`)** : Vérification du style de code.
         2.  **Tests (`pytest`)** : Vérification de non-régression et de qualité des données.
     - [ ] **(Optionnel)** Configurer une règle de branche sur GitHub pour interdire la fusion d'une PR si le workflow échoue.
@@ -110,7 +110,7 @@ Transformer le projet d'un PoC local en un produit de données robuste, reproduc
 |---|---|---|
 | 🔴 NEXT | **Memory Album : Notebook `03_memory_album.ipynb` (CLIP matching)** | À faire |
 | 🔴 NEXT | **Memory Album : Page Dash** | À faire |
-| 🟠 P2 | **Industrialisation** : Démarrer les tâches de la section 2G (Tests, CI/CD, etc.) | Après le Memory Album |
+| 🟠 P2 | **Industrialisation** : Finir les tâches de la section 2G (Validation nouveau user, MERGE INTO, etc.) | Après le Memory Album |
 | 🧊 PAUSE | **Infrastructure Cloud (R2)** | En attente |
 
 ---

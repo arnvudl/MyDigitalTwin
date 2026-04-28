@@ -7,39 +7,47 @@ Secrets belong in .env.
 """
 
 import os
-
 import yaml
 from dotenv import load_dotenv
 
+# Load environment variables from .env file (for API keys and secrets)
 load_dotenv()
 
+# --- Base Paths ---
 PROJECT_ROOT = os.path.dirname(os.path.abspath(__file__))
 
+# Data root paths differ depending on the execution environment (local vs Docker)
 _LOCAL_DATA_ROOT = os.path.join(PROJECT_ROOT, "data")
-_APP_DATA_ROOT = "/app/data"
-_SPARK_DATA_ROOT = "/opt/spark/data"
-
+_APP_DATA_ROOT = "/app/data"         # Path inside the Dash dashboard container
+_SPARK_DATA_ROOT = "/opt/spark/data" # Path inside the Spark container
 
 def _pick_data_root() -> str:
+    """Dynamically determine the root data directory based on the environment."""
     if os.path.exists(_APP_DATA_ROOT):
         return _APP_DATA_ROOT
     if os.path.exists(_SPARK_DATA_ROOT):
         return _SPARK_DATA_ROOT
     return _LOCAL_DATA_ROOT
 
-
 DATA_ROOT = _pick_data_root()
 APP_DATA_ROOT = _APP_DATA_ROOT
 SPARK_DATA_ROOT = _SPARK_DATA_ROOT
 LOCAL_DATA_ROOT = _LOCAL_DATA_ROOT
 
+# --- Main Data Directories ---
+# WAREHOUSE: Final, structured analytical tables (Parquet/Delta format)
 WAREHOUSE = os.path.join(DATA_ROOT, "warehouse")
+
+# PROCESSED_DATA: Cleaned and standardized GDPR exports (source of truth for notebooks)
 PROCESSED_DATA = os.path.join(DATA_ROOT, "processed")
-RAW_DATA = PROCESSED_DATA  # Legacy alias kept for old notebooks.
+
+# LLM_DATA: Data generated for or by Large Language Models (e.g., clone training data)
 LLM_DATA = os.path.join(DATA_ROOT, "LLM_DATA")
 
+# INBOX_ROOT: Drop zone for raw, unextracted GDPR zip files
 INBOX_ROOT = os.path.join(PROJECT_ROOT, "data", "inbox")
 
+# --- Instagram Specific Paths ---
 INSTAGRAM_PROCESSED_ROOT = os.path.join(PROCESSED_DATA, "INSTAGRAM")
 INSTAGRAM_INBOX = os.path.join(
     INSTAGRAM_PROCESSED_ROOT,
@@ -53,27 +61,36 @@ INSTAGRAM_TOPICS_PATH = os.path.join(
     "your_topics",
     "recommended_topics.json",
 )
+
+# --- Twitter/X Specific Paths ---
 X_PERSONALIZATION_PATH = os.path.join(PROCESSED_DATA, "X", "data", "personalization.js")
 
+# --- Derived Data Directories (Outputs) ---
 SOCIAL_GRAPH_DIR = os.path.join(WAREHOUSE, "social_graph")
 PHOTO_SORTING_DIR = os.path.join(INSTAGRAM_PROCESSED_ROOT, "CLIP_SORTING")
 PHOTO_CLUSTERS_DIR = os.path.join(WAREHOUSE, "photo_clusters")
 PHOTO_EMBEDDINGS_DIR = os.path.join(WAREHOUSE, "photo_embeddings")
+
+# Source directories for photos to be analyzed by CLIP
 PHOTO_SOURCE_DIRS = [
     os.path.join(INSTAGRAM_PROCESSED_ROOT, "media"),
     os.path.join(INSTAGRAM_PROCESSED_ROOT, "your_instagram_activity", "posts"),
     os.path.join(INSTAGRAM_PROCESSED_ROOT, "your_instagram_activity", "messages"),
 ]
 
+# --- Caches and Output Files ---
 SPOTIFY_METADATA_CACHE_PATH = os.path.join(WAREHOUSE, "spotify_metadata.json")
 TMDB_POSTER_CACHE_PATH = os.path.join(WAREHOUSE, "tmdb_poster_cache.json")
+
 GEMINI_CORPUS_PATH = os.path.join(LLM_DATA, "gemini_corpus.txt")
 GEMINI_SYSPROMPT_PATH = os.path.join(LLM_DATA, "SYS_PROMPT_ARNAUD")
 
+# --- Dashboard Settings ---
 APP_ASSETS_DIR = os.path.join(PROJECT_ROOT, "app", "assets")
 DASH_HOST = os.getenv("DASH_HOST", "0.0.0.0")
 DASH_PORT = int(os.getenv("DASH_PORT", "8050"))
 
+# --- User Configuration (loaded from config.yaml) ---
 _cfg_path = os.path.join(PROJECT_ROOT, "config.yaml")
 if not os.path.exists(_cfg_path):
     raise FileNotFoundError(
@@ -85,20 +102,26 @@ if not os.path.exists(_cfg_path):
 with open(_cfg_path, encoding="utf-8") as _file:
     _cfg = yaml.safe_load(_file) or {}
 
+# General User Info
 INSTAGRAM_SENDER_NAME = _cfg.get("user", {}).get("instagram_sender_name", "")
 INSTAGRAM_USERNAME = _cfg.get("user", {}).get("instagram_username", "")
 
+# Social Graph Configuration
 _social = _cfg.get("social", {})
 CLOSE_FRIENDS = set(_social.get("close_friends", []))
 CLOSE_FRIENDS_MULTIPLIER = float(_social.get("close_friends_multiplier", 2.0))
 MIN_MESSAGES = int(_social.get("min_messages", 5))
 
+# Spotify Topology Configuration
 _spotify = _cfg.get("spotify", {})
 SPOTIFY_ANCHOR_ARTISTS = _spotify.get("anchor_artists", [])
 SPOTIFY_TOPOLOGY_THRESHOLD = int(_spotify.get("topology_stream_threshold", 5))
 
+# Clone/LLM Configuration
 CLONE_CONVERSATIONS = _cfg.get("clone", {}).get("conversations", {})
 
+# --- API Keys and Secrets (loaded from .env) ---
+# NEVER hardcode these values here. They must remain in the ignored .env file.
 TMDB_API_KEY = os.getenv("TMDB_API_KEY", "")
 TMDB_ACCESS_TOKEN = os.getenv("TMDB_ACCESS_TOKEN", "")
 SPOTIFY_CLIENT_ID = os.getenv("SPOTIFY_CLIENT_ID", "")
