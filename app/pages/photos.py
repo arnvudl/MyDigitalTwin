@@ -5,17 +5,11 @@ import pandas as pd
 import plotly.express as px
 from dash import Input, Output, callback, dcc, html
 from app.icons import svg_icon, IMAGE
+from config import DATA_ROOT, PHOTO_CLUSTERS_DIR, SPARK_DATA_ROOT
 
 # ─── CONFIG ──────────────────────────────────────────────────────────────────
-if os.path.exists("/app/data/warehouse"):
-    WAREHOUSE = "/app/data/warehouse"
-    DATA_ROOT = "/app/data"
-else:
-    WAREHOUSE = "data/warehouse"
-    DATA_ROOT = "data"
-
-CLUSTERS_DIR = os.path.join(WAREHOUSE, "photo_clusters")
-_SPARK_PREFIX = "/opt/spark/data"
+CLUSTERS_DIR = PHOTO_CLUSTERS_DIR
+_SPARK_PREFIX = SPARK_DATA_ROOT
 
 CLUSTER_COLORS = ["#c13584", "#833ab4", "#fd1d1d", "#fcaf45", "#4fc3f7"]
 

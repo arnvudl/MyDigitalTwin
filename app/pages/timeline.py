@@ -8,12 +8,10 @@ from dash import dcc, html, Input, Output, callback, ALL
 from app.icons import svg_icon, FOLDER
 from dash.exceptions import PreventUpdate
 from functools import lru_cache
+from config import WAREHOUSE
 
 # ─── CONFIG ──────────────────────────────────────────────────────────────────
-if os.path.exists("/app/data/warehouse"):
-    DELTA_BASE = "/app/data/warehouse"
-else:
-    DELTA_BASE = "data/warehouse"
+DELTA_BASE = WAREHOUSE
 
 SOURCES = {
     # Existants

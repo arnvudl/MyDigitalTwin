@@ -25,9 +25,7 @@ from pathlib import Path
 
 import sys
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..")))
-from config import PROJECT_ROOT, PROCESSED_DATA
-
-INBOX_ROOT = os.path.join(PROJECT_ROOT, "data", "inbox")
+from config import INBOX_ROOT, PROCESSED_DATA
 
 INBOX_PATTERNS = [
     (re.compile(r"^instagram",         re.IGNORECASE), "INSTAGRAM"),

@@ -4,9 +4,10 @@ import plotly.graph_objects as go
 from functools import lru_cache
 from dash import ALL, Input, Output, State, callback, dcc, html, no_update
 from app.icons import svg_icon, MUSIC, CLOCK, MIC
+from config import WAREHOUSE
 
 # ─── CONFIG ──────────────────────────────────────────────────────────────────
-DELTA_BASE = "/app/data/warehouse" if os.path.exists("/app/data/warehouse") else "warehouse"
+DELTA_BASE = WAREHOUSE
 
 SPOTIFY_GREEN = "#1db954"
 

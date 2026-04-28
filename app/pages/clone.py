@@ -3,21 +3,14 @@ Page /clone — Le Clone
 Chat conversationnel propulsé par Gemini Flash + corpus de DMs réels.
 """
 
-import os
-
 from google import genai
 from google.genai import types
 from dash import Input, Output, State, callback, dcc, html, no_update
+from config import GEMINI_API_KEY, GEMINI_CORPUS_PATH, GEMINI_SYSPROMPT_PATH
 
 # ─── PATHS ───────────────────────────────────────────────────────────────────
-if os.path.exists("/app/data"):
-    LLM_DATA = "/app/data/LLM_DATA"
-else:
-    _HERE     = os.path.dirname(os.path.abspath(__file__))
-    LLM_DATA  = os.path.join(_HERE, "..", "..", "data", "LLM_DATA")
-
-CORPUS_PATH = os.path.join(LLM_DATA, "gemini_corpus.txt")
-SYSPROMPT_PATH = os.path.join(LLM_DATA, "SYS_PROMPT_ARNAUD")
+CORPUS_PATH = GEMINI_CORPUS_PATH
+SYSPROMPT_PATH = GEMINI_SYSPROMPT_PATH
 
 # ─── CHARGEMENT DU CORPUS (une seule fois au démarrage) ──────────────────────
 def _load_text(path: str, label: str) -> str:
@@ -41,7 +34,7 @@ Voici des exemples réels de tes conversations passées. Imite ce style exacteme
 """
 
 # ─── GEMINI ──────────────────────────────────────────────────────────────────
-_GEMINI_KEY = os.environ.get("GEMINI_API_KEY", "")
+_GEMINI_KEY = GEMINI_API_KEY
 _gemini_client = genai.Client(api_key=_GEMINI_KEY) if _GEMINI_KEY else None
 
 _GEMINI_CONFIG = types.GenerateContentConfig(

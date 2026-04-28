@@ -6,6 +6,7 @@
 
 user:
   instagram_sender_name: "VOTRE NOM"   # Tel qu'il apparaît dans les exports Instagram
+  instagram_username: "votre_username" # Optionnel, utile pour certains traitements futurs
 
 social:
   close_friends_multiplier: 2.0

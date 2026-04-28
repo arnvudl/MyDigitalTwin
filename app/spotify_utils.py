@@ -3,18 +3,20 @@ import json
 from concurrent.futures import ThreadPoolExecutor
 import spotipy
 from spotipy.oauth2 import SpotifyClientCredentials
-from dotenv import load_dotenv
-
-load_dotenv()
+from config import (
+    SPOTIFY_CLIENT_ID,
+    SPOTIFY_CLIENT_SECRET,
+    SPOTIFY_METADATA_CACHE_PATH,
+)
 
 # Cache file path
-CACHE_PATH = os.path.join("data/warehouse", "spotify_metadata.json")
+CACHE_PATH = SPOTIFY_METADATA_CACHE_PATH
 
 
 class SpotifyMetadata:
     def __init__(self):
-        client_id     = os.getenv("SPOTIFY_CLIENT_ID")
-        client_secret = os.getenv("SPOTIFY_CLIENT_SECRET")
+        client_id = SPOTIFY_CLIENT_ID
+        client_secret = SPOTIFY_CLIENT_SECRET
 
         if client_id and client_secret:
             try:
