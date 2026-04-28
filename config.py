@@ -1,129 +1,149 @@
 """
-Central runtime configuration for MyDigitalTwin.
+config.py — Configuration centrale du projet MyDigitalTwin
+===========================================================
+Un ami qui veut refaire le projet ne doit modifier QUE ce fichier.
 
-This file contains project paths and runtime settings.
-Personal non-secret data belongs in config.yaml.
-Secrets belong in .env.
+Usage dans les notebooks :
+    import sys, os
+    sys.path.insert(0, os.path.abspath("../../.."))  # adapter selon la profondeur
+    from config import WAREHOUSE, RAW_DATA, CLOSE_FRIENDS, SPOTIFY_ANCHOR_ARTISTS
 """
 
 import os
-import yaml
-from dotenv import load_dotenv
 
-# Load environment variables from .env file (for API keys and secrets)
-load_dotenv()
-
-# --- Base Paths ---
+# ── CHEMINS ────────────────────────────────────────────────────────────────────
+# Changer PROJECT_ROOT si le projet est cloné ailleurs
 PROJECT_ROOT = os.path.dirname(os.path.abspath(__file__))
 
-# Data root paths differ depending on the execution environment (local vs Docker)
-_LOCAL_DATA_ROOT = os.path.join(PROJECT_ROOT, "data")
-_APP_DATA_ROOT = "/app/data"         # Path inside the Dash dashboard container
-_SPARK_DATA_ROOT = "/opt/spark/data" # Path inside the Spark container
+# Chemin warehouse : priorité au chemin Docker, sinon local
+WAREHOUSE = "/opt/spark/data/warehouse" if os.path.exists("/opt/spark/data/warehouse") \
+            else os.path.join(PROJECT_ROOT, "data", "warehouse")
 
-def _pick_data_root() -> str:
-    """Dynamically determine the root data directory based on the environment."""
-    if os.path.exists(_APP_DATA_ROOT):
-        return _APP_DATA_ROOT
-    if os.path.exists(_SPARK_DATA_ROOT):
-        return _SPARK_DATA_ROOT
-    return _LOCAL_DATA_ROOT
+RAW_DATA  = os.path.join(PROJECT_ROOT, "data", "raw")
 
-DATA_ROOT = _pick_data_root()
-APP_DATA_ROOT = _APP_DATA_ROOT
-SPARK_DATA_ROOT = _SPARK_DATA_ROOT
-LOCAL_DATA_ROOT = _LOCAL_DATA_ROOT
+# ── GRAPHE SOCIAL ──────────────────────────────────────────────────────────────
+# Noms des dossiers inbox Instagram (partie avant l'ID numérique)
+# Ex : dossier 'clara_1093935518743724' → mettre 'clara'
+CLOSE_FRIENDS = {
+    "_louange___",
+    "_paulinalambin",
+    "adamvdd",
+    "alice",
+    "clara",
+    "djyoyo",
+    "erwan",
+    "evan",
+    "fafie",
+    "fredfnmz",
+    "gabi",
+    "hugobernard",
+    "jen",
+    "jerome",
+    "laura",
+    "lenysoetaerts",
+    "lou",
+    "loulou",
+    "maelle",
+    "manonvandy",
+    "mylene",
+    "nana",
+    "pilou",
+    "romane",
+    "sachou",
+    "vic",
+    "zo",
+    "3li0tttt",
+}
 
-# --- Main Data Directories ---
-# WAREHOUSE: Final, structured analytical tables (Parquet/Delta format)
-WAREHOUSE = os.path.join(DATA_ROOT, "warehouse")
+CLOSE_FRIENDS_MULTIPLIER = 2.0   # poids x2 pour les close friends dans le graphe
+MIN_MESSAGES = 5                  # seuil pour exclure les inconnus / spams
 
-# PROCESSED_DATA: Cleaned and standardized GDPR exports (source of truth for notebooks)
-PROCESSED_DATA = os.path.join(DATA_ROOT, "processed")
-
-# LLM_DATA: Data generated for or by Large Language Models (e.g., clone training data)
-LLM_DATA = os.path.join(DATA_ROOT, "LLM_DATA")
-
-# INBOX_ROOT: Drop zone for raw, unextracted GDPR zip files
-INBOX_ROOT = os.path.join(PROJECT_ROOT, "data", "inbox")
-
-# --- Instagram Specific Paths ---
-INSTAGRAM_PROCESSED_ROOT = os.path.join(PROCESSED_DATA, "INSTAGRAM")
-INSTAGRAM_INBOX = os.path.join(
-    INSTAGRAM_PROCESSED_ROOT,
-    "your_instagram_activity",
-    "messages",
-    "inbox",
-)
-INSTAGRAM_TOPICS_PATH = os.path.join(
-    INSTAGRAM_PROCESSED_ROOT,
-    "preferences",
-    "your_topics",
-    "recommended_topics.json",
-)
-
-# --- Twitter/X Specific Paths ---
-X_PERSONALIZATION_PATH = os.path.join(PROCESSED_DATA, "X", "data", "personalization.js")
-
-# --- Derived Data Directories (Outputs) ---
-SOCIAL_GRAPH_DIR = os.path.join(WAREHOUSE, "social_graph")
-PHOTO_SORTING_DIR = os.path.join(INSTAGRAM_PROCESSED_ROOT, "CLIP_SORTING")
-PHOTO_CLUSTERS_DIR = os.path.join(WAREHOUSE, "photo_clusters")
-PHOTO_EMBEDDINGS_DIR = os.path.join(WAREHOUSE, "photo_embeddings")
-
-# Source directories for photos to be analyzed by CLIP
-PHOTO_SOURCE_DIRS = [
-    os.path.join(INSTAGRAM_PROCESSED_ROOT, "media"),
-    os.path.join(INSTAGRAM_PROCESSED_ROOT, "your_instagram_activity", "posts"),
-    os.path.join(INSTAGRAM_PROCESSED_ROOT, "your_instagram_activity", "messages"),
+# ── ALS — ANCRES DE PROFIL ────────────────────────────────────────────────────
+# Artistes Spotify que tu aimes vraiment (utilisés pour construire ton profil ALS)
+SPOTIFY_ANCHOR_ARTISTS = [
+    "Damso", "Tiakola", "Travis Scott", "Bad Bunny",
+    "Ninho", "Metro Boomin", "Ziak", "Gazo", "Freeze Corleone",
 ]
 
-# --- Caches and Output Files ---
-SPOTIFY_METADATA_CACHE_PATH = os.path.join(WAREHOUSE, "spotify_metadata.json")
-TMDB_POSTER_CACHE_PATH = os.path.join(WAREHOUSE, "tmdb_poster_cache.json")
+# Séries / films Netflix favoris (chargés aussi depuis src/scripts/03_als/top.md)
+# Ajouter ici des titres exacts si top.md n'est pas disponible
+NETFLIX_ANCHOR_TITLES = []  # laisser vide = utiliser top.md uniquement
 
-GEMINI_CORPUS_PATH = os.path.join(LLM_DATA, "gemini_corpus.txt")
-GEMINI_SYSPROMPT_PATH = os.path.join(LLM_DATA, "SYS_PROMPT_ARNAUD")
+# ── CATÉGORIES D'INTÉRÊTS (02_clustering) ─────────────────────────────────────
+# Dictionnaire utilisé pour classifier les contenus (Spotify, YouTube, Netflix…).
+# Ajouter / supprimer des mots-clés selon tes propres centres d'intérêt.
+CATEGORY_KEYWORDS = {
+    "Sport":          ["football","soccer","nba","match","goal","arsenal","fifa","ligue","rugby",
+                       "tennis","basketball","sport","ucl","premier league","ufc","mma","boxing",
+                       "gym","fitness","workout","calisthenics","training","nfl","olympics",
+                       "swimming","cycling","padel","volleyball","champions league","ligue 1"],
+    "Auto/Moto":      ["car","auto","voiture","porsche","ferrari","lamborghini","bmw","mercedes",
+                       "audi","tesla","f1","formula 1","supercar","hypercar","drift","tuning",
+                       "engine","motorsport","motorcycle","moto","yamaha","kawasaki","mclaren",
+                       "bugatti","ducati","harley","grand prix","jdm","supra","amg"],
+    "Musique":        ["music","song","artist","rap","album","track","beat","drill","trap",
+                       "afrobeat","afropop","rnb","r&b","hip","hop","spotify","playlist",
+                       "concert","festival","lyrics","producer","techno","house","electro",
+                       "lo-fi","jazz","dj","remix","soundcloud","damso","tiakola","ninho",
+                       "zamdane","gazo","niska","bezbar","travis scott","freeze corleone"],
+    "Tech":           ["python","code","data","dev","javascript","api","ai","software","tech",
+                       "developer","engineering","technology","artificial intelligence",
+                       "machine learning","deep learning","nlp","llm","pytorch","tensorflow",
+                       "backend","frontend","react","github","docker","kubernetes","cloud",
+                       "aws","cybersecurity","linux","startup","chatgpt","openai","gpu","nvidia"],
+    "Cinema/Series":  ["netflix","film","série","movie","episode","cinema","trailer","season",
+                       "streaming","anime","manga","hbo","marvel","star wars","oscars",
+                       "naruto","shippuden","fairy tail","jojo","baki","boruto","fullmetal",
+                       "hunter","ghibli","rick morty","one piece"],
+    "Gaming":         ["game","gaming","xbox","ps5","steam","minecraft","fortnite","esport",
+                       "gamer","nintendo","switch","twitch","discord","multiplayer","rpg",
+                       "fps","roblox","league of legends","valorant","warzone","gta",
+                       "elden ring","zelda","playstation"],
+    "Actu/Societe":   ["news","actu","monde","france","afrique","africa","belgique","politique",
+                       "environment","ecology","climate","space","nasa","spacex","economy",
+                       "finance","crypto","bitcoin","blockchain","stock market","history",
+                       "philosophy"],
+    "Shopping":       ["amazon","shop","brand","adidas","nike","fashion","streetwear","sneakers",
+                       "yeezy","jordan","clothes","outfit","ecommerce","unboxing","skincare",
+                       "watches","apple","iphone","samsung","gadget","dior","louis vuitton"],
+    "Photo/Crea":     ["photo","photography","design","creative","art","visual","camera",
+                       "graphic","illustration","photoshop","lightroom","editing",
+                       "content creation","tiktok","reels","architecture","digital art",
+                       "ui/ux","3d modeling","blender","canva"],
+}
 
-# --- Dashboard Settings ---
-APP_ASSETS_DIR = os.path.join(PROJECT_ROOT, "app", "assets")
-DASH_HOST = os.getenv("DASH_HOST", "0.0.0.0")
-DASH_PORT = int(os.getenv("DASH_PORT", "8050"))
+# ── CLONE CONVERSATIONNEL (04_clone) ──────────────────────────────────────────
+LLM_DATA = os.path.join(PROJECT_ROOT, "data", "LLM_DATA")
 
-# --- User Configuration (loaded from config.yaml) ---
-_cfg_path = os.path.join(PROJECT_ROOT, "config.yaml")
-if not os.path.exists(_cfg_path):
-    raise FileNotFoundError(
-        "\nconfig.yaml introuvable : "
-        f"{_cfg_path}\n"
-        "Copy config.yaml.example to config.yaml and fill your values.\n"
-    )
+# Chemin vers les DMs Instagram bruts
+INSTAGRAM_INBOX = os.path.join(RAW_DATA, "INSTAGRAM", "your_instagram_activity", "messages", "inbox")
 
-with open(_cfg_path, encoding="utf-8") as _file:
-    _cfg = yaml.safe_load(_file) or {}
+# Nom de l'utilisateur tel qu'il apparaît dans les JSON Instagram (sender_name)
+INSTAGRAM_SENDER_NAME = "A R N A U D"
 
-# General User Info
-INSTAGRAM_SENDER_NAME = _cfg.get("user", {}).get("instagram_sender_name", "")
-INSTAGRAM_USERNAME = _cfg.get("user", {}).get("instagram_username", "")
-
-# Social Graph Configuration
-_social = _cfg.get("social", {})
-CLOSE_FRIENDS = set(_social.get("close_friends", []))
-CLOSE_FRIENDS_MULTIPLIER = float(_social.get("close_friends_multiplier", 2.0))
-MIN_MESSAGES = int(_social.get("min_messages", 5))
-
-# Spotify Topology Configuration
-_spotify = _cfg.get("spotify", {})
-SPOTIFY_ANCHOR_ARTISTS = _spotify.get("anchor_artists", [])
-SPOTIFY_TOPOLOGY_THRESHOLD = int(_spotify.get("topology_stream_threshold", 5))
-
-# Clone/LLM Configuration
-CLONE_CONVERSATIONS = _cfg.get("clone", {}).get("conversations", {})
-
-# --- API Keys and Secrets (loaded from .env) ---
-# NEVER hardcode these values here. They must remain in the ignored .env file.
-TMDB_API_KEY = os.getenv("TMDB_API_KEY", "")
-TMDB_ACCESS_TOKEN = os.getenv("TMDB_ACCESS_TOKEN", "")
-SPOTIFY_CLIENT_ID = os.getenv("SPOTIFY_CLIENT_ID", "")
-SPOTIFY_CLIENT_SECRET = os.getenv("SPOTIFY_CLIENT_SECRET", "")
-GEMINI_API_KEY = os.getenv("GEMINI_API_KEY", "")
+# Conversations sélectionnées pour le corpus du clone
+# Clé = label lisible, valeur = liste de dossiers inbox (une conv peut avoir plusieurs dossiers)
+# Ex : dossier 'evan_17940018788164627' dans data/raw/INSTAGRAM/.../inbox/
+CLONE_CONVERSATIONS = {
+    "djyoyo":     ["djyoyo_489918669070722"],
+    "evan":       ["evan_17940018788164627"],
+    "lou":        ["lou_1085673686153338"],
+    "maelle":     ["maelle_17935615418472883"],
+    "nana":       ["nana_18068525429472883"],
+    "pilou":      ["pilou_519116326140721"],
+    "laura":      ["laura_994708765285921"],
+    "jen":        ["jen_945836883473151"],
+    "alice":      ["alice_1204248657633025"],
+    "loulou":     ["loulou_1188711339191134"],
+    "laure":      ["laure_1094343585289278"],
+    "fafie":      ["fafie_1121444139243508"],
+    "gabi":       ["gabi_1275393733851743"],
+    "manonvandy": ["manonvandy_1292074112190912"],
+    "mylene":     ["mylene_802792480745084"],
+    "ama":        ["ama_17970077582700199"],
+    "eliott":     ["3li0tttt_17939266904472883"],
+    "paulina":    ["_paulinalambin_824971795573896"],
+    "celia":      ["celia_1366428128080987"],
+    "vic":        ["vic_1114899529906843"],
+    "romane":     ["romane_1357028805748638"],
+}
