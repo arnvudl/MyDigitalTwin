@@ -27,3 +27,29 @@ clone:
     ami1: ["ami1_conversation_id"]
     ami2: ["ami2_conversation_id"]
     # IDs trouvés dans data/processed/INSTAGRAM/.../messages/inbox/
+
+clustering:
+  # Nombre de clusters K-Means sur les profils temporels de plateformes.
+  # Plus K est grand = profils plus fins mais moins stables.
+  # Recommandé : entre 3 et 8 selon le nombre de plateformes utilisées.
+  k_behavioral: 4
+
+# Mots-clés par catégorie pour classifier les contenus (Spotify, YouTube, Netflix…).
+# Renommer les catégories et adapter les mots-clés à vos propres centres d'intérêt.
+category_keywords:
+  Sport:
+    - football
+    - tennis
+    - basketball
+    # Ajouter vos sports / équipes / compétitions
+  Tech:
+    - python
+    - data
+    - ai
+    # Ajouter vos sujets tech
+  Musique:
+    - rap
+    - album
+    - concert
+    # Ajouter vos artistes, genres, labels
+  # Ajouter ou supprimer des catégories librement
