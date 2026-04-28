@@ -9,46 +9,72 @@
 ```
 Phase 2
 ├── 2A - 2E : Fondations et Nettoyage         ✅ FAIT
-├── 2F  Memory Album (Photos × Musique)       🔄 EN COURS
+├── 2F  Memory Album (Photos × Musique)       ✅ FAIT (Définition)
 └── 2G  Industrialisation & Qualité           🔄 EN COURS
 ```
 
 ---
 
-## 2F — Memory Album (Photos × Musique) ✨ 🔄 EN COURS
+## 2F — Memory Album (Photos × Musique) ✨
 
 ### Vision
-Un album photo interactif où des groupes de photos partageant une même ambiance visuelle sont associés à une musique qui correspond à un "moment de vie" similaire.
+Créer un **album de “moments de vie” multimodaux** où :
+- les photos sont regroupées en **scènes cohérentes (visuelles + contextuelles)**
+- chaque scène est associée à une **musique crédible et contextualisée**
+L'objectif est de reconstruire des **souvenirs**, pas juste grouper des images.
 
-### Approche Technique (Version "Moments")
+### Approche Technique (Version "Moments Multimodaux")
 
-**1. Analyse Visuelle : Création des "Moments Visuels"**
-- **Input** : Les 30 photos les plus récentes du dossier `data/photos/`.
-- **Processing** :
-    1. Chaque photo est encodée par le modèle **CLIP** pour obtenir un vecteur sémantique visuel.
-    2. Un algorithme de clustering (ex: `HDBSCAN`) est appliqué sur ces 30 vecteurs pour regrouper les photos en **"clusters de moments visuels"** (ex: "paysages de nature", "soirées entre amis").
+**1. Analyse des Photos : Création des "Moments Visuels Enrichis"**
+- **Input** : Jusqu’à 100 photos récentes (avec métadonnées: date, heure, GPS optionnel).
+- **Pipeline de compréhension visuelle (fallback intelligent)** :
+    1. **BLIP-2** (prioritaire) : génère une caption riche (ex: *"crowd dancing at night concert with lights"*).
+    2. **OpenCLIP** : embedding image + texte.
+    3. **CLIP** : fallback léger et rapide.
+- **Enrichissement contextuel** :
+    - **Temps** : heure (jour/nuit), jour de la semaine/week-end, saison.
+    - **GPS** : clustering géographique, détection (domicile, extérieur, voyage).
+    - **Continuité temporelle** : boost de similarité pour les photos proches dans le temps.
+- **Fusion des embeddings** :
+    - Formule de base : `final_embedding = 0.6 * visual_embedding + 0.25 * time_embedding + 0.15 * geo_embedding`
+    - **Gestion des données manquantes** : Si `time_embedding` ou `geo_embedding` sont absents, les poids sont dynamiquement ajustés et normalisés pour que leur somme reste à 1.0.
+        - `sum_available_weights = (0.6 si visual_embedding existe) + (0.25 si time_embedding existe) + (0.15 si geo_embedding existe)`
+        - `final_embedding = (0.6 / sum_available_weights) * visual_embedding` (si disponible)
+            `+ (0.25 / sum_available_weights) * time_embedding` (si disponible)
+            `+ (0.15 / sum_available_weights) * geo_embedding` (si disponible)
+- **Clustering des "moments"** :
+    - Utilisation de **HDBSCAN** (gère le bruit, s'adapte à la densité, nombre de clusters inconnu).
 
-**2. Analyse Musicale : Création de la "Bibliothèque des Moments Musicaux"**
-- **Tâche Manuelle (une seule fois)** :
-    1. L'utilisateur sélectionne un large échantillon de ses musiques.
-    2. L'utilisateur utilise un **prompt pré-écrit** avec un LLM (ex: dans le chat de l'IDE) pour décrire les "moments de vie" associés à chaque musique.
-        > **Prompt** : "Tu es un DJ. Pour chaque musique, décris en 3-5 mots-clés les moments de vie auxquels elle correspondrait. Ex: `Daft Punk - Around the World; Soirée dansante, Nuit en ville, Boost d'énergie`."
-    3. L'utilisateur **copie-colle** la sortie du LLM dans un fichier `data/music_moments_library.csv`.
-- **Processing Automatique** :
-    1. Le script lit ce CSV.
-    2. Il encode la description textuelle de chaque "moment musical" avec un modèle comme `all-MiniLM-L6-v2` pour créer une bibliothèque de vecteurs sémantiques.
+**2. Analyse Musicale : Bibliothèque des Moments Musicaux**
+- **Source des musiques (3 niveaux)** :
+    1. **Historique réel (priorité max)** : musique écoutée au moment exact (match timestamp ↔ photo).
+    2. **Bibliothèque personnalisée (JSON)** :
+       - **Phase 1 (Manuelle + LLM)** : L'utilisateur sélectionne des musiques. Un LLM génère un fichier JSON avec `titre - artiste - moments` (ex: `{"title": "Around the World", "artist": "Daft Punk", "moments": ["soirée", "énergie", "amis"]}`).
+       - **Phase 2 (Script)** : Un script prend ce JSON, identifie les `track_id` et `track_name` correspondants (via une API musicale ou une base de données locale) et enrichit le JSON pour obtenir la structure finale :
+         ```json
+         {
+           "track_id": "...",
+           "track_name": "...",
+           "moments": ["soirée", "énergie", "amis"]
+         }
+         ```
+    3. **Fallback global (cold start)** : playlist par défaut ou génération via tags du cluster.
+- **Embedding des musiques** :
+    - Calcul dynamique avec un modèle texte (ex: `embedding = encoder("soirée énergie amis")`). *Pas d'embeddings stockés.*
 
-**3. Matching : Association Moment Visuel ↔ Moment Musical**
-- Pour chaque **cluster de photos**, on calcule son vecteur moyen (centroïde).
-- On compare ce vecteur de "moment visuel" avec tous les vecteurs de "moments musicaux" via une **similarité cosinus**.
-- La musique dont le "moment" est sémantiquement le plus proche est associée à l'ensemble du cluster de photos.
+**3. Matching : Moment Visuel ↔ Moment Musical**
+- Calcul du centroïde du cluster photo.
+- Comparaison avec les embeddings musicaux (similarité cosinus).
+- **Priorité du matching** : 1. Historique réel, 2. Similarité sémantique, 3. Fallback.
 
 **4. Interface Utilisateur**
-- Une nouvelle page `/memory-album` organisée par "scènes" (les clusters de photos).
-- Chaque scène affiche la musique associée et la galerie des photos correspondantes.
+- Une nouvelle page `/memory-album` organisée par "scènes" (clusters).
+- Chaque scène contient : musique associée, galerie de photos, description du moment (optionnel).
+- *Bonus UX* : Nom auto généré ("Nuit à Bruxelles"), animation / transition musicale.
 
 ### Actions
-- [ ] Créer un notebook `src/scripts/03_memory_album.ipynb` pour implémenter ce pipeline.
+- [ ] Mettre à jour l'architecture du notebook `src/scripts/03_memory_album.ipynb` pour intégrer BLIP-2/OpenCLIP, l'enrichissement et HDBSCAN. **Le code Spark doit être ultra-performant et éviter l'utilisation d'UDFs.**
+- [ ] Implémenter le script de la Phase 2 pour la bibliothèque musicale JSON.
 - [ ] Développer la page Dash "Memory Album".
 
 ---
@@ -72,7 +98,7 @@ Transformer le projet d'un PoC local en un produit de données robuste, reproduc
     - [x] Auditer `src/scripts/`, `src/ingestion/` et `app/` pour repérer les chemins, constantes, ports et paramètres encore hardcodés.
     - [x] Déplacer les chemins et constantes partagés dans `config.py`.
     - [x] Déplacer les paramètres personnels non secrets dans `config.yaml`.
-    - [x] Vérifier que le fichier `.env.example` est complet, que les secrets sont correctement chargés et que les erreurs de configuration sont explicites.
+    - [x] Vérifier que le fichier `.env.example` est complet, que les secrets sont correctement chargés et que les erreurs de configuration explicites.
     - [ ] Valider le parcours "nouvel utilisateur" : cloner, renseigner `config.yaml` et `.env`, puis lancer ingestion, notebooks et app sans modification du code.
 
 **3. Tests & Qualité des données**
@@ -108,11 +134,12 @@ Transformer le projet d'un PoC local en un produit de données robuste, reproduc
 
 | Priorité | Tâche | Statut |
 |---|---|---|
-| 🔴 NEXT | **Memory Album : Notebook `03_memory_album.ipynb` (CLIP matching)** | À faire |
+| 🔴 NEXT | **Memory Album : Notebook `03_memory_album.ipynb` (Architecture BLIP-2/OpenCLIP/HDBSCAN)** | À faire |
+| 🔴 NEXT | **Memory Album : Implémenter le script de la Phase 2 pour la bibliothèque musicale JSON.** | À faire |
 | 🔴 NEXT | **Memory Album : Page Dash** | À faire |
 | 🟠 P2 | **Industrialisation** : Finir les tâches de la section 2G (Validation nouveau user, MERGE INTO, etc.) | Après le Memory Album |
 | 🧊 PAUSE | **Infrastructure Cloud (R2)** | En attente |
 
 ---
 
-*Roadmap rédigée le 2026-04-24 — mise à jour le 2026-04-28 (Focus sur Memory Album, puis Industrialisation avec configuration reproductible, tests orientés données et gestion des PRs).*
+*Roadmap rédigée le 2026-04-24 — mise à jour le 2026-04-28 (Focus sur Memory Album (Version Avancée), puis Industrialisation avec configuration reproductible, tests orientés données et gestion des PRs).*
