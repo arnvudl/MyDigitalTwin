@@ -170,6 +170,7 @@ data/warehouse/
 data/topology_checkpoint/
 data/tmdb_poster_cache.json
 data/spotify_meta_cache.json
+data/LLM_DATA
 
 # Cache
 .DS_Store

@@ -3,9 +3,12 @@ Tests de qualité de données sur le warehouse (Delta Lake).
 Ces tests vérifient que l'ingestion et les transformations se sont bien passées.
 """
 import os
+import sys
 import pytest
 
-from src.scripts.01_exploration.config import WAREHOUSE
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..")))
+
+from config import WAREHOUSE
 
 try:
     import pandas as pd
@@ -68,3 +71,48 @@ def test_spotify_streams_quality():
 
     # Vérification du filtre > 30s
     assert (df["msPlayed"] >= 30000).all(), "Des écoutes de moins de 30 secondes sont présentes."
+
+    # Unicité des clés logiques
+    dupes = df.duplicated(subset=["trackName", "artistName", "listen_ts"]).sum()
+    assert dupes == 0, f"{dupes} écoutes en double (même titre + artiste + timestamp)."
+
+
+@pytest.mark.data_quality
+@pytest.mark.skipif(not HAS_PANDAS, reason="pandas n'est pas installé")
+def test_netflix_views_key_uniqueness():
+    """Vérifie l'unicité de la clé logique dans netflix_views."""
+    table_path = os.path.join(WAREHOUSE, "netflix_views")
+    if not os.path.exists(table_path):
+        pytest.skip(f"La table {table_path} n'existe pas.")
+
+    df = pd.read_parquet(table_path)
+
+    dupes = df.duplicated(subset=["show_title", "watch_date"]).sum()
+    assert dupes == 0, f"{dupes} visionnages en double (même titre + date)."
+
+
+@pytest.mark.data_quality
+@pytest.mark.skipif(not HAS_PANDAS, reason="pandas n'est pas installé")
+def test_cross_table_date_consistency():
+    """Vérifie la cohérence temporelle entre spotify_streams et netflix_views."""
+    spotify_path = os.path.join(WAREHOUSE, "spotify_streams")
+    netflix_path = os.path.join(WAREHOUSE, "netflix_views")
+
+    if not os.path.exists(spotify_path) or not os.path.exists(netflix_path):
+        pytest.skip("Une ou plusieurs tables sont absentes — ingestion non exécutée.")
+
+    spotify_df = pd.read_parquet(spotify_path)
+    netflix_df = pd.read_parquet(netflix_path)
+
+    # Les deux tables doivent couvrir une période raisonnable (> 1 an)
+    spotify_range = (
+        pd.to_datetime(spotify_df["listen_ts"]).max()
+        - pd.to_datetime(spotify_df["listen_ts"]).min()
+    )
+    netflix_range = (
+        pd.to_datetime(netflix_df["watch_date"]).max()
+        - pd.to_datetime(netflix_df["watch_date"]).min()
+    )
+
+    assert spotify_range.days >= 365, "L'historique Spotify couvre moins d'un an."
+    assert netflix_range.days >= 365, "L'historique Netflix couvre moins d'un an."
