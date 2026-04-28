@@ -2,13 +2,13 @@ from dash import html, dcc
 
 PAGES = [
     {"label": "Home",    "href": "/"},
-    {"label": "Profils", "href": "/clusters"},
-    {"label": "Netflix", "href": "/netflix"},
-    {"label": "Spotify", "href": "/spotify"},
-    {"label": "Clone", "href": "/clone"},
     {"label": "Timeline", "href": "/timeline"},
     {"label": "Social", "href": "/social"},
     {"label": "Photos", "href": "/photos"},
+    {"label": "Clusters", "href": "/clusters"},
+    {"label": "Netflix", "href": "/netflix"},
+    {"label": "Spotify", "href": "/spotify"},
+    {"label": "Clone", "href": "/clone"},
     {"label": "Analyse", "href": "/psy"},
 ]
 

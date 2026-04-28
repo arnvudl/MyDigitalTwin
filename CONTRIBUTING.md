@@ -25,18 +25,20 @@ Le projet suit un flux de données strict pour garantir l'intégrité des analys
 
 **Règle pour les Notebooks :** Les notebooks d'exploration et de feature engineering ne doivent lire les données **que** depuis `processed/` (pour créer de nouvelles tables) ou depuis `warehouse/` (pour croiser des données existantes).
 
-## 3. Qualité du Code
+## 3. Qualité du Code et Tests
 
 *   **Linting et Formatage :** Nous utilisons `ruff` pour garantir un style de code Python cohérent et identifier les erreurs courantes. Assurez-vous que votre code passe les vérifications de `ruff` avant de soumettre des modifications.
 *   **Notebooks Propres :** Avant de commiter un notebook Jupyter, assurez-vous qu'il s'exécute de bout en bout sans erreur ("Restart & Run All"). Supprimez les cellules de test inutiles et nettoyez les sorties (outputs) si elles contiennent des données personnelles volumineuses ou sensibles.
-*   **Tests (À venir) :** Le projet intègre `pytest`. Toute nouvelle fonction critique, en particulier les parsers dans `src/ingestion/`, devrait idéalement être accompagnée d'un test unitaire dans le dossier `tests/`.
+*   **Tests (`pytest`) :** Le projet intègre une suite de tests automatisés.
+    *   **Tests Unitaires (`tests/unit/`) :** Toute nouvelle fonction logique (parsers, helpers) doit être accompagnée de son test unitaire. Les tests unitaires doivent être rapides et ne pas dépendre du dataset complet (utiliser des fixtures). Exécutez-les avec `pytest -m unit`.
+    *   **Tests de Qualité de Données (`tests/data_quality/`) :** Ces tests valident le contenu final du `warehouse` (pas de valeurs nulles inattendues, volumes cohérents, pas de dates dans le futur). Exécutez-les avec `pytest -m data_quality`.
 
 ## 4. Processus de Contribution (Pour les collaborateurs)
 
 Si vous souhaitez contribuer au projet :
 
 1.  **Bifurquez (Fork) le dépôt** et créez une branche pour votre fonctionnalité ou correction de bug (ex: `feature/nouvel-export-spotify` ou `fix/parser-instagram`).
-2.  **Développez et testez** localement en vous assurant de respecter les règles de configuration (voir point 1).
+2.  **Développez et testez** localement en vous assurant de respecter les règles de configuration (voir point 1). Assurez-vous que tous les tests passent (`pytest`).
 3.  **Vérifiez le code** avec le linter (`ruff`).
 4.  **Soumettez une Pull Request (PR)** décrivant clairement les changements apportés.
 5.  **Intégration Continue (CI)** : Votre PR déclenchera automatiquement des vérifications (linting, tests unitaires) via GitHub Actions. Les PRs ne pourront être fusionnées que si tous ces voyants sont au vert.

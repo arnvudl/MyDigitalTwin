@@ -48,8 +48,5 @@ matplotlib==3.10.8
 scikit-learn==1.8.0
 scipy==1.17.1
 
-# ── Enrichissement topology (01_enrich.ipynb) ─────────────────────────────────
-aiohttp
-beautifulsoup4
-instaloader
-nest_asyncio
+# ── Test ─────────────────────────────────
+pytest
