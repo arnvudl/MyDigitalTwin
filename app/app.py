@@ -4,6 +4,7 @@ from dash import Input, Output, callback, dcc, html
 
 from app.components import create_navbar
 from app.pages import home, clusters, netflix, spotify, social, timeline, psy, photos, clone, inventory
+from config import DASH_HOST, DASH_PORT, DATA_ROOT
 
 
 def _prewarm_caches():
@@ -41,7 +42,7 @@ server = app.server
 import os as _os
 from flask import send_file as _send_file, abort as _abort
 
-_DATA_ROOT = "/app/data" if _os.path.exists("/app/data") else "data"
+_DATA_ROOT = DATA_ROOT
 
 @server.route("/photo/<path:filepath>")
 def serve_photo(filepath):
@@ -129,5 +130,4 @@ def on_tag_click(n_clicks_list, ids):
 # ─── RUN ──────────────────────────────────────────────────────────────────────
 if __name__ == "__main__":
     # app.run(debug=True)
-    # Exposer sur 0.0.0.0 pour Docker
-    app.run(host="0.0.0.0", port=8050, debug=True)
+    app.run(host=DASH_HOST, port=DASH_PORT, debug=True)

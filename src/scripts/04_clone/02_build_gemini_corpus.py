@@ -18,13 +18,13 @@ from pathlib import Path
 # ─── CONFIG ────────────────────────────────────────────────────────────────────
 
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "../../..")))
-from config import LLM_DATA
+from config import LLM_DATA, GEMINI_CORPUS_PATH, GEMINI_SYSPROMPT_PATH
 
 LLM_DATA = Path(LLM_DATA)
 
 INPUT         = LLM_DATA / "dataset_final.jsonl"
-SYS_PROMPT    = LLM_DATA / "SYS_PROMPT_ARNAUD"
-OUTPUT_CORPUS = LLM_DATA / "gemini_corpus.txt"
+SYS_PROMPT    = Path(GEMINI_SYSPROMPT_PATH)
+OUTPUT_CORPUS = Path(GEMINI_CORPUS_PATH)
 OUTPUT_SYSTEM = LLM_DATA / "gemini_system.txt"
 
 TOP_N = 300   # Nombre d'exemples à garder (Gemini supporte ~500k tokens)

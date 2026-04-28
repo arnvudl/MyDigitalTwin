@@ -15,14 +15,18 @@ import json
 import os
 import re
 import zipfile
+import sys
 from datetime import datetime
+from pathlib import Path
 
 import pandas as pd
 
 # ─── CONFIG ──────────────────────────────────────────────────────────────────
-DELTA_BASE = "/app/data/warehouse" if os.path.exists("/app/data/warehouse") else "data/warehouse"
-LLM_DATA_PATH = "/app/data/LLM_DATA/dataset_final.jsonl" if os.path.exists("/app/data/LLM_DATA") \
-    else "data/LLM_DATA/dataset_final.jsonl"
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "../../..")))
+from config import WAREHOUSE, LLM_DATA
+
+DELTA_BASE = WAREHOUSE
+LLM_DATA_PATH = os.path.join(LLM_DATA, "dataset_final.jsonl")
 
 FIRST_NAMES = [
     "Alice", "Nana", "Lou", "Maelle", "Evan", "Pilou", "Laura", "Jen",

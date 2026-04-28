@@ -11,9 +11,10 @@ from datetime import datetime
 
 import pandas as pd
 from dash import Input, Output, State, callback, dcc, html, no_update, ALL
+from config import WAREHOUSE
 
 # ─── CONFIG ──────────────────────────────────────────────────────────────────
-DELTA_BASE = "/app/data/warehouse" if os.path.exists("/app/data/warehouse") else "data/warehouse"
+DELTA_BASE = WAREHOUSE
 
 from app.icons import svg_icon, CHAT, SEARCH, MUSIC
 _svg_chat   = svg_icon(CHAT)

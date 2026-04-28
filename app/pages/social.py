@@ -9,21 +9,14 @@ from functools import lru_cache
 
 import pandas as pd
 from dash import html, dash_table
+from config import INSTAGRAM_INBOX, INSTAGRAM_SENDER_NAME, SOCIAL_GRAPH_DIR
 
 # ─── PATHS ───────────────────────────────────────────────────────────────────
-WAREHOUSE   = "/app/data/warehouse" if os.path.exists("/app/data/warehouse") else "warehouse"
-SOCIAL_DIR  = os.path.join(WAREHOUSE, "social_graph")
+SOCIAL_DIR = SOCIAL_GRAPH_DIR
 
-_HERE      = os.path.dirname(os.path.abspath(__file__))
+_HERE = os.path.dirname(os.path.abspath(__file__))
 ASSETS_DIR = os.path.join(_HERE, "..", "assets")
-
-_PROJECT_ROOT = os.path.dirname(os.path.dirname(_HERE))  # pages -> app -> project root
-
-if os.path.exists("/app/data"):
-    INBOX = "/app/data/processed/INSTAGRAM/your_instagram_activity/messages/inbox"
-else:
-    INBOX = os.path.join(_PROJECT_ROOT, "data", "raw", "INSTAGRAM",
-                         "your_instagram_activity", "messages", "inbox")
+INBOX = INSTAGRAM_INBOX
 
 
 _NOISE = re.compile(
@@ -75,7 +68,7 @@ def _load():
 
 
 @lru_cache(maxsize=100)
-def _conv_stats(node_id: str, my_name: str = "A R N A U D") -> dict:
+def _conv_stats(node_id: str, my_name: str = INSTAGRAM_SENDER_NAME or "A R N A U D") -> dict:
     """Load conversation stats from raw Instagram JSON files."""
     folder = os.path.join(INBOX, node_id)
     if not os.path.isdir(folder):

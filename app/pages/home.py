@@ -8,18 +8,12 @@ import re
 import pandas as pd
 from dash import Input, Output, callback, html, dcc, ALL
 from app.icons import svg_icon, MUSIC, FILM, SEARCH, TWITTER, PHONE
+from config import INSTAGRAM_TOPICS_PATH, WAREHOUSE, X_PERSONALIZATION_PATH
 
 # ─── CONFIG ──────────────────────────────────────────────────────────────────
 # On vérifie si on est dans Docker (où les dossiers sont montés à la racine /app/data et /app/data/warehouse)
 # ou en local (où les dossiers sont dans le répertoire courant).
-if os.path.exists("/app/data/warehouse"):
-    DELTA_BASE = "/app/data/warehouse"
-    IG_TOPICS_PATH = "/app/data/processed/INSTAGRAM/preferences/your_topics/recommended_topics.json"
-    X_PERSONALIZATION_PATH = "/app/data/processed/X/data/personalization.js"
-else:
-    DELTA_BASE = "data/warehouse"
-    IG_TOPICS_PATH = "data/processed/INSTAGRAM/preferences/your_topics/recommended_topics.json"
-    X_PERSONALIZATION_PATH = "data/processed/X/data/personalization.js"
+DELTA_BASE = WAREHOUSE
 
 CATEGORY_KEYWORDS = {
     "Sport": [

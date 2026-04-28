@@ -6,20 +6,19 @@ import requests
 import pandas as pd
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from functools import lru_cache
-from dotenv import load_dotenv
-load_dotenv()
 import plotly.graph_objects as go
 from dash import ALL, Input, Output, State, callback, dcc, html, no_update, clientside_callback, ClientsideFunction
 from app.icons import svg_icon, FILM, TV, VIDEO
 from difflib import SequenceMatcher
+from config import TMDB_API_KEY, TMDB_POSTER_CACHE_PATH, WAREHOUSE
 
 # ─── CONFIG ──────────────────────────────────────────────────────────────────
-DELTA_BASE = "/app/data/warehouse" if os.path.exists("/app/data/warehouse") else "warehouse"
+DELTA_BASE = WAREHOUSE
 
 NETFLIX_RED = "#e50914"
-_TMDB_KEY = os.getenv("TMDB_API_KEY", "")
+_TMDB_KEY = TMDB_API_KEY
 
-_TMDB_DISK_CACHE_PATH = os.path.join(DELTA_BASE, "tmdb_poster_cache.json")
+_TMDB_DISK_CACHE_PATH = TMDB_POSTER_CACHE_PATH
 _tmdb_disk: dict = {}
 
 

@@ -67,18 +67,22 @@ Transformer le projet d'un PoC local en un produit de données robuste, reproduc
 
 **2. Reproductibilité & Configuration**
 - **Objectif** : Permettre à un nouvel utilisateur de cloner le projet, remplir un fichier de configuration unique, et lancer tous les services sans erreur.
-- **Action** : Éliminer tout code "hardcodé" en centralisant les paramètres dans `config.py` et les secrets dans `.env`.
+- **Action** : Éliminer tout code "hardcodé" en centralisant les chemins et constantes projet dans `config.py`, les données personnelles non secrètes dans `config.yaml`, et les secrets dans `.env`.
 - **Tâches** :
-    - [ ] Auditer tous les notebooks pour déplacer les variables spécifiques à l'utilisateur dans `config.py`.
-    - [ ] Vérifier que le fichier `.env.example` est complet et que les secrets sont correctement chargés.
+    - [ ] Auditer `src/scripts/`, `src/ingestion/` et `app/` pour repérer les chemins, constantes, ports et paramètres encore hardcodés.
+    - [ ] Déplacer les chemins et constantes partagés dans `config.py`.
+    - [ ] Déplacer les paramètres personnels non secrets dans `config.yaml`.
+    - [ ] Vérifier que le fichier `.env.example` est complet, que les secrets sont correctement chargés et que les erreurs de configuration sont explicites.
+    - [ ] Valider le parcours "nouvel utilisateur" : cloner, renseigner `config.yaml` et `.env`, puis lancer ingestion, notebooks et app sans modification du code.
 
 **3. Tests & Qualité des données**
 - **Objectif** : Mettre en place un filet de sécurité automatisé pour détecter les régressions et les problèmes de données.
-- **Action** : Intégrer `pytest` pour lancer des tests unitaires et des tests de qualité de données.
+- **Action** : Intégrer `pytest` pour lancer à la fois des tests unitaires, des tests de qualité de données et des tests d'invariants utiles aux notebooks.
 - **Tâches** :
     - [ ] Configurer `pytest` dans le projet.
-    - [ ] Écrire des **tests unitaires** pour les fonctions critiques (ex: les parsers d'ingestion).
-    - [ ] Écrire des **tests de qualité de données** qui valident les tables du `warehouse` après l'ingestion (ex: vérifier les `nulls`, les plages de dates).
+    - [ ] Écrire des **tests unitaires** pour les fonctions critiques (ex: les parsers d'ingestion, la détection des sources, les helpers de déplacement de fichiers).
+    - [ ] Écrire des **tests de qualité de données** qui valident les tables du `warehouse` et les jeux de données intermédiaires consommés par les notebooks.
+    - [ ] Vérifier les invariants les plus utiles : `nulls` sur colonnes critiques, types attendus, plages de dates cohérentes, unicité de clés logiques, volumes minimaux et cohérence simple entre tables.
 
 **4. CI/CD & Automatisation (Gestion des PRs)**
 - **Objectif** : Automatiser les vérifications de qualité et agir comme un garde-fou pour les contributions.
@@ -88,7 +92,7 @@ Transformer le projet d'un PoC local en un produit de données robuste, reproduc
     - [ ] Configurer le workflow pour qu'il agisse comme un **"status check" obligatoire** pour les PRs.
     - [ ] Le workflow doit lancer :
         1.  **Linting (`ruff`)** : Vérification du style de code.
-        2.  **Tests Unitaires (`pytest`)** : Vérification de non-régression.
+        2.  **Tests (`pytest`)** : Vérification de non-régression et de qualité des données.
     - [ ] **(Optionnel)** Configurer une règle de branche sur GitHub pour interdire la fusion d'une PR si le workflow échoue.
 
 **5. Évaluation d'outils avancés**
@@ -111,4 +115,4 @@ Transformer le projet d'un PoC local en un produit de données robuste, reproduc
 
 ---
 
-*Roadmap rédigée le 2026-04-24 — mise à jour le 2026-04-27 (Focus sur Memory Album, puis Industrialisation avec gestion des PRs).*
+*Roadmap rédigée le 2026-04-24 — mise à jour le 2026-04-28 (Focus sur Memory Album, puis Industrialisation avec configuration reproductible, tests orientés données et gestion des PRs).*

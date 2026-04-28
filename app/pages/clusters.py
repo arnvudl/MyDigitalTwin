@@ -5,6 +5,7 @@ from functools import lru_cache
 import pandas as pd
 from dash import ALL, Input, Output, State, callback, dcc, html
 from app.icons import svg_icon, PUZZLE
+from config import APP_ASSETS_DIR, WAREHOUSE
 
 # ─── FILTRE ANTI-PUB / BRUIT ─────────────────────────────────────────────────
 # Patterns communs : campagnes YouTube (INH, VID 16x9), Chrome promos,
@@ -55,12 +56,8 @@ def _clean_samples(samples: list) -> list:
     return cleaned
 
 # ─── CONFIG ──────────────────────────────────────────────────────────────────
-if os.path.exists("/app/data/warehouse"):
-    DELTA_BASE = "/app/data/warehouse"
-    ASSETS_DIR = "/app/assets"
-else:
-    DELTA_BASE = "data/warehouse"
-    ASSETS_DIR = "app/assets"
+DELTA_BASE = WAREHOUSE
+ASSETS_DIR = APP_ASSETS_DIR
 
 PLATFORM_COLORS = {
     "youtube":   ("#ff3b30", "rgba(255,59,48,0.18)",  "rgba(255,59,48,0.65)"),
