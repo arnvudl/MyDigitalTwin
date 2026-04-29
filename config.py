@@ -126,6 +126,42 @@ K_BEHAVIORAL = int(_cfg.get("clustering", {}).get("k_behavioral", 4))
 # Content Category Keywords
 CATEGORY_KEYWORDS: dict = _cfg.get("category_keywords", {})
 
+# --- Spark ---
+def build_spark_session(
+    app_name: str,
+    driver_memory: str = "4g",
+    shuffle_partitions: int = 8,
+    delta: bool = True,
+    snappy: bool = False,
+    master: str = "local[*]",
+):
+    """Crée ou récupère une SparkSession configurée pour le projet.
+
+    Paramètres
+    ----------
+    app_name          : nom affiché dans la Spark UI
+    driver_memory     : RAM allouée au driver  (ex: "4g", "6g", "8g")
+    shuffle_partitions: nombre de partitions après un shuffle (réduire pour les petits datasets)
+    delta             : active les extensions Delta Lake (lecture/écriture .delta)
+    snappy            : active la compression Snappy pour le stockage Parquet
+    master            : URL du cluster Spark ("local[*]" = tous les cœurs locaux)
+    """
+    from pyspark.sql import SparkSession
+    builder = (SparkSession.builder
+               .appName(app_name)
+               .master(master)
+               .config("spark.driver.memory", driver_memory)
+               .config("spark.sql.shuffle.partitions", str(shuffle_partitions)))
+    if delta:
+        builder = (builder
+                   .config("spark.sql.extensions",
+                           "io.delta.sql.DeltaSparkSessionExtension")
+                   .config("spark.sql.catalog.spark_catalog",
+                           "org.apache.spark.sql.delta.catalog.DeltaCatalog"))
+    if snappy:
+        builder = builder.config("spark.sql.parquet.compression.codec", "snappy")
+    return builder.getOrCreate()
+
 # --- API Keys and Secrets (loaded from .env) ---
 # NEVER hardcode these values here. They must remain in the ignored .env file.
 TMDB_API_KEY = os.getenv("TMDB_API_KEY", "")
