@@ -4,10 +4,12 @@
 # Copier ce fichier : cp config.yaml.example config.yaml
 # Puis remplacer les valeurs par vos propres données.
 
+# ── Identité ──────────────────────────────────────────────────────────────────
 user:
   instagram_sender_name: "VOTRE NOM"   # Tel qu'il apparaît dans les exports Instagram
   instagram_username: "votre_username" # Optionnel, utile pour certains traitements futurs
 
+# ── Graphe social Instagram ───────────────────────────────────────────────────
 social:
   close_friends_multiplier: 2.0
   min_messages: 5
@@ -16,24 +18,21 @@ social:
     - "pseudo_ami_2"
     # Ajouter les pseudos Instagram de vos proches
 
+# ── Spotify ───────────────────────────────────────────────────────────────────
 spotify:
   anchor_artists:
     - "Artiste 1"
     - "Artiste 2"
-  topology_stream_threshold: 5   # écoutes minimum pour apparaître dans le graphe
+  topology_stream_threshold: 5   # écoutes minimum pour apparaître dans le graphe topologique
 
-clone:
-  conversations:
-    ami1: ["ami1_conversation_id"]
-    ami2: ["ami2_conversation_id"]
-    # IDs trouvés dans data/processed/INSTAGRAM/.../messages/inbox/
-
+# ── Clustering comportemental ─────────────────────────────────────────────────
 clustering:
   # Nombre de clusters K-Means sur les profils temporels de plateformes.
   # Plus K est grand = profils plus fins mais moins stables.
   # Recommandé : entre 3 et 8 selon le nombre de plateformes utilisées.
   k_behavioral: 4
 
+# ── Catégories d'intérêts (content clustering) ────────────────────────────────
 # Mots-clés par catégorie pour classifier les contenus (Spotify, YouTube, Netflix…).
 # Renommer les catégories et adapter les mots-clés à vos propres centres d'intérêt.
 category_keywords:
@@ -53,3 +52,109 @@ category_keywords:
     - concert
     # Ajouter vos artistes, genres, labels
   # Ajouter ou supprimer des catégories librement
+
+# ── Memory Album ──────────────────────────────────────────────────────────────
+memory_album:
+  # Modèle vision pour captions + embeddings
+  # "Salesforce/blip2-opt-2.7b" ≈ 5 Go VRAM (recommandé GPU)
+  # Fallback auto sur OpenCLIP si CUDA indisponible
+  model: "Salesforce/blip2-opt-2.7b"
+
+  # Taille de lot images par appel modèle
+  # 8 = bon équilibre pour 8 Go VRAM ; réduire à 4 si OOM
+  batch_size: 8
+
+  # Partitions Spark = nombre de chargements du modèle
+  # Garder à 1 avec GPU (BLIP-2 ~5 Go) ; monter à 4 en CPU only
+  n_partitions: 1
+
+  # Groupement temporel : écart > scene_gap_hours entre deux photos = nouveau groupe
+  scene_gap_hours: 6.0
+
+  # Fenêtre de matching temporel photo ↔ Spotify (en minutes)
+  temporal_window_minutes: 60
+
+  # ID de la playlist Spotify source pour la bibliothèque musicale
+  # Obtenu via : https://open.spotify.com/playlist/<ID>
+  spotify_playlist_id: "VOTRE_PLAYLIST_ID"
+
+  # Overrides manuels : imposer une musique à une photo précise
+  # photo_id = 12 premiers caractères du hash MD5 du chemin (affiché par notebook 01)
+  manual_overrides: []
+  # Exemple :
+  # - photo_id: "a1b2c3d4e5f6"
+  #   track_id:  "4x6jx7AeSyE7PlQTdCjIJs"
+
+# ── CLIP Photo Clustering ──────────────────────────────────────────────────────
+clip:
+  # Labels zero-shot pour la classification CLIP des photos
+  # Adapter selon votre corpus de photos (lieux, ambiances, activités…)
+  candidate_labels:
+    - "soiree entre amis"
+    - "concert ou festival"
+    - "voyage et paysage"
+    - "nourriture et restaurant"
+    - "sport et fitness"
+    - "famille"
+    - "ville et architecture"
+    - "nature et randonnee"
+    - "selfie portrait"
+    - "plage et vacances"
+    - "meme et humour internet"
+    - "photo du quotidien entre amis"
+    # Ajouter vos propres catégories
+
+# ── Page Psy (Miroir) ──────────────────────────────────────────────────────────
+psy:
+  # Prénoms à anonymiser dans les exports de messages
+  first_names:
+    - "Alice"
+    - "Emma"
+    - "Hugo"
+    # Ajouter vos proches / contacts à anonymiser
+
+  # Marqueurs de raisonnement (style d'écriture — facultatif, adapté au français)
+  reasoning_markers:
+    - "parce que"
+    - "du coup"
+    - "je pense"
+    - "en vrai"
+    - "en fait"
+    - "donc"
+
+  # Tics verbaux (langage familier)
+  verbal_tics:
+    - "mdr"
+    - "lol"
+    - "ouais"
+    - "nan"
+    # Ajouter vos propres tics
+
+  # Catégories comportementales et leurs mots-clés associés
+  behaviour_categories:
+    "Santé / Corps":
+      - "maladie"
+      - "fatigue"
+      - "médecin"
+      - "stress"
+    "Tech / IA":
+      - "python"
+      - "ia"
+      - "code"
+      - "data"
+    "Finance / Carrière":
+      - "salaire"
+      - "emploi"
+      - "argent"
+    "Divertissement":
+      - "film"
+      - "musique"
+      - "sport"
+    # Ajouter ou supprimer des catégories selon vos centres d'intérêt
+
+# ── Clone conversationnel ─────────────────────────────────────────────────────
+clone:
+  conversations:
+    ami1: ["ami1_conversation_id"]
+    ami2: ["ami2_conversation_id"]
+    # IDs trouvés dans data/processed/INSTAGRAM/.../messages/inbox/

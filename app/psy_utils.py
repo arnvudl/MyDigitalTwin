@@ -5,35 +5,21 @@ import zipfile
 from datetime import datetime
 import pandas as pd
 
+from config import (
+    WAREHOUSE, LLM_DATA, DATA_ROOT,
+    PSY_FIRST_NAMES, PSY_REASONING_MARKERS, PSY_VERBAL_TICS, PSY_BEHAVIOUR_CATEGORIES,
+)
+
 # ─── CONFIG ──────────────────────────────────────────────────────────────────
-BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-DELTA_BASE = os.path.join(BASE_DIR, "data", "warehouse")
-LLM_DATA_PATH = os.path.join(BASE_DIR, "data", "LLM_DATA", "dataset_final.jsonl")
-STATIC_PACKAGE_DIR = os.path.join(BASE_DIR, "data", "Analyse comportementaliste")
+DELTA_BASE        = WAREHOUSE
+LLM_DATA_PATH     = os.path.join(LLM_DATA, "dataset_final.jsonl")
+STATIC_PACKAGE_DIR = os.path.join(DATA_ROOT, "Analyse comportementaliste")
 
-FIRST_NAMES = [
-    "Alice", "Nana", "Lou", "Maelle", "Evan", "Pilou", "Laura", "Jen",
-    "Loulou", "Laure", "Gabi", "Mylene", "Fafie", "Ama", "Eliott", "Paulina",
-    "Celia", "Vic", "Romane", "Djyoyo", "Léa", "Emma", "Hugo", "Théo",
-    "Lucas", "Chloé", "Inès", "Jade", "Noah", "Léo",
-]
-
-REASONING_MARKERS = ["parce que", "du coup", "je pense", "en vrai", "en fait",
-                     "donc", "c'est que", "ça veut dire", "au final", "genre"]
-VERBAL_TICS = ["jsp", "bah", "oe", "mdr", "lol", "wtf", "pk", "ouais", "nan", "wsh"]
-
-BEHAVIOUR_CATEGORIES = {
-    "Santé / Corps": ["maladie", "symptôme", "douleur", "médecin", "fatigue", "anxiété",
-                      "stress", "dépression", "sommeil", "santé", "kiné"],
-    "Tech / IA": ["python", "ia", "llm", "gpt", "machine learning", "code", "github",
-                  "docker", "data", "algorithme", "neural", "openai"],
-    "Questions existentielles": ["sens de la vie", "bonheur", "solitude", "mort", "avenir",
-                                  "identité", "liberté", "relation", "amour", "but"],
-    "Finance / Carrière": ["salaire", "emploi", "stage", "argent", "budget", "investissement",
-                            "bourse", "crypto", "entreprise", "startup"],
-    "Divertissement": ["film", "série", "musique", "concert", "jeu", "sport", "netflix",
-                       "spotify", "youtube", "anime"],
-}
+# Alias locaux pour la compatibilité des fonctions ci-dessous
+FIRST_NAMES         = PSY_FIRST_NAMES
+REASONING_MARKERS   = PSY_REASONING_MARKERS
+VERBAL_TICS         = PSY_VERBAL_TICS
+BEHAVIOUR_CATEGORIES = PSY_BEHAVIOUR_CATEGORIES
 
 
 # ─── LOADERS ─────────────────────────────────────────────────────────────────

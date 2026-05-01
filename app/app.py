@@ -7,7 +7,7 @@ import dash
 from dash import Input, Output, callback, dcc, html
 
 from app.components import create_navbar
-from app.pages import home, clusters, netflix, spotify, social, timeline, psy, photos, clone, inventory, memory_album
+from app.pages import home, clusters, netflix, spotify, social, timeline, psy, photos, inventory, memory_album
 from config import DASH_HOST, DASH_PORT, DATA_ROOT
 
 
@@ -102,9 +102,6 @@ def display_page(pathname):
 
     if pathname == "/photos":
         return photos.layout(), navbar
-
-    if pathname == "/clone":
-        return clone.layout(), navbar
 
     if pathname == "/inventaire":
         return inventory.layout(), navbar
