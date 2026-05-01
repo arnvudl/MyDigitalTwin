@@ -832,6 +832,16 @@ html, body {
 
 
 /* ═══════════════════════════════════════════════════════════════════════════
+   PAGE /memory-album — Memory Album
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+.photo-tile-hover:hover .photo-overlay { opacity: 1 !important; }
+
+details > summary::-webkit-details-marker { display: none; }
+details.playlist-details > summary::before { content: '▸ '; }
+details.playlist-details[open] > summary::before { content: '▾ '; }
+
+/* ═══════════════════════════════════════════════════════════════════════════
    PAGE /clone — Le Clone
    ═══════════════════════════════════════════════════════════════════════════ */
 

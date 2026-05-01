@@ -39,6 +39,11 @@ tokenizers==0.22.2
 umap-learn
 tda-mapper
 
+# ── Memory Album (clustering + vision) ───────────────────────────────────────
+hdbscan==0.8.38.post1
+open_clip_torch==2.26.1           # fallback OpenCLIP si pas de GPU
+Pillow==11.2.1                     # lecture JPEG/EXIF
+
 # ── Notebooks & dev ───────────────────────────────────────────────────────────
 ipykernel==7.2.0
 ipython==9.12.0

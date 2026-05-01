@@ -1,9 +1,13 @@
+import sys
+import os
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
+
 import threading
 import dash
 from dash import Input, Output, callback, dcc, html
 
 from app.components import create_navbar
-from app.pages import home, clusters, netflix, spotify, social, timeline, psy, photos, clone, inventory
+from app.pages import home, clusters, netflix, spotify, social, timeline, psy, photos, clone, inventory, memory_album
 from config import DASH_HOST, DASH_PORT, DATA_ROOT
 
 
@@ -24,6 +28,8 @@ def _prewarm_caches():
     try: photos._read_clusters()
     except Exception: pass
     try: clusters._read_profiles()
+    except Exception: pass
+    try: memory_album._load_album()
     except Exception: pass
 
 
@@ -46,7 +52,8 @@ _DATA_ROOT = DATA_ROOT
 
 @server.route("/photo/<path:filepath>")
 def serve_photo(filepath):
-    full_path = _os.path.join(_DATA_ROOT, filepath)
+    # Normaliser les séparateurs (URLs utilisent /, Windows attend \)
+    full_path = _os.path.normpath(_os.path.join(_DATA_ROOT, filepath))
     if not _os.path.isfile(full_path):
         _abort(404)
     return _send_file(full_path)
@@ -101,6 +108,9 @@ def display_page(pathname):
 
     if pathname == "/inventaire":
         return inventory.layout(), navbar
+
+    if pathname == "/memory-album":
+        return memory_album.layout(), navbar
 
     # 404
     return html.Div("404 — Page introuvable",

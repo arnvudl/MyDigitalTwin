@@ -8,7 +8,7 @@ import re
 import pandas as pd
 from dash import Input, Output, callback, html, dcc, ALL
 from app.icons import svg_icon, MUSIC, FILM, SEARCH, TWITTER, PHONE
-from config import INSTAGRAM_TOPICS_PATH, WAREHOUSE, X_PERSONALIZATION_PATH
+from config import INSTAGRAM_TOPICS_PATH as IG_TOPICS_PATH, WAREHOUSE, X_PERSONALIZATION_PATH
 
 # ─── CONFIG ──────────────────────────────────────────────────────────────────
 # On vérifie si on est dans Docker (où les dossiers sont montés à la racine /app/data et /app/data/warehouse)

@@ -75,8 +75,8 @@ RUN pip3 install --no-cache-dir \
 FROM pyspark AS pyspark-clip
 
 # PyTorch CPU-only (évite ~1.5 Go de binaires CUDA inutiles en container)
-RUN pip3 install torch --index-url https://download.pytorch.org/whl/cpu && \
-    pip3 install transformers accelerate Pillow umap-learn hdbscan scikit-learn sentence-transformers
+RUN pip3 install torch torchvision --index-url https://download.pytorch.org/whl/cpu && \
+    pip3 install transformers accelerate Pillow umap-learn hdbscan scikit-learn sentence-transformers open_clip_torch
 
 FROM pyspark-clip AS pyspark-runner
 
