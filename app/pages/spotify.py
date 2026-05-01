@@ -239,8 +239,8 @@ def _get_playlist_cover(playlist_name: str, tracks_df: pd.DataFrame) -> str | No
     return None
 
 
-# ─── PLAYLISTS GRID ───────────────────────────────────────────────────────────
-def _build_playlists_grid(playlists_df: pd.DataFrame) -> html.Div:
+# ─── PLAYLISTS SIDEBAR ───────────────────────────────────────────────────────────
+def _build_playlists_sidebar(playlists_df: pd.DataFrame, selected_playlist: str | None) -> html.Div:
     if playlists_df.empty:
         return html.Div()
 
@@ -258,31 +258,20 @@ def _build_playlists_grid(playlists_df: pd.DataFrame) -> html.Div:
         tracks = playlists_df[playlists_df["playlistName"] == name]
         img_url = _get_playlist_cover(name, tracks)
 
-        cover = (
-            html.Img(
-                src=img_url,
-                style={"width": "100%", "aspectRatio": "1/1", "objectFit": "cover", "display": "block", "borderRadius": "6px"},
-            )
-            if img_url
-            else html.Div(
-                svg_icon(MUSIC, size="32"),
-                style={
-                    "width": "100%", "aspectRatio": "1/1", "background": "#282828",
-                    "display": "flex", "alignItems": "center", "justifyContent": "center",
-                    "color": "#555", "borderRadius": "6px",
-                },
-            )
-        )
+        is_active = name == selected_playlist
 
         cards.append(
             html.Div(
                 id={"type": "spotify-playlist-card", "index": name},
                 n_clicks=0,
-                className="spotify-playlist-card",
+                className=f"spotify-playlist-card {'spotify-playlist-card-active' if is_active else ''}",
                 children=[
-                    cover,
+                    html.Img(
+                        src=img_url or "https://via.placeholder.com/64?text=♪",
+                        style={"width": "48px", "height": "48px", "borderRadius": "4px", "objectFit": "cover"},
+                    ),
                     html.Div(
-                        style={"marginTop": "10px"},
+                        style={"flex": "1", "minWidth": "0"},
                         children=[
                             html.Div(name, style={
                                 "fontSize": "14px", "fontWeight": "600", "color": "#fff",
@@ -296,21 +285,18 @@ def _build_playlists_grid(playlists_df: pd.DataFrame) -> html.Div:
         )
 
     return html.Div(
-        style={"marginBottom": "48px"},
+        className="spotify-sidebar",
         children=[
             html.Div(
                 "Mes Playlists",
                 style={
-                    "fontSize": "22px", "fontWeight": "700", "color": "#fff",
+                    "fontSize": "18px", "fontWeight": "700", "color": "#fff",
                     "fontFamily": "var(--font-serif)", "marginBottom": "20px",
+                    "padding": "0 8px",
                 },
             ),
             html.Div(
-                style={
-                    "display": "grid",
-                    "gridTemplateColumns": "repeat(auto-fill, minmax(150px, 1fr))",
-                    "gap": "16px",
-                },
+                style={"display": "flex", "flexDirection": "column", "gap": "8px"},
                 children=cards,
             ),
         ],
@@ -571,18 +557,10 @@ def _chart_hourly(df: pd.DataFrame) -> go.Figure:
 
 
 # ─── CONTENT BUILDER ─────────────────────────────────────────────────────────
-def _build_content(df: pd.DataFrame, playlists_df: pd.DataFrame, sel: dict, selected_playlist: str | None) -> list:
-    # ── Playlist detail view ──────────────────────────────────────────────────
-    if selected_playlist:
-        return _build_playlist_detail(playlists_df, selected_playlist)
-
-    # ── Main view: playlists grid + analytics ────────────────────────────────
+def _build_main_content(df: pd.DataFrame, sel: dict) -> list:
     if df.empty:
-        return [
-            _build_playlists_grid(playlists_df),
-            html.P("Aucune donnée d'écoute pour cette période.",
-                   style={"color": "var(--text-muted)", "padding": "20px 0"}),
-        ]
+        return [html.P("Aucune donnée d'écoute pour cette période.",
+                       style={"color": "var(--text-muted)", "padding": "20px 0"})]
 
     total_streams = len(df)
     total_minutes = int(df["minutes_played"].sum()) if "minutes_played" in df.columns else 0
@@ -597,32 +575,14 @@ def _build_content(df: pd.DataFrame, playlists_df: pd.DataFrame, sel: dict, sele
             html.Div(label, className="stat-label"),
         ])
 
-    analyse_label = html.Div(
-        style={
-            "marginTop": "40px", "marginBottom": "24px",
-            "borderBottom": "1px solid rgba(255,255,255,0.08)", "paddingBottom": "12px",
-        },
-        children=[
-            html.Span("Analyse Détaillée", style={
-                "fontSize": "11px", "fontWeight": "700", "color": SPOTIFY_GREEN,
-                "textTransform": "uppercase", "letterSpacing": "2px",
-            }),
-        ],
-    )
-
     return [
-        # Playlists grid
-        _build_playlists_grid(playlists_df),
-
         # Stats
-        html.Div(className="stats-row", style={"marginBottom": "24px", "marginLeft": "auto", "marginRight": "auto"}, children=[
+        html.Div(className="stats-row", style={"marginBottom": "24px"}, children=[
             _stat(svg_icon(MUSIC), f"{total_streams:,}", "Streams"),
             _stat(svg_icon(CLOCK), f"{total_hours:,}h",  "Écoutées"),
             _stat(svg_icon(MIC),   f"{n_artists:,}",     "Artistes"),
             _stat(svg_icon(MUSIC), f"{n_tracks:,}",      "Titres distincts"),
         ]),
-
-        analyse_label,
 
         # Top artistes
         html.Div(className="data-panel", style={"marginBottom": "24px"}, children=[
@@ -669,42 +629,49 @@ def layout():
 
     return html.Div(className="page-wrapper", children=[
         html.Div(
-            style={"maxWidth": "1100px", "margin": "0 auto", "padding": "40px 32px 80px"},
+            className="spotify-layout",
             children=[
-                # Header (hidden in detail view via callback)
-                html.Div(id="spotify-hero", children=[
-                    html.Div(className="home-hero", style={"textAlign": "center"}, children=[
-                        html.P("Wrapped Custom • Année · Mois · Semaine",
-                                className="home-hero-label", style={"color": SPOTIFY_GREEN}),
-                        html.H1(html.Span(["Mon ", html.Em("Spotify")]),
-                                 className="home-hero-title", style={"fontSize": "56px"}),
-                        html.P("Tes playlists et tes écoutes en un coup d'œil.",
-                                className="home-hero-sub"),
-                    ]),
-                ]),
-
-                # Back button (visible only in playlist detail)
-                html.Button(
-                    "← Mes Playlists",
-                    id="spotify-back-btn",
-                    n_clicks=0,
-                    style={
-                        "display": "none",
-                        "background": "none", "border": f"1px solid rgba(29,185,84,0.4)",
-                        "color": SPOTIFY_GREEN, "fontSize": "13px", "fontWeight": "600",
-                        "cursor": "pointer", "borderRadius": "8px", "padding": "8px 16px",
-                        "marginBottom": "28px", "fontFamily": "var(--font-family)",
-                    },
+                # Sidebar
+                html.Div(
+                    id="spotify-sidebar-container",
+                    className="spotify-sidebar-container",
+                    children=_build_playlists_sidebar(playlists_df, None)
                 ),
 
-                dcc.Store(id="spotify-sel-store", data=_DEFAULT_SEL),
-                dcc.Store(id="spotify-playlist-store", data=None),
+                # Main Content
+                html.Div(
+                    className="spotify-main-content",
+                    children=[
+                        # Header
+                        html.Div(id="spotify-hero", children=[
+                            html.Div(className="home-hero", style={"textAlign": "center"}, children=[
+                                html.P("Wrapped Custom • Année · Mois · Semaine",
+                                       className="home-hero-label", style={"color": SPOTIFY_GREEN}),
+                                html.H1(html.Span(["Mon ", html.Em("Spotify")]),
+                                         className="home-hero-title", style={"fontSize": "56px"}),
+                                html.P("Tes playlists et tes écoutes en un coup d'œil.",
+                                       className="home-hero-sub"),
+                            ]),
+                        ]),
 
-                html.Div(id="spotify-period-selector",
-                         children=_period_selector(df, _DEFAULT_SEL)),
+                        # Back button (visible only in playlist detail)
+                        html.Button(
+                            "← Dashboard",
+                            id="spotify-back-btn",
+                            n_clicks=0,
+                            style={"display": "none"},
+                            className="spotify-back-btn",
+                        ),
 
-                html.Div(id="spotify-content",
-                         children=_build_content(df, playlists_df, _DEFAULT_SEL, None)),
+                        dcc.Store(id="spotify-sel-store", data=_DEFAULT_SEL),
+                        dcc.Store(id="spotify-playlist-store", data=None),
+
+                        html.Div(id="spotify-period-selector",
+                                 children=_period_selector(df, _DEFAULT_SEL)),
+
+                        html.Div(id="spotify-content"),
+                    ],
+                ),
             ],
         )
     ])
@@ -716,15 +683,12 @@ def layout():
     Input({"type": "spotify-chip-year",  "index": ALL}, "n_clicks"),
     Input({"type": "spotify-chip-month", "index": ALL}, "n_clicks"),
     Input({"type": "spotify-chip-week",  "index": ALL}, "n_clicks"),
-    State({"type": "spotify-chip-year",  "index": ALL}, "id"),
-    State({"type": "spotify-chip-month", "index": ALL}, "id"),
-    State({"type": "spotify-chip-week",  "index": ALL}, "id"),
     State("spotify-sel-store", "data"),
     prevent_initial_call=True,
 )
-def update_selection(*args):
+def update_selection(clicks_y, clicks_m, clicks_w, store):
     from dash import ctx
-    store = args[-1] or _DEFAULT_SEL
+    store = store or _DEFAULT_SEL
 
     if not ctx.triggered_id or not isinstance(ctx.triggered_id, dict):
         return store
@@ -769,7 +733,7 @@ def select_playlist(clicks):
     from dash import ctx
     if not ctx.triggered_id or not isinstance(ctx.triggered_id, dict):
         return no_update
-    if not any(c for c in (clicks or []) if c):
+    if not any(c > 0 for c in (clicks or [])):
         return no_update
     return ctx.triggered_id["index"]
 
@@ -791,6 +755,7 @@ def go_back(n):
     Output("spotify-content",         "children"),
     Output("spotify-back-btn",        "style"),
     Output("spotify-hero",            "style"),
+    Output("spotify-sidebar-container", "children"),
     Input("spotify-sel-store",        "data"),
     Input("spotify-playlist-store",   "data"),
 )
@@ -800,22 +765,19 @@ def refresh_view(sel, selected_playlist):
     playlists_df = _load_playlists()
     filtered     = _apply_filter(df, sel)
 
+    sidebar = _build_playlists_sidebar(playlists_df, selected_playlist)
+
     if selected_playlist:
+        content       = _build_playlist_detail(playlists_df, selected_playlist)
         period_sel    = html.Div()
         period_style  = {"display": "none"}
-        back_style    = {
-            "display": "inline-block",
-            "background": "none", "border": "1px solid rgba(29,185,84,0.4)",
-            "color": SPOTIFY_GREEN, "fontSize": "13px", "fontWeight": "600",
-            "cursor": "pointer", "borderRadius": "8px", "padding": "8px 16px",
-            "marginBottom": "28px", "fontFamily": "var(--font-family)",
-        }
+        back_style    = {"display": "inline-block"}
         hero_style    = {"display": "none"}
     else:
+        content       = _build_main_content(filtered, sel)
         period_sel    = _period_selector(df, sel)
         period_style  = {}
         back_style    = {"display": "none"}
         hero_style    = {}
 
-    content = _build_content(filtered, playlists_df, sel, selected_playlist)
-    return period_sel, period_style, content, back_style, hero_style
+    return period_sel, period_style, content, back_style, hero_style, sidebar

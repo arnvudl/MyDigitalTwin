@@ -68,7 +68,7 @@ services:
 
   dashboard:
     container_name: dashboard
-    build: 
+    build:
       context: .
       dockerfile: Dockerfile.app
     ports:
@@ -78,6 +78,8 @@ services:
     volumes:
       - ./app:/app/app
       - ./data:/app/data
+      - ./config.py:/app/config.py       # config centrale (chemins, build_spark_session)
+      - ./config.yaml:/app/config.yaml   # données personnelles (voir CONTRIBUTING.md)
     depends_on:
       - spark-master
 

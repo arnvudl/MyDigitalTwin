@@ -10,7 +10,8 @@
 Phase 2
 ├── 2A - 2E : Fondations et Nettoyage         ✅ FAIT
 ├── 2F  Memory Album (Photos × Musique)       ✅ FAIT (Définition)
-└── 2G  Industrialisation & Qualité           🔄 EN COURS
+├── 2G  Industrialisation & Qualité           🔄 EN COURS
+└── 2H  Refonte UI (Réflexion)                ⏳ EN ATTENTE
 ```
 
 ---
@@ -91,22 +92,24 @@ Transformer le projet d'un PoC local en un produit de données robuste, reproduc
     - [x] Documenter les clés primaires de chaque table dans `docs/ingestion_keys.md`.
     - [ ] Refactoriser les notebooks du `warehouse` pour utiliser `MERGE INTO`.
 
-**2. Reproductibilité & Configuration**
-- **Objectif** : Permettre à un nouvel utilisateur de cloner le projet, remplir un fichier de configuration unique, et lancer tous les services sans erreur.
-- **Action** : Éliminer tout code "hardcodé" en centralisant les chemins et constantes projet dans `config.py`, les données personnelles non secrètes dans `config.yaml`, et les secrets dans `.env`.
+**2. Reproductibilité & Configuration (Migration vers Copier)**
+- **Objectif** : Permettre à un nouvel utilisateur de cloner le projet, remplir un fichier de configuration unique, et lancer tous les services sans erreur. Mais aussi de pouvoir **mettre à jour** la structure de son projet facilement par la suite.
+- **Action** : Transformer le projet en un template standardisé avec **Copier** (plutôt que Cookiecutter) pour gérer les mises à jour futures via `copier update`. Continuer d'éliminer tout code "hardcodé".
 - **Tâches** :
     - [x] Auditer `src/scripts/`, `src/ingestion/` et `app/` pour repérer les chemins, constantes, ports et paramètres encore hardcodés.
     - [x] Déplacer les chemins et constantes partagés dans `config.py`.
     - [x] Déplacer les paramètres personnels non secrets dans `config.yaml`.
     - [x] Vérifier que le fichier `.env.example` est complet, que les secrets sont correctement chargés et que les erreurs de configuration explicites.
-    - [ ] Valider le parcours "nouvel utilisateur" : cloner, renseigner `config.yaml` et `.env`, puis lancer ingestion, notebooks et app sans modification du code.
+    - [ ] **NOUVEAU** : Mettre en place la structure du template **Copier** (`copier.yml`, `{{ cookiecutter.project_name }}` -> syntaxe Copier).
+    - [ ] Valider le parcours "nouvel utilisateur" : générer le projet avec Copier, renseigner les configs, puis lancer ingestion, notebooks et app sans modification du code.
 
 **3. Tests & Qualité des données**
 - **Objectif** : Mettre en place un filet de sécurité automatisé pour détecter les régressions et les problèmes de données.
-- **Action** : Intégrer `pytest` pour lancer à la fois des tests unitaires, des tests de qualité de données et des tests d'invariants utiles aux notebooks.
+- **Action** : Intégrer `pytest` pour lancer à la fois des tests unitaires, des tests de qualité de données et des tests d'invariants utiles aux notebooks. **Intégrer Pandera pour des contrats de données robustes sur les DataFrames Spark.**
 - **Tâches** :
     - [x] Configurer `pytest` dans le projet (`pytest.ini`, `tests/conftest.py`).
     - [x] Écrire des **tests unitaires** pour les fonctions critiques (ex: les parsers d'ingestion Google et Spotify).
+    - [ ] **NOUVEAU** : Intégrer **Pandera** pour définir des schémas de validation stricts sur les DataFrames PySpark (ex: pas de nulls sur `track_id`, limites sur `latitude`).
     - [x] Écrire des **tests de qualité de données** qui valident les tables du `warehouse` et les jeux de données intermédiaires consommés par les notebooks.
     - [x] Vérifier les invariants les plus utiles : `nulls` sur colonnes critiques, types attendus, plages de dates cohérentes, unicité de clés logiques, volumes minimaux et cohérence simple entre tables.
 
@@ -130,6 +133,17 @@ Transformer le projet d'un PoC local en un produit de données robuste, reproduc
 
 ---
 
+## 2H — Refonte UI (Réflexion) ⏳ EN ATTENTE
+
+### Objectif
+Réfléchir à une modernisation complète de l'interface utilisateur de l'application Dash en utilisant des composants plus riches et esthétiques.
+
+**Action envisagée :**
+- Étudier l'intégration de la librairie **Dash Mantine Components (DMC)**.
+- Cela permettrait de remplacer les composants Dash natifs (souvent basiques visuellement) par des composants basés sur React Mantine, offrant des designs modernes, le support du Dark Mode natif, et une meilleure ergonomie (cartes, notifications, etc.).
+
+---
+
 ## Priorités
 
 | Priorité | Tâche | Statut |
@@ -137,9 +151,9 @@ Transformer le projet d'un PoC local en un produit de données robuste, reproduc
 | 🔴 NEXT | **Memory Album : Notebook `03_memory_album.ipynb` (Architecture BLIP-2/OpenCLIP/HDBSCAN)** | À faire |
 | 🔴 NEXT | **Memory Album : Implémenter le script de la Phase 2 pour la bibliothèque musicale JSON.** | À faire |
 | 🔴 NEXT | **Memory Album : Page Dash** | À faire |
-| 🟠 P2 | **Industrialisation** : Finir les tâches de la section 2G (Validation nouveau user, MERGE INTO, etc.) | Après le Memory Album |
+| 🟠 P2 | **Industrialisation** : Finir les tâches de la section 2G (Validation nouveau user, Copier template, MERGE INTO, Tests Pandera, etc.) | Après le Memory Album |
 | 🧊 PAUSE | **Infrastructure Cloud (R2)** | En attente |
 
 ---
 
-*Roadmap rédigée le 2026-04-24 — mise à jour le 2026-04-28 (Focus sur Memory Album (Version Avancée), puis Industrialisation avec configuration reproductible, tests orientés données et gestion des PRs).*
+*Roadmap rédigée le 2026-04-24 — mise à jour le 2026-04-28 (Focus sur Memory Album (Version Avancée), puis Industrialisation avec configuration Copier, tests orientés données et gestion des PRs).*

@@ -78,6 +78,12 @@ PHOTO_SOURCE_DIRS = [
     os.path.join(INSTAGRAM_PROCESSED_ROOT, "your_instagram_activity", "messages"),
 ]
 
+# --- Memory Album ---
+ALBUM_PHOTOS_DIR   = os.path.join(DATA_ROOT, "processed", "ALBUM")
+MEMORY_ALBUM_DIR   = os.path.join(WAREHOUSE, "memory_album")
+MODELS_CACHE_DIR   = os.path.join(DATA_ROOT, "models")   # cache HuggingFace (BLIP-2, OpenCLIP…)
+MUSIC_LIBRARY_PATH = os.path.join(LLM_DATA, "music_library.json")
+
 # --- Caches and Output Files ---
 SPOTIFY_METADATA_CACHE_PATH = os.path.join(WAREHOUSE, "spotify_metadata.json")
 TMDB_POSTER_CACHE_PATH = os.path.join(WAREHOUSE, "tmdb_poster_cache.json")
