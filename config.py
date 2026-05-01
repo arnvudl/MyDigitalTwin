@@ -132,6 +132,16 @@ K_BEHAVIORAL = int(_cfg.get("clustering", {}).get("k_behavioral", 4))
 # Content Category Keywords
 CATEGORY_KEYWORDS: dict = _cfg.get("category_keywords", {})
 
+# CLIP Photo Clustering
+CLIP_CANDIDATE_LABELS: list = _cfg.get("clip", {}).get("candidate_labels", [])
+
+# Psy (Miroir) Configuration
+_psy = _cfg.get("psy", {})
+PSY_FIRST_NAMES: list        = _psy.get("first_names", [])
+PSY_REASONING_MARKERS: list  = _psy.get("reasoning_markers", [])
+PSY_VERBAL_TICS: list        = _psy.get("verbal_tics", [])
+PSY_BEHAVIOUR_CATEGORIES: dict = _psy.get("behaviour_categories", {})
+
 # --- Spark ---
 def build_spark_session(
     app_name: str,

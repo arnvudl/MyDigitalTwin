@@ -9,7 +9,7 @@
 ```
 Phase 2
 ├── 2A - 2E : Fondations et Nettoyage         ✅ FAIT
-├── 2F  Memory Album (Photos × Musique)       ✅ FAIT (Définition)
+├── 2F  Memory Album (Photos × Musique)       ✅ FAIT
 ├── 2G  Industrialisation & Qualité           🔄 EN COURS
 └── 2H  Refonte UI (Réflexion)                ⏳ EN ATTENTE
 ```
@@ -74,9 +74,10 @@ L'objectif est de reconstruire des **souvenirs**, pas juste grouper des images.
 - *Bonus UX* : Nom auto généré ("Nuit à Bruxelles"), animation / transition musicale.
 
 ### Actions
-- [ ] Mettre à jour l'architecture du notebook `src/scripts/03_memory_album.ipynb` pour intégrer BLIP-2/OpenCLIP, l'enrichissement et HDBSCAN. **Le code Spark doit être ultra-performant et éviter l'utilisation d'UDFs.**
-- [ ] Implémenter le script de la Phase 2 pour la bibliothèque musicale JSON.
-- [ ] Développer la page Dash "Memory Album".
+- [x] Notebooks `src/scripts/03_memory_album/` : 01 embeddings BLIP-2/OpenCLIP, 02 clustering temporel, 03 matching musical.
+- [x] Implémenter le script de la Phase 2 pour la bibliothèque musicale JSON (via Spotify API).
+- [x] Développer la page Dash "Memory Album" (`/memory-album`) — layout vertical, music par scène.
+- [x] Corriger les bugs post-lancement : doublons Delta, encodage URLs, clustering inter-dates, perf.
 
 ---
 
@@ -148,12 +149,11 @@ Réfléchir à une modernisation complète de l'interface utilisateur de l'appli
 
 | Priorité | Tâche | Statut |
 |---|---|---|
-| 🔴 NEXT | **Memory Album : Notebook `03_memory_album.ipynb` (Architecture BLIP-2/OpenCLIP/HDBSCAN)** | À faire |
-| 🔴 NEXT | **Memory Album : Implémenter le script de la Phase 2 pour la bibliothèque musicale JSON.** | À faire |
-| 🔴 NEXT | **Memory Album : Page Dash** | À faire |
-| 🟠 P2 | **Industrialisation** : Finir les tâches de la section 2G (Validation nouveau user, Copier template, MERGE INTO, Tests Pandera, etc.) | Après le Memory Album |
+| ✅ FAIT | **Memory Album** : notebooks, matching musical, page Dash, corrections bugs | Terminé |
+| 🔴 NEXT | **Industrialisation** : Copier template, MERGE INTO, Tests Pandera | En cours (2G) |
+| 🟠 P2 | **Validation nouveau user** : générer le projet avec Copier, lancer ingestion + app | Après Copier |
 | 🧊 PAUSE | **Infrastructure Cloud (R2)** | En attente |
 
 ---
 
-*Roadmap rédigée le 2026-04-24 — mise à jour le 2026-04-28 (Focus sur Memory Album (Version Avancée), puis Industrialisation avec configuration Copier, tests orientés données et gestion des PRs).*
+*Roadmap rédigée le 2026-04-24 — mise à jour le 2026-05-02 (2F Memory Album terminé ; focus 2G Industrialisation).*

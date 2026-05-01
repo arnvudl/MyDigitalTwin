@@ -9,7 +9,6 @@ PAGES = [
     {"label": "Netflix", "href": "/netflix"},
     {"label": "Spotify", "href": "/spotify"},
     {"label": "Album", "href": "/memory-album"},
-    {"label": "Clone", "href": "/clone"},
     {"label": "Analyse", "href": "/psy"},
 ]
 

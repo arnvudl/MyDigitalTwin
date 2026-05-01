@@ -1,5 +1,6 @@
 import os
 from functools import lru_cache
+from urllib.parse import quote
 
 import pandas as pd
 import plotly.express as px
@@ -16,8 +17,8 @@ CLUSTER_COLORS = ["#c13584", "#833ab4", "#fd1d1d", "#fcaf45", "#4fc3f7"]
 # ─── HELPERS ─────────────────────────────────────────────────────────────────
 def _spark_to_local(spark_path: str) -> str:
     if spark_path and spark_path.startswith(_SPARK_PREFIX):
-        return DATA_ROOT + spark_path[len(_SPARK_PREFIX):]
-    return spark_path
+        return os.path.normpath(DATA_ROOT + spark_path[len(_SPARK_PREFIX):])
+    return os.path.normpath(spark_path) if spark_path else spark_path
 
 
 @lru_cache(maxsize=1)
@@ -40,10 +41,15 @@ def _read_clusters() -> pd.DataFrame:
 
 
 def _photo_url(local_path: str) -> str:
-    rel = local_path
-    if rel.startswith(DATA_ROOT):
-        rel = rel[len(DATA_ROOT):].lstrip("/")
-    return f"/photo/{rel}"
+    norm_path = os.path.normpath(local_path)
+    norm_root = os.path.normpath(DATA_ROOT)
+    if norm_path.startswith(norm_root):
+        rel = norm_path[len(norm_root):].lstrip('/\\')
+    else:
+        rel = norm_path.lstrip('/\\')
+    rel = rel.replace('\\', '/')
+    _safe = "/:@!$&'()*+,;="
+    return f'/photo/{quote(rel, safe=_safe)}'
 
 
 def _scatter_fig(df: pd.DataFrame, selected_cluster=None):
@@ -74,7 +80,7 @@ def _scatter_fig(df: pd.DataFrame, selected_cluster=None):
 def _photo_grid(rows: pd.DataFrame) -> html.Div:
     imgs = []
     for _, row in rows.iterrows():
-        local = row["local_path"]
+        local = os.path.normpath(row["local_path"])
         if os.path.exists(local):
             imgs.append(
                 html.Img(
