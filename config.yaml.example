@@ -1,29 +1,36 @@
 # ══════════════════════════════════════════════════════════════════════════════
-# config.yaml.example — Template MyDigitalTwin
+# config.yaml.example — Modèle à copier
 # ══════════════════════════════════════════════════════════════════════════════
-# Copier ce fichier : cp config.yaml.example config.yaml
-# Puis remplacer les valeurs par vos propres données.
+# 1. Copier ce fichier : cp config.yaml.example config.yaml
+# 2. Remplacer toutes les valeurs d'exemple par vos propres données.
+# 3. Ne jamais commiter config.yaml (il est dans .gitignore).
 
 # ── Identité ──────────────────────────────────────────────────────────────────
 user:
-  instagram_sender_name: "VOTRE NOM"   # Tel qu'il apparaît dans les exports Instagram
-  instagram_username: "votre_username" # Optionnel, utile pour certains traitements futurs
+  # Votre nom tel qu'il apparaît dans les messages Instagram exportés
+  instagram_sender_name: "Prénom Nom"
+  # Username Instagram (pour instaloader session)
+  instagram_username: "votre_pseudo_instagram"
 
 # ── Graphe social Instagram ───────────────────────────────────────────────────
 social:
-  close_friends_multiplier: 2.0
-  min_messages: 5
+  close_friends_multiplier: 2.0   # poids des messages avec les proches
+  min_messages: 5                  # seuil minimum pour apparaître dans le graphe
   close_friends:
-    - "pseudo_ami_1"
-    - "pseudo_ami_2"
-    # Ajouter les pseudos Instagram de vos proches
+    - "ami1"
+    - "ami2"
+    - "ami3"
 
 # ── Spotify ───────────────────────────────────────────────────────────────────
 spotify:
+  # Artistes de référence pour contextualiser le profil musical
   anchor_artists:
     - "Artiste 1"
     - "Artiste 2"
-  topology_stream_threshold: 5   # écoutes minimum pour apparaître dans le graphe topologique
+    - "Artiste 3"
+  # Seuil d'écoutes répétées pour inclure un titre dans le graphe topologique
+  # Un titre écouté >= N fois = signal d'intérêt fort
+  topology_stream_threshold: 20
 
 # ── Clustering comportemental ─────────────────────────────────────────────────
 clustering:
@@ -34,24 +41,183 @@ clustering:
 
 # ── Catégories d'intérêts (content clustering) ────────────────────────────────
 # Mots-clés par catégorie pour classifier les contenus (Spotify, YouTube, Netflix…).
-# Renommer les catégories et adapter les mots-clés à vos propres centres d'intérêt.
+# Ajouter / supprimer / renommer les catégories selon tes centres d'intérêt.
 category_keywords:
   Sport:
     - football
+    - soccer
+    - nba
+    - match
+    - goal
+    - fifa
+    - rugby
     - tennis
     - basketball
-    # Ajouter vos sports / équipes / compétitions
-  Tech:
-    - python
-    - data
-    - ai
-    # Ajouter vos sujets tech
+    - sport
+    - ufc
+    - mma
+    - gym
+    - fitness
+    - workout
+    - training
+    - nfl
+    - olympics
+    - swimming
+    - cycling
+    - champions league
+  Auto/Moto:
+    - car
+    - auto
+    - voiture
+    - f1
+    - formula 1
+    - supercar
+    - drift
+    - motorsport
+    - motorcycle
+    - moto
+    - grand prix
   Musique:
+    - music
+    - song
+    - artist
     - rap
     - album
+    - track
+    - beat
+    - rnb
+    - r&b
+    - hip
+    - hop
+    - spotify
+    - playlist
     - concert
-    # Ajouter vos artistes, genres, labels
-  # Ajouter ou supprimer des catégories librement
+    - festival
+    - lyrics
+    - producer
+    - techno
+    - house
+    - electro
+    - lo-fi
+    - jazz
+    - dj
+    - remix
+  Tech:
+    - python
+    - code
+    - data
+    - dev
+    - javascript
+    - api
+    - ai
+    - software
+    - tech
+    - developer
+    - engineering
+    - technology
+    - artificial intelligence
+    - machine learning
+    - deep learning
+    - nlp
+    - llm
+    - pytorch
+    - backend
+    - frontend
+    - react
+    - github
+    - docker
+    - cloud
+    - cybersecurity
+    - linux
+    - startup
+  Cinema/Series:
+    - netflix
+    - film
+    - série
+    - movie
+    - episode
+    - cinema
+    - trailer
+    - season
+    - streaming
+    - anime
+    - manga
+    - hbo
+    - marvel
+    - oscars
+  Gaming:
+    - game
+    - gaming
+    - xbox
+    - ps5
+    - steam
+    - minecraft
+    - fortnite
+    - esport
+    - gamer
+    - nintendo
+    - switch
+    - twitch
+    - discord
+    - multiplayer
+    - rpg
+    - fps
+    - valorant
+    - gta
+    - playstation
+  Actu/Societe:
+    - news
+    - actu
+    - monde
+    - politique
+    - environment
+    - ecology
+    - climate
+    - space
+    - nasa
+    - economy
+    - finance
+    - crypto
+    - bitcoin
+    - blockchain
+    - stock market
+    - history
+    - philosophy
+  Shopping:
+    - amazon
+    - shop
+    - brand
+    - adidas
+    - nike
+    - fashion
+    - streetwear
+    - sneakers
+    - clothes
+    - outfit
+    - ecommerce
+    - skincare
+    - apple
+    - iphone
+    - samsung
+    - gadget
+  Photo/Crea:
+    - photo
+    - photography
+    - design
+    - creative
+    - art
+    - visual
+    - camera
+    - graphic
+    - illustration
+    - photoshop
+    - lightroom
+    - editing
+    - content creation
+    - architecture
+    - digital art
+    - blender
+    - canva
 
 # ── Memory Album ──────────────────────────────────────────────────────────────
 memory_album:
@@ -68,7 +234,8 @@ memory_album:
   # Garder à 1 avec GPU (BLIP-2 ~5 Go) ; monter à 4 en CPU only
   n_partitions: 1
 
-  # Groupement temporel : écart > scene_gap_hours entre deux photos = nouveau groupe
+  # Groupement temporel (remplace HDBSCAN)
+  # Écart > scene_gap_hours entre deux photos consécutives = nouveau groupe
   scene_gap_hours: 6.0
 
   # Fenêtre de matching temporel photo ↔ Spotify (en minutes)
@@ -76,19 +243,19 @@ memory_album:
 
   # ID de la playlist Spotify source pour la bibliothèque musicale
   # Obtenu via : https://open.spotify.com/playlist/<ID>
-  spotify_playlist_id: "VOTRE_PLAYLIST_ID"
+  spotify_playlist_id: "YOUR_PLAYLIST_ID_HERE"
 
-  # Overrides manuels : imposer une musique à une photo précise
-  # photo_id = 12 premiers caractères du hash MD5 du chemin (affiché par notebook 01)
+  # Overrides manuels : imposer une musique à une ou plusieurs photos
+  # photo_id = hash MD5 du chemin affiché par le notebook 01
   manual_overrides: []
   # Exemple :
-  # - photo_id: "a1b2c3d4e5f6"
-  #   track_id:  "4x6jx7AeSyE7PlQTdCjIJs"
+  # - photo_id: "a1b2c3d4"
+  #   track_id:  "spotify:track:4x6jx7AeSyE7PlQTdCjIJs"
 
 # ── CLIP Photo Clustering ──────────────────────────────────────────────────────
 clip:
   # Labels zero-shot pour la classification CLIP des photos
-  # Adapter selon votre corpus de photos (lieux, ambiances, activités…)
+  # Adapter selon ton corpus de photos (lieux, ambiances, activités…)
   candidate_labels:
     - "soiree entre amis"
     - "concert ou festival"
@@ -102,7 +269,7 @@ clip:
     - "plage et vacances"
     - "meme et humour internet"
     - "photo du quotidien entre amis"
-    # Ajouter vos propres catégories
+    - "photo de voiture"
 
 # ── Page Psy (Miroir) ──────────────────────────────────────────────────────────
 psy:
@@ -111,9 +278,15 @@ psy:
     - "Alice"
     - "Emma"
     - "Hugo"
-    # Ajouter vos proches / contacts à anonymiser
+    - "Léa"
+    - "Lucas"
+    - "Chloé"
+    - "Inès"
+    - "Jade"
+    - "Noah"
+    - "Léo"
 
-  # Marqueurs de raisonnement (style d'écriture — facultatif, adapté au français)
+  # Marqueurs de raisonnement (style d'écriture)
   reasoning_markers:
     - "parce que"
     - "du coup"
@@ -121,40 +294,83 @@ psy:
     - "en vrai"
     - "en fait"
     - "donc"
+    - "c'est que"
+    - "ça veut dire"
+    - "au final"
+    - "genre"
 
   # Tics verbaux (langage familier)
   verbal_tics:
+    - "jsp"
+    - "bah"
     - "mdr"
     - "lol"
+    - "wtf"
+    - "pk"
     - "ouais"
     - "nan"
-    # Ajouter vos propres tics
 
   # Catégories comportementales et leurs mots-clés associés
   behaviour_categories:
     "Santé / Corps":
       - "maladie"
-      - "fatigue"
+      - "symptôme"
+      - "douleur"
       - "médecin"
+      - "fatigue"
+      - "anxiété"
       - "stress"
+      - "dépression"
+      - "sommeil"
+      - "santé"
     "Tech / IA":
       - "python"
       - "ia"
+      - "llm"
+      - "gpt"
+      - "machine learning"
       - "code"
+      - "github"
+      - "docker"
       - "data"
+      - "algorithme"
+    "Questions existentielles":
+      - "sens de la vie"
+      - "bonheur"
+      - "solitude"
+      - "mort"
+      - "avenir"
+      - "identité"
+      - "liberté"
+      - "relation"
+      - "amour"
+      - "but"
     "Finance / Carrière":
       - "salaire"
       - "emploi"
+      - "stage"
       - "argent"
+      - "budget"
+      - "investissement"
+      - "bourse"
+      - "crypto"
+      - "entreprise"
+      - "startup"
     "Divertissement":
       - "film"
+      - "série"
       - "musique"
+      - "concert"
+      - "jeu"
       - "sport"
-    # Ajouter ou supprimer des catégories selon vos centres d'intérêt
+      - "netflix"
+      - "spotify"
+      - "youtube"
+      - "anime"
 
 # ── Clone conversationnel ─────────────────────────────────────────────────────
 clone:
   conversations:
-    ami1: ["ami1_conversation_id"]
-    ami2: ["ami2_conversation_id"]
-    # IDs trouvés dans data/processed/INSTAGRAM/.../messages/inbox/
+    ami1: ["ami1_CONVERSATION_ID"]
+    ami2: ["ami2_CONVERSATION_ID"]
+    ami3: ["ami3_CONVERSATION_ID"]

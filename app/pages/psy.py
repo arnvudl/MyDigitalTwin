@@ -11,7 +11,7 @@ from datetime import datetime
 
 import pandas as pd
 from dash import Input, Output, State, callback, dcc, html, no_update, ALL
-from config import WAREHOUSE
+from config import WAREHOUSE, INSTAGRAM_SENDER_NAME
 
 # ─── CONFIG ──────────────────────────────────────────────────────────────────
 DELTA_BASE = WAREHOUSE
@@ -449,7 +449,7 @@ def generate_package(n_clicks, start, end, sources, anon_names_val):
         return no_update, error_msg
 
     with tempfile.TemporaryDirectory() as tmpdir:
-        out_path = os.path.join(tmpdir, "Dossier_Psy_Arnaud.zip")
+        out_path = os.path.join(tmpdir, f"Dossier_Psy_{INSTAGRAM_SENDER_NAME}.zip")
         try:
             build_package(start, end, sources, anon, out_path)
             with open(out_path, "rb") as f:
