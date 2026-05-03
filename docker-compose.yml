@@ -15,7 +15,6 @@ services:
       - ./src/__init__.py:/opt/spark/src/__init__.py
       - ./data:/opt/spark/data
       - ./spark-logs:/opt/spark/spark-events
-      - ./warehouse:/opt/spark/warehouse
       - ./config.py:/opt/spark/config.py
       - ./config.yaml:/opt/spark/config.yaml
       - ./data/instaloader:/root/.config/instaloader
@@ -42,7 +41,6 @@ services:
       - ./src/__init__.py:/opt/spark/src/__init__.py
       - ./data:/opt/spark/data
       - ./spark-logs:/opt/spark/spark-events
-      - ./warehouse:/opt/spark/warehouse
       - ./config.py:/opt/spark/config.py
       - ./config.yaml:/opt/spark/config.yaml
     ports:
@@ -62,7 +60,6 @@ services:
       - ./src/__init__.py:/opt/spark/src/__init__.py
       - ./data:/opt/spark/data
       - ./spark-logs:/opt/spark/spark-events
-      - ./warehouse:/opt/spark/warehouse
       - ./config.py:/opt/spark/config.py
       - ./config.yaml:/opt/spark/config.yaml
 

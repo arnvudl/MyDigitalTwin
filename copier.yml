@@ -1,0 +1,53 @@
+# ══════════════════════════════════════════════════════════════════════════════
+# copier.yml — Template MyDigitalTwin
+# Usage : copier copy gh:ton-user/MyDigitalTwin mon-digital-twin/
+#         ou : copier copy . mon-digital-twin/  (depuis le repo local)
+# ══════════════════════════════════════════════════════════════════════════════
+
+_subdirectory: template
+_message_after_copy: |
+  ✅ MyDigitalTwin initialisé !
+
+  Prochaines étapes :
+  1. Compléter config.yaml  → close_friends, anchor_artists, category_keywords, clone
+  2. Compléter .env          → vérifier les clés API
+  3. Placer vos exports dans data/inbox/<plateforme>/
+  4. Lancer l'ingestion      → python -m src.ingestion.run_all
+  5. Lancer les notebooks    → src/scripts/ (via Docker Spark : docker compose up)
+  6. Démarrer le dashboard   → docker compose up  (service dashboard inclus)
+
+# ── Identité ──────────────────────────────────────────────────────────────────
+instagram_sender_name:
+  type: str
+  help: "Votre nom tel qu'il apparaît dans vos exports Instagram (ex: J E A N)"
+  placeholder: "P R E N O M"
+
+instagram_username:
+  type: str
+  help: "Votre username Instagram sans @ (ex: jean_dupont)"
+  placeholder: "votre_pseudo"
+
+# ── Clés API ──────────────────────────────────────────────────────────────────
+spotify_client_id:
+  type: str
+  secret: true
+  help: "Spotify Client ID — https://developer.spotify.com/dashboard"
+  default: ""
+
+spotify_client_secret:
+  type: str
+  secret: true
+  help: "Spotify Client Secret — https://developer.spotify.com/dashboard"
+  default: ""
+
+tmdb_api_key:
+  type: str
+  secret: true
+  help: "Clé TMDB pour les affiches films (optionnel) — https://www.themoviedb.org/settings/api"
+  default: ""
+
+tmdb_access_token:
+  type: str
+  secret: true
+  help: "TMDB Read Access Token (optionnel)"
+  default: ""

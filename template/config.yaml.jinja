@@ -1,0 +1,321 @@
+# ══════════════════════════════════════════════════════════════════════════════
+# config.yaml — Données personnelles MyDigitalTwin
+# ══════════════════════════════════════════════════════════════════════════════
+# Ce fichier est propre à CHAQUE utilisateur. Ne pas commiter (voir .gitignore).
+# Généré par : copier copy gh:ton-user/MyDigitalTwin .
+
+# ── Identité ──────────────────────────────────────────────────────────────────
+user:
+  instagram_sender_name: "{{ instagram_sender_name }}"
+  instagram_username: "{{ instagram_username }}"
+
+# ── Graphe social Instagram ───────────────────────────────────────────────────
+social:
+  close_friends_multiplier: 2.0
+  min_messages: 5
+  close_friends:
+    - "ami1"   # ← Remplacer par vos usernames Instagram proches
+
+# ── Spotify ───────────────────────────────────────────────────────────────────
+spotify:
+  anchor_artists:
+    - "Artiste 1"   # ← Remplacer par vos artistes de référence
+    - "Artiste 2"
+  topology_stream_threshold: 20
+
+# ── Clustering comportemental ─────────────────────────────────────────────────
+clustering:
+  k_behavioral: 4
+
+# ── Catégories d'intérêts (content clustering) ────────────────────────────────
+# Adapter les mots-clés selon vos centres d'intérêt.
+category_keywords:
+  Sport:
+    - football
+    - soccer
+    - nba
+    - match
+    - goal
+    - fifa
+    - rugby
+    - tennis
+    - basketball
+    - sport
+    - ufc
+    - mma
+    - gym
+    - fitness
+    - workout
+    - training
+    - nfl
+    - olympics
+    - swimming
+    - cycling
+    - champions league
+  Auto/Moto:
+    - car
+    - auto
+    - voiture
+    - f1
+    - formula 1
+    - supercar
+    - drift
+    - motorsport
+    - motorcycle
+    - moto
+    - grand prix
+  Musique:
+    - music
+    - song
+    - artist
+    - rap
+    - album
+    - track
+    - beat
+    - rnb
+    - r&b
+    - hip
+    - hop
+    - spotify
+    - playlist
+    - concert
+    - festival
+    - lyrics
+    - producer
+    - techno
+    - house
+    - electro
+    - lo-fi
+    - jazz
+    - dj
+    - remix
+  Tech:
+    - python
+    - code
+    - data
+    - dev
+    - javascript
+    - api
+    - ai
+    - software
+    - tech
+    - developer
+    - engineering
+    - technology
+    - artificial intelligence
+    - machine learning
+    - deep learning
+    - nlp
+    - llm
+    - pytorch
+    - backend
+    - frontend
+    - react
+    - github
+    - docker
+    - cloud
+    - cybersecurity
+    - linux
+    - startup
+  Cinema/Series:
+    - netflix
+    - film
+    - série
+    - movie
+    - episode
+    - cinema
+    - trailer
+    - season
+    - streaming
+    - anime
+    - manga
+    - hbo
+    - marvel
+    - oscars
+  Gaming:
+    - game
+    - gaming
+    - xbox
+    - ps5
+    - steam
+    - minecraft
+    - fortnite
+    - esport
+    - gamer
+    - nintendo
+    - switch
+    - twitch
+    - discord
+    - multiplayer
+    - rpg
+    - fps
+    - valorant
+    - gta
+    - playstation
+  Actu/Societe:
+    - news
+    - actu
+    - monde
+    - politique
+    - environment
+    - ecology
+    - climate
+    - space
+    - nasa
+    - economy
+    - finance
+    - crypto
+    - bitcoin
+    - blockchain
+    - stock market
+    - history
+    - philosophy
+  Shopping:
+    - amazon
+    - shop
+    - brand
+    - adidas
+    - nike
+    - fashion
+    - streetwear
+    - sneakers
+    - clothes
+    - outfit
+    - ecommerce
+    - skincare
+    - apple
+    - iphone
+    - samsung
+    - gadget
+  Photo/Crea:
+    - photo
+    - photography
+    - design
+    - creative
+    - art
+    - visual
+    - camera
+    - graphic
+    - illustration
+    - photoshop
+    - lightroom
+    - editing
+    - content creation
+    - architecture
+    - digital art
+    - blender
+    - canva
+
+# ── Memory Album ──────────────────────────────────────────────────────────────
+memory_album:
+  model: "Salesforce/blip2-opt-2.7b"
+  batch_size: 8
+  n_partitions: 1
+  scene_gap_hours: 6.0
+  temporal_window_minutes: 60
+  spotify_playlist_id: "YOUR_PLAYLIST_ID_HERE"
+  manual_overrides: []
+
+# ── CLIP Photo Clustering ──────────────────────────────────────────────────────
+clip:
+  candidate_labels:
+    - "soiree entre amis"
+    - "concert ou festival"
+    - "voyage et paysage"
+    - "nourriture et restaurant"
+    - "sport et fitness"
+    - "famille"
+    - "ville et architecture"
+    - "nature et randonnee"
+    - "selfie portrait"
+    - "plage et vacances"
+    - "meme et humour internet"
+    - "photo du quotidien entre amis"
+
+# ── Page Psy (Miroir) ──────────────────────────────────────────────────────────
+psy:
+  first_names:
+    - "Prénom1"   # ← Remplacer par les prénoms à anonymiser
+    - "Prénom2"
+  reasoning_markers:
+    - "parce que"
+    - "du coup"
+    - "je pense"
+    - "en vrai"
+    - "en fait"
+    - "donc"
+    - "c'est que"
+    - "ça veut dire"
+    - "au final"
+    - "genre"
+  verbal_tics:
+    - "jsp"
+    - "bah"
+    - "mdr"
+    - "lol"
+    - "wtf"
+    - "pk"
+    - "ouais"
+    - "nan"
+  behaviour_categories:
+    "Santé / Corps":
+      - "maladie"
+      - "symptôme"
+      - "douleur"
+      - "médecin"
+      - "fatigue"
+      - "anxiété"
+      - "stress"
+      - "dépression"
+      - "sommeil"
+      - "santé"
+    "Tech / IA":
+      - "python"
+      - "ia"
+      - "llm"
+      - "gpt"
+      - "machine learning"
+      - "code"
+      - "github"
+      - "docker"
+      - "data"
+      - "algorithme"
+    "Questions existentielles":
+      - "sens de la vie"
+      - "bonheur"
+      - "solitude"
+      - "mort"
+      - "avenir"
+      - "identité"
+      - "liberté"
+      - "relation"
+      - "amour"
+      - "but"
+    "Finance / Carrière":
+      - "salaire"
+      - "emploi"
+      - "stage"
+      - "argent"
+      - "budget"
+      - "investissement"
+      - "bourse"
+      - "crypto"
+      - "entreprise"
+      - "startup"
+    "Divertissement":
+      - "film"
+      - "série"
+      - "musique"
+      - "concert"
+      - "jeu"
+      - "sport"
+      - "netflix"
+      - "spotify"
+      - "youtube"
+      - "anime"
+
+# ── Clone conversationnel ─────────────────────────────────────────────────────
+# Format : pseudo: ["pseudo_CONVERSATION_FOLDER_ID"]
+# Les IDs de dossiers se trouvent dans data/inbox/
+clone:
+  conversations: {}
