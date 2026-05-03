@@ -9,7 +9,7 @@ from functools import lru_cache
 
 import pandas as pd
 from dash import html, dash_table
-from config import INSTAGRAM_INBOX, INSTAGRAM_SENDER_NAME, SOCIAL_GRAPH_DIR
+from config import INSTAGRAM_INBOX, INSTAGRAM_SENDER_NAME, INSTAGRAM_USERNAME, SOCIAL_GRAPH_DIR
 
 # ─── PATHS ───────────────────────────────────────────────────────────────────
 SOCIAL_DIR = SOCIAL_GRAPH_DIR
@@ -144,7 +144,7 @@ def _conv_stats(node_id: str, my_name: str = INSTAGRAM_SENDER_NAME or "A R N A U
 
 
 def _df_to_graph_data(df: pd.DataFrame, stats_map: dict) -> dict:
-    nodes = [{"id": "arnaud", "label": "Arnaud", "is_close": False, "msg_count": 0, "val": 80, "stats": {}}]
+    nodes = [{"id": INSTAGRAM_USERNAME, "label": INSTAGRAM_SENDER_NAME, "is_close": False, "msg_count": 0, "val": 80, "stats": {}}]
     links = []
 
     if df.empty:
@@ -169,7 +169,7 @@ def _df_to_graph_data(df: pd.DataFrame, stats_map: dict) -> dict:
             "stats": stats_map.get(node_id, {}),
         })
         links.append({
-            "source": "arnaud", "target": node_id,
+            "source": INSTAGRAM_USERNAME, "target": node_id,
             "is_close": is_close,
             "width": 0.8 + int(2 * ratio),
         })

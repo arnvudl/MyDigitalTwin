@@ -10,7 +10,7 @@ import plotly.graph_objects as go
 from dash import ALL, Input, Output, State, callback, dcc, html, no_update, clientside_callback, ClientsideFunction
 from app.icons import svg_icon, FILM, TV, VIDEO
 from difflib import SequenceMatcher
-from config import TMDB_API_KEY, TMDB_POSTER_CACHE_PATH, WAREHOUSE
+from config import TMDB_API_KEY, TMDB_POSTER_CACHE_PATH, WAREHOUSE, INSTAGRAM_SENDER_NAME
 
 # ─── CONFIG ──────────────────────────────────────────────────────────────────
 DELTA_BASE = WAREHOUSE
@@ -385,11 +385,11 @@ def _score_color(score: float) -> str:
     return "#ff453a"
 
 def _score_label(score: float) -> str:
-    if score >= 85: return "Arnaud adorera"
-    if score >= 70: return "Arnaud aimera probablement"
-    if score >= 50: return "Arnaud pourrait aimer"
-    if score >= 30: return "Arnaud aimera peu"
-    return "Arnaud n'aimera probablement pas"
+    if score >= 85: return f"{INSTAGRAM_SENDER_NAME} adorera"
+    if score >= 70: return f"{INSTAGRAM_SENDER_NAME} aimera probablement"
+    if score >= 50: return f"{INSTAGRAM_SENDER_NAME} pourrait aimer"
+    if score >= 30: return f"{INSTAGRAM_SENDER_NAME} aimera peu"
+    return f"{INSTAGRAM_SENDER_NAME} n'aimera probablement pas"
 
 def _find_match(query: str, df: pd.DataFrame):
     if df.empty or not query.strip(): return None, 0
@@ -456,7 +456,7 @@ def _reco_section():
             html.P("Basé sur ton historique et 32M de notes MovieLens.", style={"color": "var(--text-muted)"})
         ]),
         html.Div(style={"maxWidth": "600px", "margin": "0 auto 48px", "display": "flex", "gap": "12px"}, children=[
-            dcc.Input(id="nf-reco-input", type="text", placeholder="Arnaud aimera-t-il le film...",
+            dcc.Input(id="nf-reco-input", type="text", placeholder=f"{INSTAGRAM_SENDER_NAME} aimera-t-il le film...",
                       style={"flex": "1", "background": "rgba(255,255,255,0.05)", "border": "1px solid rgba(255,255,255,0.1)", "borderRadius": "12px", "padding": "12px 20px", "color": "#fff"}),
             html.Button("Vérifier", id="nf-reco-btn", n_clicks=0, className="btn-primary", style={"background": NETFLIX_RED, "border": "none", "borderRadius": "12px", "padding": "0 24px", "color": "#fff", "fontWeight": "600"})
         ]),

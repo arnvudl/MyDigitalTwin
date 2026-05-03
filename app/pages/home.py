@@ -8,83 +8,10 @@ import re
 import pandas as pd
 from dash import Input, Output, callback, html, dcc, ALL
 from app.icons import svg_icon, MUSIC, FILM, SEARCH, TWITTER, PHONE
-from config import INSTAGRAM_TOPICS_PATH as IG_TOPICS_PATH, WAREHOUSE, X_PERSONALIZATION_PATH
+from config import INSTAGRAM_TOPICS_PATH as IG_TOPICS_PATH, WAREHOUSE, X_PERSONALIZATION_PATH, CATEGORY_KEYWORDS
 
 # ─── CONFIG ──────────────────────────────────────────────────────────────────
-# On vérifie si on est dans Docker (où les dossiers sont montés à la racine /app/data et /app/data/warehouse)
-# ou en local (où les dossiers sont dans le répertoire courant).
 DELTA_BASE = WAREHOUSE
-
-CATEGORY_KEYWORDS = {
-    "Sport": [
-        "football", "soccer", "nba", "match", "goal", "player", "arsenal", "champions",
-        "fifa", "ligue", "rugby", "tennis", "basketball", "sport", "ballon d'or", "ucl",
-        "premier league", "ufc", "mma", "boxing", "gym", "fitness", "workout", "calisthenics",
-        "training", "nfl", "olympics", "swimming", "cycling", "padel", "volleyball",
-        "champions league", "ligue 1"
-    ],
-    "Auto/Moto": [
-        "car", "auto", "voiture", "porsche", "ferrari", "lamborghini", "bmw", "mercedes",
-        "audi", "tesla", "f1", "formula 1", "supercar", "hypercar", "drift", "tuning",
-        "engine", "v8", "v12", "electric vehicle", "motorsport", "motorcycle", "moto",
-        "yamaha", "kawasaki", "mclaren", "bugatti", "aston martin", "jdm", "nissan",
-        "toyota", "supra", "rb26", "porsche 911", "rs6", "amg", "m performance", "ducati",
-        "harley", "grand prix"
-    ],
-    "Musique": [
-        "music", "song", "artist", "rap", "album", "track", "beat", "drill", "trap",
-        "afrobeat", "afropop", "rnb", "r&b", "hip", "hop", "streaming", "spotify",
-        "playlist", "concert", "festival", "lyrics", "producer", "instrumental", "pop",
-        "rock", "techno", "house", "electro", "low fi", "lo-fi", "jazz", "synth", "dj",
-        "remix", "type beat", "soundcloud", "rnboi", "l2b", "rema", "gazo", "freeze corleone",
-        "niska", "ninho", "dimitri vegas", "damso", "tiakola", "zamdane", "bezbar",
-        "travis scott", "bad bunny", "deejay", "frank ocean", "blaiz fayah", "mister v",
-        "team bs", "sexion", "shatta", "bouyon", "soca", "gouyad", "zouk"
-    ],
-    "Tech": [
-        "python", "code", "data", "dev", "javascript", "api", "ai", "software", "tech",
-        "developer", "engineering", "science", "consumer tech", "technology", "equipment",
-        "artificial intelligence", "machine learning", "deep learning", "nlp", "llm",
-        "pytorch", "tensorflow", "backend", "frontend", "fullstack", "react", "github",
-        "docker", "kubernetes", "cloud", "aws", "cybersecurity", "linux", "open source",
-        "startup", "computer science", "rust", "typescript", "chatgpt", "openai", "gpu",
-        "nvidia", "cuda", "mac"
-    ],
-    "Cinéma/Séries": [
-        "netflix", "film", "série", "movie", "episode", "cinema", "watch", "trailer",
-        "season", "tv", "show", "streaming", "anime", "manga", "crunchyroll", "hbo",
-        "prime video", "disney+", "marvel", "dc comics", "star wars", "oscars",
-        "documentary", "horror", "scifi", "animation", "otaku", "ghibli", "rick", "morty",
-        "jojo's bizarre", "bojack horseman", "naruto", "shippuden", "fairy tail", "jojo",
-        "baki", "boruto", "fullmetal", "one piece", "hunter", "demon slayer",
-        "attack on titan", "fullmetal alchemist", "rick morty"
-    ],
-    "Gaming": [
-        "game", "gaming", "play", "xbox", "ps5", "steam", "minecraft", "fortnite", "esport",
-        "gamer", "action game", "video game", "ar/vr", "nintendo", "switch", "twitch",
-        "discord", "multiplayer", "rpg", "fps", "roblox", "league of legends", "valorant",
-        "warzone", "gta", "elden ring", "zelda", "playstation", "controller",
-        "pc master race", "casino"
-    ],
-    "Actu/Société": [
-        "news", "actu", "society", "monde", "france", "afrique", "africa", "senegal",
-        "belgique", "politique", "cup of nations", "environment", "ecology", "climate",
-        "space", "nasa", "spacex", "economy", "finance", "crypto", "bitcoin", "ethereum",
-        "blockchain", "stock market", "history", "philosophy", "culture", "university"
-    ],
-    "Shopping": [
-        "amazon", "shop", "product", "électronique", "brand", "adidas", "nike", "fashion",
-        "streetwear", "sneakers", "yeezy", "jordan", "clothes", "outfit", "ecommerce",
-        "unboxing", "skincare", "watches", "apple", "iphone", "samsung", "gadget",
-        "deals", "dior", "louis vuitton", "stussy", "vintage", "airpods pro", "ralph lauren"
-    ],
-    "Photo/Créa": [
-        "photo", "photography", "design", "creative", "art", "visual", "camera", "image",
-        "graphic", "illustration", "photoshop", "lightroom", "editing", "video production",
-        "content creation", "youtube", "tiktok", "reels", "architecture", "interior design",
-        "digital art", "ui/ux", "portfolio", "3d modeling", "blender", "canva", "photopea"
-    ],
-}
 
 # ─── DELTA READER ────────────────────────────────────────────────────────────
 def _read_delta(table_name: str, cols: list) -> pd.DataFrame:
