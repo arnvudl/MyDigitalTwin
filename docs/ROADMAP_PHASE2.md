@@ -132,6 +132,12 @@ Transformer le projet d'un PoC local en un produit de données robuste, reproduc
     - [ ] **DVC (Data Version Control)** : Analyser le besoin de versionner les données pour une reproductibilité historique parfaite.
     - [ ] **Kedro** : Évaluer si la complexité des notebooks justifie une migration vers un framework de pipeline de données plus structuré.
 
+**6. Documentation**
+- **Objectif**: Documenter l'architecture de production et les décisions techniques.
+- **Tâches**:
+    - [ ] [PROD1.md](./PROD1.md) - Architecture de Production Cible.
+    - [ ] [PROD2.md](./PROD2.md) - Analyse des Coûts et Services.
+
 ---
 
 ## 2H — Refonte UI (Réflexion) ⏳ EN ATTENTE
