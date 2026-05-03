@@ -9,7 +9,7 @@
 user:
   # Votre nom tel qu'il apparaît dans les messages Instagram exportés
   instagram_sender_name: "Prénom Nom"
-  # Username Instagram (pour instaloader session)
+  # Votre username Instagram
   instagram_username: "votre_pseudo_instagram"
 
 # ── Graphe social Instagram ───────────────────────────────────────────────────

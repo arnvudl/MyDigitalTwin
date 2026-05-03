@@ -67,7 +67,6 @@ RUN pip3 install --no-cache-dir \
     pyyaml==6.0.2 \
     aiohttp \
     beautifulsoup4 \
-    instaloader \
     nest_asyncio \
     tda-mapper
 

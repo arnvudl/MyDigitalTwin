@@ -17,7 +17,6 @@ services:
       - ./spark-logs:/opt/spark/spark-events
       - ./config.py:/opt/spark/config.py
       - ./config.yaml:/opt/spark/config.yaml
-      - ./data/instaloader:/root/.config/instaloader
       - ./app/assets:/opt/spark/app/assets  # topology_data.json écrit par 02_graph.ipynb
     env_file:
       - .env.spark

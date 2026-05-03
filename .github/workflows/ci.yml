@@ -23,7 +23,7 @@ jobs:
       - name: Install Dependencies
         run: |
           python -m pip install --upgrade pip
-          pip install ruff pytest pandas python-dotenv pyyaml
+          pip install ruff pytest pandas pyarrow pandera python-dotenv pyyaml
 
       - name: Create minimal config.yaml for CI
         run: cp config.yaml.example config.yaml
@@ -36,3 +36,7 @@ jobs:
       - name: Run Unit Tests
         run: |
           pytest -m unit -v
+
+      - name: Run Data Quality Tests (Pandera schemas)
+        run: |
+          pytest tests/data_quality/ -v --tb=short
