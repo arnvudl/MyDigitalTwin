@@ -37,7 +37,7 @@ up:
 
 down:
 	docker compose down --rmi all
-	rm -rf data/output && rm -rf warehouse
+	rm -rf data/output
 
 dev:
 	docker exec -it spark-master bash

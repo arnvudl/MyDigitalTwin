@@ -56,3 +56,6 @@ scipy==1.17.1
 # ── Test ─────────────────────────────────
 pytest
 pandera
+
+# ── Templating projet (onboarding nouvel utilisateur) ─────────────────────────
+copier
