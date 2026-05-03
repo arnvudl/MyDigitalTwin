@@ -42,6 +42,8 @@ opérations I/O coûteuses.
 | `tiktok_comments` | `user_data_tiktok.json` | `(text, timestamp_ms)` |
 | `tiktok_messages_meta` | `user_data_tiktok.json` | `(conv_id, sender_anon, timestamp_ms)` |
 | `tiktok_messages_text` | `user_data_tiktok.json` | `(text, timestamp_ms)` |
+| `tiktok_favorite_hashtags` | `user_data_tiktok.json` | `hashtag` | Petite table statique, pas de timestamp. |
+| `tiktok_ads_interests` | `user_data_tiktok.json` | `category` | Petite table statique, pas de timestamp. |
 
 ### Twitter/X
 | Table | Source | Clé de Déduplication / Upsert | Remarques |
