@@ -183,3 +183,5 @@ instaloader/
 
 # Backup files
 *.bak
+
+.idea/
