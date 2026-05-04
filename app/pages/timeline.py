@@ -5,6 +5,8 @@ import pandas as pd
 import plotly.express as px
 import dash
 from dash import dcc, html, Input, Output, callback, ALL
+import dash_mantine_components as dmc
+from dash_iconify import DashIconify
 from app.icons import svg_icon, FOLDER
 from dash.exceptions import PreventUpdate
 from functools import lru_cache
@@ -168,8 +170,8 @@ def render_page(year, month_idx, week_start_str):
     if month_idx is None:
         header = html.Div(className="home-hero",
                           style={"textAlign": "center", "marginBottom": "60px"}, children=[
-            html.Div("Chronologie numérique", className="home-hero-label"),
-            html.H1([html.Em("Timeline"), f" {year}"], className="home-hero-title"),
+            dmc.Text("Chronologie numérique", className="home-hero-label"),
+            dmc.Title([html.Em("Timeline"), f" {year}"], order=1, className="home-hero-title"),
             html.Div(className="filter-bar",
                      style={"marginTop": "30px", "display": "flex", "justifyContent": "center"},
                      children=[html.Div(className="filter-chips-row", children=[
@@ -185,10 +187,12 @@ def render_page(year, month_idx, week_start_str):
                 id={"type": "month-card", "index": i}, className="profile-card",
                 style={"cursor": "pointer", "padding": "40px 20px", "textAlign": "center"},
                 children=[
-                    html.Div(svg_icon(FOLDER, size="56"),
-                             style={"color": "var(--text-secondary)", "marginBottom": "15px"}),
-                    html.Div(name, className="profile-platform-name", style={"fontSize": "20px"}),
-                    html.Div(f"{count:,} act.".replace(",", "\u202f"), className="profile-count"),
+                    DashIconify(icon=FOLDER, width=56,
+                                style={"color": "var(--text-secondary)", "marginBottom": "15px"}),
+                    dmc.Text(name, className="profile-platform-name", fw=600,
+                             style={"fontSize": "20px"}),
+                    dmc.Text(f"{count:,} act.".replace(",", "\u202f"),
+                             className="profile-count", c="dimmed", size="sm"),
                 ]
             ))
         content = html.Div(className="clusters-grid",
@@ -204,7 +208,7 @@ def render_page(year, month_idx, week_start_str):
                           style={"textAlign": "left", "marginBottom": "40px"}, children=[
             html.Div("← Retour", id={"type": "nav-btn", "index": "back-year"},
                      className="nav-back-link"),
-            html.H1([html.Em(month_name), f" {year}"], className="home-hero-title"),
+            dmc.Title([html.Em(month_name), f" {year}"], order=1, className="home-hero-title"),
         ])
 
         df_m = df[df["month"] == month_idx].copy() if not df.empty else pd.DataFrame()
@@ -215,18 +219,19 @@ def render_page(year, month_idx, week_start_str):
             df_m.groupby("source").size().sort_values(ascending=False).head(8)
             if not df_m.empty else pd.Series(dtype=int)
         )
-        pills = html.Div(
-            style={"display": "flex", "gap": "8px", "flexWrap": "wrap", "marginBottom": "28px"},
+        pills = dmc.Group(
+            gap="xs",
+            style={"marginBottom": "28px"},
             children=[
-                html.Span(
+                dmc.Badge(
                     f"{s}  {c:,}".replace(",", "\u202f"),
+                    variant="light",
+                    size="sm",
                     style={
-                        "fontSize": "0.72rem", "padding": "4px 12px", "borderRadius": "999px",
                         "background": f"{COLOR_MAP.get(s,'#888')}18",
                         "color": COLOR_MAP.get(s, "#aaa"),
                         "border": f"1px solid {COLOR_MAP.get(s,'#aaa')}55",
-                        "fontWeight": "500",
-                    }
+                    },
                 )
                 for s, c in source_counts.items()
             ]
@@ -292,7 +297,7 @@ def render_page(year, month_idx, week_start_str):
                       style={"textAlign": "left", "marginBottom": "40px"}, children=[
         html.Div("← Retour au mois", id={"type": "nav-btn", "index": "back-month"},
                  className="nav-back-link"),
-        html.H1([html.Em(label)], className="home-hero-title"),
+        dmc.Title([html.Em(label)], order=1, className="home-hero-title"),
     ])
 
     if df.empty:
@@ -363,15 +368,15 @@ def render_page(year, month_idx, week_start_str):
         stats,
         html.Div(className="clusters-grid",
                  style={"gridTemplateColumns": "1fr 1fr", "gap": "30px", "width": "100%"}, children=[
-            html.Div(className="stat-card",
+            dmc.Card(withBorder=True, radius="md", className="stat-card",
                      style={"gridColumn": "span 2", "height": "440px", "padding": "20px"},
                      children=[dcc.Graph(figure=fig_daily, responsive=True,
                                         style={"width": "100%", "height": "100%"})]),
-            html.Div(className="stat-card",
+            dmc.Card(withBorder=True, radius="md", className="stat-card",
                      style={"height": "340px", "padding": "20px"},
                      children=[dcc.Graph(figure=fig_hour, responsive=True,
                                         style={"width": "100%", "height": "100%"})]),
-            html.Div(className="stat-card",
+            dmc.Card(withBorder=True, radius="md", className="stat-card",
                      style={"height": "340px", "padding": "20px"},
                      children=[dcc.Graph(figure=fig_src, responsive=True,
                                         style={"width": "100%", "height": "100%"})]),
@@ -385,7 +390,7 @@ def _stat_card(value, label, color):
         className="stat-card",
         style={"padding": "20px", "textAlign": "center"},
         children=[
-            html.Div(value, style={"fontSize": "1.9rem", "fontWeight": "700", "color": color}),
-            html.Div(label, style={"fontSize": "0.78rem", "color": "var(--text-secondary)", "marginTop": "4px"}),
+            dmc.Text(value, fw=700, style={"fontSize": "1.9rem", "color": color}),
+            dmc.Text(label, size="xs", c="dimmed", style={"marginTop": "4px"}),
         ]
     )

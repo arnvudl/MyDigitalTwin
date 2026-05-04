@@ -10,20 +10,19 @@ import tempfile
 from datetime import datetime
 
 import pandas as pd
+import dash_mantine_components as dmc
 from dash import Input, Output, State, callback, dcc, html, no_update, ALL
+from dash_iconify import DashIconify
 from config import WAREHOUSE, INSTAGRAM_SENDER_NAME
 
 # ─── CONFIG ──────────────────────────────────────────────────────────────────
 DELTA_BASE = WAREHOUSE
 
-from app.icons import svg_icon, CHAT, SEARCH, MUSIC
-_svg_chat   = svg_icon(CHAT)
-_svg_search = svg_icon(SEARCH)
-_svg_music  = svg_icon(MUSIC)
+from app.icons import CHAT, SEARCH, MUSIC
 SOURCES_OPTIONS = [
-    {"id": "verbe",       "label": "Le Verbe",      "desc": "Messages TikTok + Instagram",           "icon": _svg_chat},
-    {"id": "inconscient", "label": "L'Inconscient",  "desc": "Recherches Google & YouTube",           "icon": _svg_search},
-    {"id": "emotionnel",  "label": "L'Émotionnel",   "desc": "Spotify, Netflix, TikTok Watch",        "icon": _svg_music},
+    {"id": "verbe",       "label": "Le Verbe",      "desc": "Messages TikTok + Instagram",           "icon": DashIconify(icon=CHAT,   width=20)},
+    {"id": "inconscient", "label": "L'Inconscient",  "desc": "Recherches Google & YouTube",           "icon": DashIconify(icon=SEARCH, width=20)},
+    {"id": "emotionnel",  "label": "L'Émotionnel",   "desc": "Spotify, Netflix, TikTok Watch",        "icon": DashIconify(icon=MUSIC,  width=20)},
 ]
 
 
@@ -73,8 +72,8 @@ def _step1_layout(start_date, end_date) -> html.Div:
     s = start_date or "2024-01-01"
     e = end_date or datetime.now().strftime("%Y-%m-%d")
     return html.Div([
-        html.H3("Cadre Temporel", className="psy-section-title"),
-        html.P("Sélectionne la période à analyser pour ton dossier.", className="psy-section-desc"),
+        dmc.Title("Cadre Temporel", order=3, className="psy-section-title"),
+        dmc.Text("Sélectionne la période à analyser pour ton dossier.", className="psy-section-desc", size="sm", c="dimmed"),
         html.Div(className="psy-date-row", children=[
             html.Div([
                 html.Label("Début", className="filter-label"),
@@ -106,14 +105,7 @@ def _step2_layout(selected_sources=None) -> html.Div:
     if selected_sources is None:
         selected_sources = ["verbe", "inconscient", "emotionnel"]
 
-    instagram_notice = html.Div(
-        style={
-            "background": "rgba(124,90,246,0.07)",
-            "border": "1px solid rgba(124,90,246,0.25)",
-            "borderRadius": "10px", "padding": "12px 16px",
-            "fontSize": "12px", "color": "rgba(255,255,255,0.55)",
-            "marginBottom": "14px", "lineHeight": "1.6",
-        },
+    instagram_notice = dmc.Alert(
         children=[
             html.Span("Instagram — ", style={"color": "#7c5af6", "fontWeight": "700"}),
             "Pour inclure tes conversations Instagram complètes, exporte-les depuis le dashboard Instagram "
@@ -121,6 +113,9 @@ def _step2_layout(selected_sources=None) -> html.Div:
             html.Code("data/Analyse comportementaliste/", style={"fontSize": "11px", "color": "#7c5af6"}),
             " avant de générer.",
         ],
+        color="violet",
+        variant="light",
+        style={"marginBottom": "14px", "fontSize": "12px"},
     )
 
     source_cards = []
@@ -151,8 +146,8 @@ def _step2_layout(selected_sources=None) -> html.Div:
             )
         )
     return html.Div([
-        html.H3("Choix des Sources", className="psy-section-title"),
-        html.P("Clique pour sélectionner les dimensions de ta vie numérique à inclure.", className="psy-section-desc"),
+        dmc.Title("Choix des Sources", order=3, className="psy-section-title"),
+        dmc.Text("Clique pour sélectionner les dimensions de ta vie numérique à inclure.", className="psy-section-desc", size="sm", c="dimmed"),
         instagram_notice,
         html.Div(source_cards, className="psy-source-list"),
     ])
@@ -167,8 +162,8 @@ def _step3_layout(anon_value) -> html.Div:
         "cursor": "pointer",
     }
     return html.Div([
-        html.H3("Filtre de Confidentialité", className="psy-section-title"),
-        html.P("Tes données restent chez toi. Ce filtre aide à l'anonymisation.", className="psy-section-desc"),
+        dmc.Title("Filtre de Confidentialité", order=3, className="psy-section-title"),
+        dmc.Text("Tes données restent chez toi. Ce filtre aide à l'anonymisation.", className="psy-section-desc", size="sm", c="dimmed"),
         html.Div([
             html.Div(style=option_style, children=[
                 dcc.Checklist(
@@ -189,8 +184,8 @@ def _step3_layout(anon_value) -> html.Div:
 
 def _step4_layout() -> html.Div:
     return html.Div([
-        html.H3("Génération du Dossier", className="psy-section-title"),
-        html.P("Prêt pour l'analyse. Le dossier sera téléchargé directement sur ton ordinateur.", className="psy-section-desc"),
+        dmc.Title("Génération du Dossier", order=3, className="psy-section-title"),
+        dmc.Text("Prêt pour l'analyse. Le dossier sera téléchargé directement sur ton ordinateur.", className="psy-section-desc", size="sm", c="dimmed"),
         html.Div(id="psy-generate-result"),
         html.Button(
             children=["Générer et Télécharger"],
@@ -212,21 +207,18 @@ def layout() -> html.Div:
         children=[
             # Header
             html.Div(className="psy-header", children=[
-                html.Div("Analyse Comportementale", className="psy-label"),
-                html.H1("Dossier Comportemental Numérique", className="psy-title"),
-                html.P(
+                dmc.Text("Analyse Comportementale", className="psy-label", size="sm", c="dimmed"),
+                dmc.Title("Dossier Comportemental Numérique", order=1, className="psy-title"),
+                dmc.Text(
                     "Génère un package structuré pour analyser tes patterns numériques avec un LLM.",
                     className="psy-subtitle",
+                    size="sm",
                 ),
-                html.Div(
-                    style={
-                        "background": "rgba(255,255,255,0.04)",
-                        "border": "1px solid rgba(255,255,255,0.08)",
-                        "borderRadius": "10px", "padding": "12px 16px",
-                        "fontSize": "12px", "color": "rgba(255,255,255,0.45)",
-                        "marginTop": "12px", "lineHeight": "1.6",
-                    },
-                    children="Outil de réflexion assistée uniquement — pas un diagnostic clinique ni un suivi thérapeutique.",
+                dmc.Alert(
+                    "Outil de réflexion assistée uniquement — pas un diagnostic clinique ni un suivi thérapeutique.",
+                    color="gray",
+                    variant="light",
+                    style={"marginTop": "12px", "fontSize": "12px"},
                 ),
             ]),
 
@@ -463,23 +455,21 @@ def generate_package(n_clicks, start, end, sources, anon_names_val):
 
     filename = f"Analyse_Comportementale_{start[:10]}_{end[:10]}.zip"
 
-    success_card = html.Div(
-        style={
-            "background": "rgba(124,90,246,0.1)",
-            "border": "1px solid rgba(124, 90, 246, 0.4)",
-            "borderRadius": "14px", "padding": "20px 24px",
-            "marginBottom": "20px",
-        },
+    success_card = dmc.Card(
+        withBorder=True,
+        radius="md",
+        p="lg",
+        style={"marginBottom": "20px"},
         children=[
-            html.Div("✓ DOSSIER PRÊT", style={
-                "fontSize": "11px", "fontWeight": "700", "letterSpacing": "2px",
-                "color": "#7c5af6", "marginBottom": "8px",
-            }),
-            html.P("Ton dossier comportemental a été généré et le téléchargement a commencé.", style={
-                "color": "#fff", "fontWeight": "600", "marginBottom": "12px",
-            }),
-            html.P("Si le téléchargement ne se lance pas automatiquement, vérifie tes réglages de navigateur.",
-                   style={"color": "rgba(255,255,255,0.5)", "fontSize": "12px", "marginBottom": "16px"}),
+            dmc.Group(mb="xs", children=[
+                DashIconify(icon="tabler:circle-check", width=20, color="#7c5af6"),
+                dmc.Badge("DOSSIER PRÊT", color="violet", variant="light", style={"letterSpacing": "2px"}),
+            ]),
+            dmc.Text("Ton dossier comportemental a été généré et le téléchargement a commencé.", fw=600, mb="xs"),
+            dmc.Text(
+                "Si le téléchargement ne se lance pas automatiquement, vérifie tes réglages de navigateur.",
+                size="xs", c="dimmed", mb="md",
+            ),
             html.Ol(style={"color": "rgba(255,255,255,0.7)", "fontSize": "14px",
                            "lineHeight": "1.8", "paddingLeft": "20px"}, children=[
                 html.Li("Ouvre ton LLM (Gemini 2.5 Pro, GPT-4o, Claude…)"),

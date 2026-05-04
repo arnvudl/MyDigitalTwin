@@ -4,6 +4,7 @@ sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')
 
 import threading
 import dash
+import dash_mantine_components as dmc
 from dash import Input, Output, callback, dcc, html
 
 from app.components import create_navbar
@@ -59,12 +60,26 @@ def serve_photo(filepath):
     return _send_file(full_path)
 
 # ─── ROOT LAYOUT ──────────────────────────────────────────────────────────────
-app.layout = html.Div(
-    children=[
-        dcc.Location(id="url", refresh=False),
-        html.Div(id="navbar-container"),
-        html.Div(id="page-content"),
-    ]
+app.layout = dmc.MantineProvider(
+    theme={
+        "colorScheme": "dark",
+        "primaryColor": "violet",
+        "fontFamily": "-apple-system, BlinkMacSystemFont, 'Inter', 'Segoe UI', Roboto, sans-serif",
+        "colors": {
+            "dark": [
+                "#C1C2C5", "#A6A7AB", "#909296", "#5C5F66",
+                "#373A40", "#2C2E33", "#25262B", "#1A1B1E",
+                "#141517", "#101113",
+            ],
+        },
+    },
+    children=html.Div(
+        children=[
+            dcc.Location(id="url", refresh=False),
+            html.Div(id="navbar-container"),
+            html.Div(id="page-content"),
+        ]
+    ),
 )
 
 

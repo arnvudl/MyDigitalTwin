@@ -6,8 +6,10 @@ from functools import lru_cache
 import re
 
 import pandas as pd
+import dash_mantine_components as dmc
 from dash import Input, Output, callback, html, dcc, ALL
-from app.icons import svg_icon, MUSIC, FILM, SEARCH, TWITTER, PHONE
+from dash_iconify import DashIconify
+from app.icons import icon, MUSIC, FILM, SEARCH, TWITTER, PHONE
 from config import INSTAGRAM_TOPICS_PATH as IG_TOPICS_PATH, WAREHOUSE, X_PERSONALIZATION_PATH, CATEGORY_KEYWORDS
 
 # ─── CONFIG ──────────────────────────────────────────────────────────────────
@@ -306,11 +308,11 @@ def layout():
     tags  = build_orbit_tags(data)
 
     stats_cards = [
-        {"icon": svg_icon(MUSIC),   "value": f"{stats['artistes']:,}", "label": "Artistes écoutés"},
-        {"icon": svg_icon(FILM),    "value": f"{stats['films']:,}",    "label": "Contenus Netflix"},
-        {"icon": svg_icon(SEARCH),  "value": f"{stats['recherches']:,}", "label": "Recherches Google"},
-        {"icon": svg_icon(TWITTER), "value": f"{stats['tweets']:,}",   "label": "Tweets postés"},
-        {"icon": svg_icon(PHONE),   "value": str(len(data["scores"])), "label": "Centres d'intérêt"},
+        {"icon": MUSIC,   "value": f"{stats['artistes']:,}", "label": "Artistes écoutés"},
+        {"icon": FILM,    "value": f"{stats['films']:,}",    "label": "Contenus Netflix"},
+        {"icon": SEARCH,  "value": f"{stats['recherches']:,}", "label": "Recherches Google"},
+        {"icon": TWITTER, "value": f"{stats['tweets']:,}",   "label": "Tweets postés"},
+        {"icon": PHONE,   "value": str(len(data["scores"])), "label": "Centres d'intérêt"},
     ]
 
     return html.Div(className="page-wrapper", children=[
@@ -335,14 +337,40 @@ def layout():
                 *tags,
             ]),
 
-            # Stats
-            html.Div(className="stats-row", children=[
-                html.Div(className="stat-card", children=[
-                    html.Div(s["icon"], className="stat-icon"),
-                    html.Div(s["value"], className="stat-value"),
-                    html.Div(s["label"], className="stat-label"),
-                ]) for s in stats_cards
-            ]),
+            # Stats — DMC SimpleGrid + Cards
+            dmc.SimpleGrid(
+                cols={"base": 2, "sm": 3, "lg": 5},
+                spacing="md",
+                className="stats-row",
+                children=[
+                    dmc.Card(
+                        withBorder=True,
+                        radius="md",
+                        className="stat-card",
+                        children=[
+                            dmc.Group(
+                                gap="sm",
+                                align="center",
+                                children=[
+                                    dmc.ThemeIcon(
+                                        DashIconify(icon=s["icon"], width=20),
+                                        size="lg",
+                                        radius="md",
+                                        variant="light",
+                                        color="violet",
+                                        className="stat-icon",
+                                    ),
+                                    html.Div([
+                                        dmc.Text(s["value"], fw=700, size="xl", className="stat-value"),
+                                        dmc.Text(s["label"], size="xs", c="dimmed", className="stat-label"),
+                                    ]),
+                                ],
+                            ),
+                        ],
+                    )
+                    for s in stats_cards
+                ],
+            ),
 
             # Detail panel
             html.Div(id="home-detail-panel", children=[]),
@@ -388,19 +416,46 @@ def update_detail_panel(tag_id):
                 1 for topic in data["raw_topics"] if tag_id.lower() in topic.lower()
             )
 
-    return html.Div(className="detail-panel", children=[
-        html.Div(className="detail-panel-title", children=[
-            cat,
-            html.Span(f"  {score:,} occurrences",
-                      style={"fontSize": "13px", "fontWeight": "400", "color": "var(--text-muted)"}),
-        ]),
-        html.Div(className="detail-chips", children=[
-            html.Span(e, className="detail-chip") for e in ex_list
-        ]),
-        html.Div(
-            "Sources : K-Means · YouTube · Google · Spotify · Netflix"
-            if is_kmeans else
-            "Sources : Instagram Topics · X Personalization",
-            className="detail-source"
-        ),
-    ])
+    source_text = (
+        "Sources : K-Means · YouTube · Google · Spotify · Netflix"
+        if is_kmeans else
+        "Sources : Instagram Topics · X Personalization"
+    )
+
+    return dmc.Card(
+        withBorder=True,
+        radius="lg",
+        className="detail-panel",
+        children=[
+            dmc.Group(
+                gap="xs",
+                align="center",
+                mb="sm",
+                children=[
+                    dmc.Text(cat, fw=600, size="lg", className="detail-panel-title"),
+                    dmc.Badge(
+                        f"{score:,} occurrences",
+                        variant="light",
+                        color="violet",
+                        radius="sm",
+                    ),
+                ],
+            ),
+            dmc.Group(
+                gap="xs",
+                wrap="wrap",
+                className="detail-chips",
+                children=[
+                    dmc.Badge(
+                        e,
+                        variant="outline",
+                        color="gray",
+                        radius="sm",
+                        className="detail-chip",
+                    )
+                    for e in ex_list
+                ],
+            ),
+            dmc.Text(source_text, size="xs", c="dimmed", mt="sm", className="detail-source"),
+        ],
+    )
