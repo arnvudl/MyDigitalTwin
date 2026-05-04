@@ -5,6 +5,8 @@ WORKDIR /app
 # ── Dashboard deps uniquement (pas de torch/pyspark/ML lourd) ─────────────────
 RUN pip install --no-cache-dir \
     dash==4.1.0 \
+    dash-mantine-components==0.15.3 \
+    dash-iconify==0.1.2 \
     Flask==3.1.3 \
     plotly==6.6.0 \
     pandas==3.0.2 \

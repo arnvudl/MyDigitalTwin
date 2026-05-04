@@ -4,6 +4,8 @@ from functools import lru_cache
 
 import pandas as pd
 from dash import ALL, Input, Output, State, callback, dcc, html
+import dash_mantine_components as dmc
+from dash_iconify import DashIconify
 from app.icons import svg_icon, PUZZLE
 from config import APP_ASSETS_DIR, WAREHOUSE
 
@@ -171,15 +173,16 @@ def _build_card(row: pd.Series, max_count: int, dimmed: bool = False) -> html.Di
         ]),
 
         # ── Meta badges ───────────────────────────────────────────────────────
-        html.Div(className="profile-meta", children=[
-            html.Span(time_per,           className="profile-meta-tag"),
-            html.Span(day_type,           className="profile-meta-tag"),
-            html.Span(_fmt_hour(avg_hour), className="profile-meta-tag"),
+        dmc.Group(className="profile-meta", gap="xs", children=[
+            dmc.Badge(time_per,            variant="light", size="sm", className="profile-meta-tag"),
+            dmc.Badge(day_type,            variant="light", size="sm", className="profile-meta-tag"),
+            dmc.Badge(_fmt_hour(avg_hour), variant="light", size="sm", className="profile-meta-tag"),
         ]),
 
         # ── Plateformes ───────────────────────────────────────────────────────
-        html.Div(className="profile-platforms", children=[
-            html.Span(p.capitalize(), className="profile-platform-chip")
+        dmc.Group(className="profile-platforms", gap="xs", children=[
+            dmc.Badge(p.capitalize(), variant="outline", size="xs", className="profile-platform-chip",
+                      style={"borderColor": accent, "color": accent})
             for p in platforms
         ]),
 
@@ -303,12 +306,9 @@ def layout():
     if df.empty:
         return html.Div(className="page-wrapper", children=[
             html.Div(className="page-empty-state", children=[
-                html.Div(svg_icon(PUZZLE, size="56"), style={"color": "var(--text-secondary)"}),
-                html.H2("Profils comportementaux",
-                        style={"fontSize": "28px", "fontWeight": "700",
-                               "color": "var(--text-primary)"}),
-                html.P("Lance d'abord 03_fusion_visualization.ipynb.",
-                       style={"fontSize": "14px", "color": "var(--text-secondary)"}),
+                DashIconify(icon=PUZZLE, width=56, style={"color": "var(--text-secondary)"}),
+                dmc.Title("Profils comportementaux", order=2),
+                dmc.Text("Lance d'abord 03_fusion_visualization.ipynb.", c="dimmed", size="sm"),
             ])
         ])
 
@@ -316,15 +316,17 @@ def layout():
         html.Div(className="clusters-container", children=[
 
             html.Div(className="home-hero", children=[
-                html.P("Analyse comportementale • 6 profils", className="home-hero-label"),
-                html.H1(
+                dmc.Text("Analyse comportementale • 6 profils", className="home-hero-label"),
+                dmc.Title(
                     html.Span(["Profils ", html.Em("Comportementaux")]),
+                    order=1,
                     className="home-hero-title",
                     style={"fontSize": "56px"},
                 ),
-                html.P(
+                dmc.Text(
                     "Comment, quand et sur quelle plateforme tu consommes du contenu.",
                     className="home-hero-sub",
+                    c="dimmed",
                 ),
             ]),
 

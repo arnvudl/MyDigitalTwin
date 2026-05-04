@@ -19,7 +19,9 @@ from functools import lru_cache
 from urllib.parse import quote
 
 import pandas as pd
+import dash_mantine_components as dmc
 from dash import html
+from dash_iconify import DashIconify
 from config import (
     MEMORY_ALBUM_DIR,
     DATA_ROOT,
@@ -222,15 +224,25 @@ def _fmt_date(ts) -> str:
 def _empty_state() -> html.Div:
     return html.Div(className='page-wrapper', children=[
         html.Div(className='page-empty-state', children=[
-            html.H2('Memory Album', style={'color': '#fff'}),
-            html.P("Lance d'abord les notebooks 03_memory_album/ dans l'ordre.",
-                   style={'color': 'rgba(255,255,255,0.5)'}),
-            html.Ol([
-                html.Li('01_visual_embeddings.ipynb'),
-                html.Li('02_scene_clustering.ipynb'),
-                html.Li('03_music_matching.ipynb'),
-            ], style={'color': ACCENT, 'textAlign': 'left',
-                      'maxWidth': '320px', 'margin': '12px auto 0'}),
+            dmc.ThemeIcon(
+                DashIconify(icon="tabler:photo-heart", width=40),
+                size=80, radius="xl", variant="light", color="violet",
+                mb="lg",
+            ),
+            dmc.Title('Memory Album', order=2, mb="sm"),
+            dmc.Text(
+                "Lance d'abord les notebooks 03_memory_album/ dans l'ordre.",
+                c="dimmed", mb="md",
+            ),
+            dmc.List(
+                spacing="xs",
+                children=[
+                    dmc.ListItem('01_visual_embeddings.ipynb'),
+                    dmc.ListItem('02_scene_clustering.ipynb'),
+                    dmc.ListItem('03_music_matching.ipynb'),
+                ],
+                style={'color': ACCENT, 'textAlign': 'left', 'maxWidth': '320px', 'margin': '0 auto'},
+            ),
         ])
     ])
 
@@ -492,20 +504,18 @@ def layout() -> html.Div:
         children=[
             # ── En-tête global ────────────────────────────────────────────────
             html.Div(style={'marginBottom': '52px'}, children=[
-                html.Div('MEMORY ALBUM', style={
-                    'fontSize': '11px', 'fontWeight': '700',
-                    'letterSpacing': '0.2em', 'color': ACCENT, 'marginBottom': '8px',
-                }),
-                html.H1('Mes scènes de vie', style={
-                    'fontSize': '40px', 'fontWeight': '800', 'color': '#fff',
-                    'margin': '0 0 6px', 'fontFamily': 'Georgia, serif', 'lineHeight': '1.1',
-                }),
-                html.Div(date_range, style={
-                    'fontSize': '15px', 'color': 'rgba(255,255,255,0.4)',
-                    'marginBottom': '24px',
-                }) if date_range else html.Span(),
-                html.Div(
-                    style={'display': 'flex', 'gap': '32px'},
+                dmc.Text(
+                    'MEMORY ALBUM',
+                    size='xs', fw=700, c='violet',
+                    style={'letterSpacing': '0.2em', 'marginBottom': '8px'},
+                ),
+                dmc.Title(
+                    'Mes scènes de vie', order=1,
+                    style={'fontFamily': 'Georgia, serif', 'marginBottom': '6px'},
+                ),
+                dmc.Text(date_range, c='dimmed', size='md', mb='xl') if date_range else html.Span(),
+                dmc.Group(
+                    gap='xl',
                     children=[
                         _stat_block(str(len(scenes)), 'moments'),
                         _stat_block(str(n_photos),    'photos'),
@@ -520,12 +530,10 @@ def layout() -> html.Div:
 
 
 def _stat_block(value: str, label: str) -> html.Div:
-    return html.Div([
-        html.Div(value, style={
-            'fontSize': '28px', 'fontWeight': '800', 'color': '#fff', 'lineHeight': '1',
-        }),
-        html.Div(label, style={
-            'fontSize': '11px', 'color': 'rgba(255,255,255,0.38)',
-            'marginTop': '2px', 'letterSpacing': '0.05em',
-        }),
-    ])
+    return dmc.Stack(
+        gap=2,
+        children=[
+            dmc.Text(value, size='xl', fw=800, lh=1),
+            dmc.Text(label, size='xs', c='dimmed', style={'letterSpacing': '0.05em'}),
+        ]
+    )

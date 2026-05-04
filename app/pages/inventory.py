@@ -1,4 +1,6 @@
+import dash_mantine_components as dmc
 from dash import html, dcc
+from dash_iconify import DashIconify
 
 # ─── DATA LINEAGE ─────────────────────────────────────────────────────────────
 # Statuts : "full" = ingéré + page dashboard | "ingested" = ingéré, pas de page
@@ -101,10 +103,10 @@ PLATFORMS = [
 ]
 
 STATUS_CONFIG = {
-    "full":     {"label": "Visualisé",    "color": "#15803d", "bg": "#dcfce7"},
-    "partial":  {"label": "Partiel",      "color": "#92400e", "bg": "#fef3c7"},
-    "ingested": {"label": "Ingéré",       "color": "#1d4ed8", "bg": "#dbeafe"},
-    "missing":  {"label": "Non ingéré",   "color": "#9f1239", "bg": "#ffe4e6"},
+    "full":     {"label": "Visualisé",    "dmc_color": "green"},
+    "partial":  {"label": "Partiel",      "dmc_color": "yellow"},
+    "ingested": {"label": "Ingéré",       "dmc_color": "blue"},
+    "missing":  {"label": "Non ingéré",   "dmc_color": "red"},
 }
 
 # ─── STATS ────────────────────────────────────────────────────────────────────
@@ -121,43 +123,53 @@ def _compute_stats():
 def layout():
     total, full, ingested, partial, missing = _compute_stats()
 
-    stat_cards = html.Div(
-        style={"display": "grid", "gridTemplateColumns": "repeat(4, 1fr)", "gap": "0.75rem", "marginBottom": "2rem"},
+    stat_cards = dmc.SimpleGrid(
+        cols=4,
+        spacing="md",
+        style={"marginBottom": "2rem"},
         children=[
-            _stat_card(str(full),     "Visualisés",  "#dcfce7", "#15803d"),
-            _stat_card(str(ingested), "Ingérés seulement", "#dbeafe", "#1d4ed8"),
-            _stat_card(str(partial),  "Partiels",    "#fef3c7", "#92400e"),
-            _stat_card(str(missing),  "Non ingérés", "#ffe4e6", "#9f1239"),
+            _stat_card(str(full),     "Visualisés",       "green"),
+            _stat_card(str(ingested), "Ingérés seulement","blue"),
+            _stat_card(str(partial),  "Partiels",         "yellow"),
+            _stat_card(str(missing),  "Non ingérés",      "red"),
         ]
     )
 
     platform_blocks = [_platform_block(p) for p in PLATFORMS]
 
     return html.Div(
-        style={"padding": "2rem", "maxWidth": "1100px", "margin": "0 auto", "fontFamily": "var(--font, Inter, sans-serif)"},
+        className="page-wrapper",
         children=[
             html.Div(
-                style={"marginBottom": "1.5rem"},
+                style={"padding": "2rem", "maxWidth": "1100px", "margin": "0 auto"},
                 children=[
-                    html.H1("Inventaire des données", style={"fontSize": "1.4rem", "fontWeight": "600", "marginBottom": "0.25rem"}),
-                    html.P(
-                        f"{total} sources · {full} visualisées · {missing} non ingérées",
-                        style={"color": "var(--text-muted, #64748b)", "fontSize": "0.9rem"}
-                    ),
+                    dmc.Stack(gap="xs", mb="lg", children=[
+                        dmc.Group(children=[
+                            DashIconify(icon="tabler:package", width=24),
+                            dmc.Title("Inventaire des données", order=1,
+                                      style={"fontSize": "1.4rem", "fontWeight": "600"}),
+                        ]),
+                        dmc.Text(
+                            f"{total} sources · {full} visualisées · {missing} non ingérées",
+                            size="sm", c="dimmed",
+                        ),
+                    ]),
+                    stat_cards,
+                    dmc.Stack(gap="md", children=platform_blocks),
                 ]
             ),
-            stat_cards,
-            html.Div(children=platform_blocks),
         ]
     )
 
 
-def _stat_card(number, label, bg, fg):
-    return html.Div(
-        style={"background": bg, "borderRadius": "10px", "padding": "1rem 1.25rem"},
+def _stat_card(number, label, color):
+    return dmc.Card(
+        withBorder=True,
+        radius="md",
+        p="md",
         children=[
-            html.Div(number, style={"fontSize": "2rem", "fontWeight": "700", "color": fg, "lineHeight": "1"}),
-            html.Div(label,  style={"fontSize": "0.78rem", "fontWeight": "500", "color": fg, "marginTop": "4px", "opacity": "0.85"}),
+            dmc.Text(number, size="xl", fw=700, c=color, style={"fontSize": "2rem", "lineHeight": "1"}),
+            dmc.Text(label, size="xs", fw=500, c="dimmed", mt=4),
         ]
     )
 
@@ -166,28 +178,21 @@ def _platform_block(platform):
     rows = []
     for src in platform["sources"]:
         cfg = STATUS_CONFIG[src["status"]]
-        badge = html.Span(
+        badge = dmc.Badge(
             cfg["label"],
-            style={
-                "fontSize": "0.7rem", "fontWeight": "600",
-                "padding": "2px 8px", "borderRadius": "999px",
-                "background": cfg["bg"], "color": cfg["color"],
-                "whiteSpace": "nowrap",
-            }
+            color=cfg["dmc_color"],
+            variant="light",
+            size="sm",
+            radius="xl",
         )
 
-        pages_chips = html.Div(
-            style={"display": "flex", "gap": "4px", "flexWrap": "wrap"},
+        pages_chips = dmc.Group(
+            gap=4,
+            wrap="wrap",
             children=[
-                html.Span(
-                    p,
-                    style={
-                        "fontSize": "0.68rem", "padding": "2px 7px", "borderRadius": "999px",
-                        "background": "#f1f5f9", "color": "#475569", "fontWeight": "500",
-                    }
-                )
+                dmc.Badge(p, variant="outline", size="xs", radius="xl", color="gray")
                 for p in src["pages"]
-            ] or [html.Span("—", style={"color": "#cbd5e1", "fontSize": "0.75rem"})]
+            ] or [dmc.Text("—", size="xs", c="dimmed")],
         )
 
         rows.append(
@@ -198,39 +203,32 @@ def _platform_block(platform):
                     "alignItems": "center",
                     "gap": "1rem",
                     "padding": "0.6rem 0",
-                    "borderBottom": "1px solid #f1f5f9",
+                    "borderBottom": "1px solid rgba(255,255,255,0.06)",
                 },
                 children=[
-                    html.Span(src["name"], style={"fontSize": "0.82rem", "fontFamily": "monospace", "color": "#334155"}),
+                    dmc.Text(src["name"], size="sm", style={"fontFamily": "monospace"}),
                     badge,
                     pages_chips,
                 ]
             )
         )
 
-    return html.Div(
-        style={
-            "background": "#fff",
-            "border": "1px solid #e4e8ef",
-            "borderRadius": "12px",
-            "padding": "1.25rem 1.5rem",
-            "marginBottom": "1rem",
-            "borderLeft": f"4px solid {platform['color']}",
-        },
+    return dmc.Card(
+        withBorder=True,
+        radius="md",
+        p="lg",
+        style={"borderLeft": f"4px solid {platform['color']}"},
         children=[
-            html.Div(
-                style={"display": "flex", "alignItems": "center", "gap": "0.6rem", "marginBottom": "0.75rem"},
-                children=[
-                    html.Span(platform["emoji"], style={"fontSize": "1.2rem"}),
-                    html.Span(platform["name"], style={"fontWeight": "600", "fontSize": "1rem"}),
-                ]
-            ),
+            dmc.Group(mb="md", children=[
+                html.Span(platform["emoji"], style={"fontSize": "1.2rem"}),
+                dmc.Text(platform["name"], fw=600, size="md"),
+            ]),
             html.Div(
                 style={"display": "grid", "gridTemplateColumns": "1fr 120px 1fr", "gap": "1rem", "marginBottom": "0.5rem"},
                 children=[
-                    html.Span("Source", style={"fontSize": "0.7rem", "fontWeight": "600", "color": "#94a3b8", "textTransform": "uppercase", "letterSpacing": "0.05em"}),
-                    html.Span("Statut",  style={"fontSize": "0.7rem", "fontWeight": "600", "color": "#94a3b8", "textTransform": "uppercase", "letterSpacing": "0.05em"}),
-                    html.Span("Pages",   style={"fontSize": "0.7rem", "fontWeight": "600", "color": "#94a3b8", "textTransform": "uppercase", "letterSpacing": "0.05em"}),
+                    dmc.Text("Source", size="xs", fw=600, c="dimmed", tt="uppercase"),
+                    dmc.Text("Statut", size="xs", fw=600, c="dimmed", tt="uppercase"),
+                    dmc.Text("Pages",  size="xs", fw=600, c="dimmed", tt="uppercase"),
                 ]
             ),
             html.Div(children=rows),

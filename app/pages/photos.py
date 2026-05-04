@@ -4,7 +4,9 @@ from urllib.parse import quote
 
 import pandas as pd
 import plotly.express as px
+import dash_mantine_components as dmc
 from dash import Input, Output, callback, dcc, html
+from dash_iconify import DashIconify
 from app.icons import svg_icon, IMAGE
 from config import DATA_ROOT, PHOTO_CLUSTERS_DIR, SPARK_DATA_ROOT
 
@@ -95,7 +97,7 @@ def _photo_grid(rows: pd.DataFrame) -> html.Div:
                 )
             )
     if not imgs:
-        return html.Div("Aucune photo disponible.", style={"color": "#555", "fontSize": "14px"})
+        return dmc.Text("Aucune photo disponible.", size="sm", c="dimmed")
     return html.Div(
         imgs,
         style={
@@ -113,12 +115,12 @@ def layout():
     if df.empty:
         return html.Div(className="page-wrapper", children=[
             html.Div(className="page-empty-state", children=[
-                html.Div(svg_icon(IMAGE, size="56"), style={"color": "var(--text-secondary)"}),
-                html.H2("Clustering Photos",
-                        style={"fontSize": "28px", "fontWeight": "700",
-                               "color": "var(--text-primary)"}),
-                html.P("Lance d'abord 05_CLIP/02_clip_clustering.ipynb.",
-                       style={"fontSize": "14px", "color": "var(--text-secondary)"}),
+                html.Div(DashIconify(icon=IMAGE, width=56), style={"color": "var(--text-secondary)"}),
+                dmc.Title("Clustering Photos", order=2,
+                          style={"fontSize": "28px", "fontWeight": "700",
+                                 "color": "var(--text-primary)"}),
+                dmc.Text("Lance d'abord 05_CLIP/02_clip_clustering.ipynb.",
+                         size="sm", c="dimmed"),
             ])
         ])
 
@@ -161,17 +163,27 @@ def layout():
                 html.P("Clustering visuel par similarité CLIP (ViT-L/14).", className="home-hero-sub"),
             ]),
 
-            # Scatter PCA
-            html.Div(children=[
-                html.P("Carte visuelle UMAP 2D", className="section-label"),
-                dcc.Graph(
-                    id="photo-scatter",
-                    figure=_scatter_fig(df),
-                    config={"displayModeBar": False},
-                    style={"height": "380px", "borderRadius": "12px", "overflow": "hidden",
-                           "background": "rgba(28,28,30,0.6)"},
-                ),
-            ]),
+            # Scatter UMAP
+            html.Div(
+                style={
+                    "background": "rgba(28,28,30,0.7)",
+                    "border": "1px solid rgba(255,255,255,0.08)",
+                    "borderRadius": "16px",
+                    "padding": "20px",
+                },
+                children=[
+                    dmc.Group(mb="md", children=[
+                        DashIconify(icon="tabler:chart-scatter", width=20, color="rgba(255,255,255,0.6)"),
+                        dmc.Text("Carte visuelle UMAP 2D", size="sm", fw=600, c="dimmed"),
+                    ]),
+                    dcc.Graph(
+                        id="photo-scatter",
+                        figure=_scatter_fig(df),
+                        config={"displayModeBar": False},
+                        style={"height": "380px"},
+                    ),
+                ],
+            ),
 
             # Chips
             html.Div(className="filter-bar", children=[
@@ -305,22 +317,15 @@ def update_view(selected_cluster):
     # Sous-ensemble
     if selected_cluster == -999:
         sub = df
-        header = html.Div(
-            f"{len(df)} photos — tous les clusters",
-            style={"fontSize": "14px", "color": "#888"},
-        )
+        header = dmc.Text(f"{len(df)} photos — tous les clusters", size="sm", c="dimmed")
     else:
         sub = df[df["cluster"].astype(int) == int(selected_cluster)]
         label = sub["cluster_label"].iloc[0] if not sub.empty else ""
         color = CLUSTER_COLORS[int(selected_cluster) % len(CLUSTER_COLORS)]
-        header = html.Div(style={"display": "flex", "alignItems": "center", "gap": "12px"}, children=[
+        header = dmc.Group(align="center", children=[
             html.Div(style={"width": "4px", "height": "24px", "borderRadius": "2px", "background": color}),
-            html.Div(label, style={"fontSize": "20px", "fontWeight": "600", "color": "#e5e5e7"}),
-            html.Div(f"{len(sub)} photos", style={
-                "fontSize": "13px", "color": "#888",
-                "background": "rgba(255,255,255,0.06)",
-                "padding": "3px 10px", "borderRadius": "20px",
-            }),
+            dmc.Text(label, size="lg", fw=600),
+            dmc.Badge(f"{len(sub)} photos", variant="light", radius="xl"),
         ])
 
     grid = _photo_grid(sub)

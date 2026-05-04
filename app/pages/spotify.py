@@ -3,6 +3,8 @@ import pandas as pd
 import plotly.graph_objects as go
 from functools import lru_cache
 from dash import ALL, Input, Output, State, callback, dcc, html, no_update
+import dash_mantine_components as dmc
+from dash_iconify import DashIconify
 from app.icons import svg_icon, MUSIC, CLOCK, MIC
 from config import WAREHOUSE
 
@@ -287,16 +289,19 @@ def _build_playlists_sidebar(playlists_df: pd.DataFrame, selected_playlist: str 
     return html.Div(
         className="spotify-sidebar",
         children=[
+            # Header style "Ma Bibliothèque" Spotify
             html.Div(
-                "Mes Playlists",
-                style={
-                    "fontSize": "18px", "fontWeight": "700", "color": "#fff",
-                    "fontFamily": "var(--font-serif)", "marginBottom": "20px",
-                    "padding": "0 8px",
-                },
+                className="spotify-library-header",
+                children=[
+                    dmc.Group(gap="xs", align="center", children=[
+                        DashIconify(icon="tabler:library", width=20, color="rgba(255,255,255,0.7)"),
+                        dmc.Text("Ma Bibliothèque", fw=700, size="sm", c="dimmed"),
+                    ]),
+                    dmc.Badge(str(len(cards)), variant="light", color="gray", size="xs", radius="xl"),
+                ],
             ),
             html.Div(
-                style={"display": "flex", "flexDirection": "column", "gap": "8px"},
+                style={"display": "flex", "flexDirection": "column", "gap": "2px"},
                 children=cards,
             ),
         ],
@@ -356,15 +361,21 @@ def _build_playlist_detail(playlists_df: pd.DataFrame, playlist_name: str) -> li
 
     return [
         # Header
-        html.Div(
-            style={"display": "flex", "gap": "24px", "alignItems": "flex-end", "marginBottom": "32px"},
+        dmc.Group(
+            gap="xl",
+            align="flex-end",
+            style={"marginBottom": "32px"},
             children=[
                 cover,
-                html.Div(children=[
-                    html.Div("Playlist", style={"fontSize": "11px", "fontWeight": "700", "color": SPOTIFY_GREEN, "textTransform": "uppercase", "letterSpacing": "2px", "marginBottom": "8px"}),
-                    html.H2(playlist_name, style={"fontSize": "32px", "fontWeight": "800", "color": "#fff", "fontFamily": "var(--font-serif)", "marginBottom": "8px"}),
-                    html.Div(f"{track_count} titres", style={"fontSize": "14px", "color": "var(--text-muted)"}),
-                ]),
+                dmc.Stack(
+                    gap="xs",
+                    children=[
+                        dmc.Badge("Playlist", color="green", variant="light",
+                                  style={"letterSpacing": "2px", "textTransform": "uppercase"}),
+                        dmc.Title(playlist_name, order=2, style={"fontFamily": "var(--font-serif)"}),
+                        dmc.Text(f"{track_count} titres", c="dimmed", size="sm"),
+                    ],
+                ),
             ],
         ),
         # Tracklist header
@@ -578,37 +589,52 @@ def _build_main_content(df: pd.DataFrame, sel: dict) -> list:
     return [
         # Stats
         html.Div(className="stats-row", style={"marginBottom": "24px"}, children=[
-            _stat(svg_icon(MUSIC), f"{total_streams:,}", "Streams"),
-            _stat(svg_icon(CLOCK), f"{total_hours:,}h",  "Écoutées"),
-            _stat(svg_icon(MIC),   f"{n_artists:,}",     "Artistes"),
-            _stat(svg_icon(MUSIC), f"{n_tracks:,}",      "Titres distincts"),
+            _stat(DashIconify(icon=MUSIC, width=22), f"{total_streams:,}", "Streams"),
+            _stat(DashIconify(icon=CLOCK, width=22), f"{total_hours:,}h",  "Écoutées"),
+            _stat(DashIconify(icon=MIC,   width=22), f"{n_artists:,}",     "Artistes"),
+            _stat(DashIconify(icon=MUSIC, width=22), f"{n_tracks:,}",      "Titres distincts"),
         ]),
 
         # Top artistes
-        html.Div(className="data-panel", style={"marginBottom": "24px"}, children=[
-            html.Div("Top Artistes", style={
-                "fontSize": "11px", "fontWeight": "700", "color": SPOTIFY_GREEN,
-                "textTransform": "uppercase", "letterSpacing": "2px", "marginBottom": "16px",
-            }),
-            _render_top_artists_visual(df),
-        ]),
+        dmc.Card(
+            withBorder=True,
+            radius="md",
+            className="data-panel",
+            style={"marginBottom": "24px"},
+            children=[
+                dmc.Text("Top Artistes", fw=700, size="xs",
+                         style={"color": SPOTIFY_GREEN, "textTransform": "uppercase",
+                                "letterSpacing": "2px", "marginBottom": "16px"}),
+                _render_top_artists_visual(df),
+            ],
+        ),
 
         # Top titres
-        html.Div(className="data-panel", style={"marginBottom": "24px"}, children=[
-            html.Div("Top Titres", style={
-                "fontSize": "11px", "fontWeight": "700", "color": SPOTIFY_GREEN,
-                "textTransform": "uppercase", "letterSpacing": "2px", "marginBottom": "16px",
-            }),
-            _render_top_tracks_visual(df, n=12),
-        ]),
+        dmc.Card(
+            withBorder=True,
+            radius="md",
+            className="data-panel",
+            style={"marginBottom": "24px"},
+            children=[
+                dmc.Text("Top Titres", fw=700, size="xs",
+                         style={"color": SPOTIFY_GREEN, "textTransform": "uppercase",
+                                "letterSpacing": "2px", "marginBottom": "16px"}),
+                _render_top_tracks_visual(df, n=12),
+            ],
+        ),
 
         # Graphiques
-        html.Div(style={"display": "flex", "gap": "16px", "flexWrap": "wrap"}, children=[
-            html.Div(className="data-panel", style={"flex": "1.5", "minWidth": "340px"},
-                     children=[dcc.Graph(figure=_chart_activity(df, sel), config={"displayModeBar": False})]),
-            html.Div(className="data-panel", style={"flex": "1", "minWidth": "300px"},
-                     children=[dcc.Graph(figure=_chart_hourly(df), config={"displayModeBar": False})]),
-        ]),
+        dmc.SimpleGrid(
+            cols={"base": 1, "md": 2},
+            spacing="md",
+            children=[
+                dmc.Card(withBorder=True, radius="md", className="data-panel",
+                         style={"flex": "1.5"},
+                         children=[dcc.Graph(figure=_chart_activity(df, sel), config={"displayModeBar": False})]),
+                dmc.Card(withBorder=True, radius="md", className="data-panel",
+                         children=[dcc.Graph(figure=_chart_hourly(df), config={"displayModeBar": False})]),
+            ],
+        ),
     ]
 
 
@@ -620,10 +646,9 @@ def layout():
     if df.empty and playlists_df.empty:
         return html.Div(className="page-wrapper", children=[
             html.Div(className="page-empty-state", children=[
-                html.Div(svg_icon(MUSIC, size="56"), style={"color": "var(--text-secondary)"}),
-                html.H2("Spotify", style={"fontSize": "28px", "fontWeight": "700", "color": "var(--text-primary)"}),
-                html.P("Lance d'abord 01_exploration/spotify.ipynb.",
-                       style={"fontSize": "14px", "color": "var(--text-secondary)"}),
+                DashIconify(icon=MUSIC, width=56, style={"color": "var(--text-secondary)"}),
+                dmc.Title("Spotify", order=2),
+                dmc.Text("Lance d'abord 01_exploration/spotify.ipynb.", c="dimmed", size="sm"),
             ])
         ])
 
@@ -645,12 +670,17 @@ def layout():
                         # Header
                         html.Div(id="spotify-hero", children=[
                             html.Div(className="home-hero", style={"textAlign": "center"}, children=[
-                                html.P("Wrapped Custom • Année · Mois · Semaine",
-                                       className="home-hero-label", style={"color": SPOTIFY_GREEN}),
-                                html.H1(html.Span(["Mon ", html.Em("Spotify")]),
-                                         className="home-hero-title", style={"fontSize": "56px"}),
-                                html.P("Tes playlists et tes écoutes en un coup d'œil.",
-                                       className="home-hero-sub"),
+                                dmc.Text("Wrapped Custom • Année · Mois · Semaine",
+                                         className="home-hero-label",
+                                         style={"color": SPOTIFY_GREEN}),
+                                dmc.Title(
+                                    html.Span(["Mon ", html.Em("Spotify")]),
+                                    order=1,
+                                    className="home-hero-title",
+                                    style={"fontSize": "56px"},
+                                ),
+                                dmc.Text("Tes playlists et tes écoutes en un coup d'œil.",
+                                         className="home-hero-sub", c="dimmed"),
                             ]),
                         ]),
 

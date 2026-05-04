@@ -8,6 +8,8 @@ from concurrent.futures import ThreadPoolExecutor, as_completed
 from functools import lru_cache
 import plotly.graph_objects as go
 from dash import ALL, Input, Output, State, callback, dcc, html, no_update, clientside_callback, ClientsideFunction
+import dash_mantine_components as dmc
+from dash_iconify import DashIconify
 from app.icons import svg_icon, FILM, TV, VIDEO
 from difflib import SequenceMatcher
 from config import TMDB_API_KEY, TMDB_POSTER_CACHE_PATH, WAREHOUSE, INSTAGRAM_SENDER_NAME
@@ -358,12 +360,10 @@ def _build_recent_carousel(df: pd.DataFrame) -> html.Div:
     return html.Div(
         style={"marginBottom": "48px"},
         children=[
-            html.Div(
+            dmc.Title(
                 "Mon Activité Récente",
-                style={
-                    "fontSize": "22px", "fontWeight": "700", "color": "#fff",
-                    "fontFamily": "var(--font-serif)", "marginBottom": "16px",
-                },
+                order=3,
+                style={"fontFamily": "var(--font-serif)", "marginBottom": "16px"},
             ),
             html.Div(
                 style={
@@ -418,18 +418,17 @@ def _reco_section():
         sc = _score_color(r["predicted_score"])
         poster_url = _get_tmdb_cached_only(r["title"], "movie").get("poster_url", "")
         genre_label = r["genres"].split("|")[0] if r.get("genres") else "Film"
-        cards.append(html.Div(
-            style={
-                "background": "rgba(28,28,30,0.5)", "border": "1px solid rgba(255,255,255,0.06)",
-                "borderRadius": "16px", "overflow": "hidden", "minWidth": "160px", "flex": "1",
-                "display": "flex", "flexDirection": "column",
-            },
+        cards.append(dmc.Card(
+            withBorder=True,
+            radius="md",
+            p=0,
+            style={"minWidth": "160px", "flex": "1", "overflow": "hidden"},
             children=[
                 html.Div(
                     style={"height": "220px", "background": "rgba(255,255,255,0.04)", "position": "relative", "overflow": "hidden"},
                     children=[
                         html.Img(src=poster_url, style={"width": "100%", "height": "100%", "objectFit": "cover"}) if poster_url
-                        else html.Div(svg_icon(FILM, size="48"), style={"display": "flex", "alignItems": "center", "justifyContent": "center", "height": "100%", "color": "#555"}),
+                        else html.Div(DashIconify(icon=FILM, width=48), style={"display": "flex", "alignItems": "center", "justifyContent": "center", "height": "100%", "color": "#555"}),
                         html.Span(f"#{r['rank']}", style={
                             "position": "absolute", "top": "8px", "left": "8px",
                             "background": "rgba(0,0,0,0.75)", "color": NETFLIX_RED if r["rank"] <= 3 else "#fff",
@@ -443,17 +442,22 @@ def _reco_section():
                         }),
                     ]
                 ),
-                html.Div(style={"padding": "12px 14px", "display": "flex", "flexDirection": "column", "gap": "4px"}, children=[
-                    html.Div(r["title"], style={"fontSize": "13px", "fontWeight": "600", "color": "#fff", "lineHeight": "1.3"}),
-                    html.Div(genre_label, style={"fontSize": "10px", "color": "var(--text-muted)", "textTransform": "uppercase", "letterSpacing": "0.5px"}),
-                ]),
+                dmc.CardSection(
+                    style={"padding": "12px 14px"},
+                    children=dmc.Stack(gap=4, children=[
+                        dmc.Text(r["title"], fw=600, size="sm", style={"lineHeight": "1.3"}),
+                        dmc.Text(genre_label, size="xs", c="dimmed",
+                                 style={"textTransform": "uppercase", "letterSpacing": "0.5px"}),
+                    ]),
+                ),
             ]
         ))
 
     return html.Div(style={"marginTop": "60px"}, children=[
-        html.Div(style={"textAlign": "center", "marginBottom": "40px"}, children=[
-            html.H2(["Recommandé pour ", html.Em("Toi")], style={"fontSize": "32px", "fontFamily": "var(--font-serif)", "marginBottom": "8px"}),
-            html.P("Basé sur ton historique et 32M de notes MovieLens.", style={"color": "var(--text-muted)"})
+        dmc.Stack(align="center", gap="xs", style={"marginBottom": "40px"}, children=[
+            dmc.Title(["Recommandé pour ", html.Em("Toi")], order=2,
+                      style={"fontSize": "32px", "fontFamily": "var(--font-serif)"}),
+            dmc.Text("Basé sur ton historique et 32M de notes MovieLens.", c="dimmed"),
         ]),
         html.Div(style={"maxWidth": "600px", "margin": "0 auto 48px", "display": "flex", "gap": "12px"}, children=[
             dcc.Input(id="nf-reco-input", type="text", placeholder=f"{INSTAGRAM_SENDER_NAME} aimera-t-il le film...",
@@ -578,11 +582,11 @@ def _build_content(df: pd.DataFrame, sel: dict) -> list:
     n_series = df[df["content_type"] == "series"]["show_title"].nunique() if "content_type" in df.columns else 0
     n_movies = df[df["content_type"] == "movie"]["show_title"].nunique()  if "content_type" in df.columns else 0
 
-    def _stat(icon, value, label):
+    def _stat(icon_el, value, label):
         return html.Div(className="stat-card", children=[
-            html.Div(icon,  className="stat-icon"),
-            html.Div(value, className="stat-value"),
-            html.Div(label, className="stat-label"),
+            html.Div(icon_el, className="stat-icon"),
+            html.Div(value,   className="stat-value"),
+            html.Div(label,   className="stat-label"),
         ])
 
     top_series = (
@@ -617,12 +621,14 @@ def _build_content(df: pd.DataFrame, sel: dict) -> list:
         return items
 
     def _section_card(title, children):
-        return html.Div(
+        return dmc.Card(
+            withBorder=True,
+            radius="md",
             className="data-panel",
             style={"borderTop": f"2px solid {NETFLIX_RED}", "flex": "1", "minWidth": "280px"},
             children=[
-                html.H3(title, style={"fontFamily": "var(--font-serif)", "fontSize": "18px",
-                                      "color": "var(--text-primary)", "marginBottom": "16px"}),
+                dmc.Title(title, order=3,
+                          style={"fontFamily": "var(--font-serif)", "marginBottom": "16px"}),
                 *children,
             ],
         )
@@ -636,10 +642,8 @@ def _build_content(df: pd.DataFrame, sel: dict) -> list:
             "borderBottom": "1px solid rgba(255,255,255,0.08)", "paddingBottom": "12px",
         },
         children=[
-            html.Span("Analyse Détaillée", style={
-                "fontSize": "11px", "fontWeight": "700", "color": NETFLIX_RED,
-                "textTransform": "uppercase", "letterSpacing": "2px",
-            }),
+            dmc.Text("Analyse Détaillée", fw=700, size="xs",
+                     style={"color": NETFLIX_RED, "textTransform": "uppercase", "letterSpacing": "2px"}),
         ],
     )
 
@@ -647,36 +651,46 @@ def _build_content(df: pd.DataFrame, sel: dict) -> list:
         # Carrousel principal
         _build_recent_carousel(df),
 
-        # Stats rapides
-        html.Div(className="stats-row", style={"marginBottom": "24px", "marginLeft": "auto", "marginRight": "auto"}, children=[
-            _stat(svg_icon(FILM),  f"{total:,}",    "Épisodes / Films"),
-            _stat(svg_icon(TV),    f"{n_series:,}", "Séries distinctes"),
-            _stat(svg_icon(VIDEO), f"{n_movies:,}", "Films regardés"),
-        ]),
+        # Stats rapides — pleine largeur
+        dmc.SimpleGrid(
+            cols={"base": 1, "sm": 3},
+            spacing="md",
+            style={"marginBottom": "24px", "width": "100%"},
+            children=[
+                _stat(DashIconify(icon=FILM,  width=22), f"{total:,}",    "Épisodes / Films"),
+                _stat(DashIconify(icon=TV,    width=22), f"{n_series:,}", "Séries distinctes"),
+                _stat(DashIconify(icon=VIDEO, width=22), f"{n_movies:,}", "Films regardés"),
+            ],
+        ),
 
         analyse_label,
 
-        html.Div(style={"display": "flex", "gap": "16px", "flexWrap": "wrap"},
-                 children=[
-            html.Div(className="data-panel", style={"flex": "2", "minWidth": "340px"},
-                     children=[dcc.Graph(figure=_chart_activity(df, sel),
-                                         config={"displayModeBar": False})]),
-            html.Div(className="data-panel", style={"flex": "1", "minWidth": "240px"},
-                     children=[dcc.Graph(figure=_chart_weekday(df),
-                                         config={"displayModeBar": False})]),
-        ]),
+        # Activité globale — pleine largeur
+        dmc.Card(withBorder=True, radius="md", className="data-panel", mb="md",
+                 children=[dcc.Graph(figure=_chart_activity(df, sel),
+                                     config={"displayModeBar": False})]),
 
-        *([html.Div(className="data-panel", style={"marginTop": "16px"},
+        # Jour de la semaine — pleine largeur
+        dmc.Card(withBorder=True, radius="md", className="data-panel", mb="md",
+                 children=[dcc.Graph(figure=_chart_weekday(df),
+                                     config={"displayModeBar": False})]),
+
+        *([dmc.Card(withBorder=True, radius="md", className="data-panel",
+                    style={"marginTop": "16px"},
                     children=[dcc.Graph(figure=_chart_by_year(df),
                                          config={"displayModeBar": False})])]
           if show_yearly else []),
 
-        html.Div(style={"marginTop": "24px", "display": "flex", "gap": "16px", "flexWrap": "wrap"},
-                 children=[
-            _section_card("Top Séries", _rank_list(top_series) if not top_series.empty else [html.P("—")]),
-            _section_card("Top Films",  _rank_list(top_movies, color="rgba(255,255,255,0.6)")
-                          if not top_movies.empty else [html.P("—")]),
-        ]),
+        dmc.SimpleGrid(
+            cols={"base": 1, "md": 2},
+            spacing="md",
+            style={"marginTop": "24px"},
+            children=[
+                _section_card("Top Séries", _rank_list(top_series) if not top_series.empty else [html.P("—")]),
+                _section_card("Top Films",  _rank_list(top_movies, color="rgba(255,255,255,0.6)")
+                              if not top_movies.empty else [html.P("—")]),
+            ],
+        ),
     ]
 
 
@@ -687,11 +701,9 @@ def layout():
     if df.empty:
         return html.Div(className="page-wrapper", children=[
             html.Div(className="page-empty-state", children=[
-                html.Div(svg_icon(FILM, size="56"), style={"color": "var(--text-secondary)"}),
-                html.H2("Netflix", style={"fontSize": "28px", "fontWeight": "700",
-                                          "color": "var(--text-primary)"}),
-                html.P("Lance d'abord 01_exploration/netflix.ipynb.",
-                       style={"fontSize": "14px", "color": "var(--text-secondary)"}),
+                DashIconify(icon=FILM, width=56, style={"color": "var(--text-secondary)"}),
+                dmc.Title("Netflix", order=2),
+                dmc.Text("Lance d'abord 01_exploration/netflix.ipynb.", c="dimmed", size="sm"),
             ])
         ])
 
@@ -700,12 +712,16 @@ def layout():
             style={"maxWidth": "1100px", "margin": "0 auto", "padding": "40px 32px 80px"},
             children=[
                 html.Div(className="home-hero", style={"textAlign": "center"}, children=[
-                    html.P("Historique Netflix • Année · Mois · Semaine",
-                            className="home-hero-label", style={"color": NETFLIX_RED}),
-                    html.H1(html.Span(["Mon ", html.Em("Netflix")]),
-                             className="home-hero-title", style={"fontSize": "56px"}),
-                    html.P("Timeline de tes visionnages, tes séries et films favoris.",
-                            className="home-hero-sub"),
+                    dmc.Text("Historique Netflix • Année · Mois · Semaine",
+                             className="home-hero-label", style={"color": NETFLIX_RED}),
+                    dmc.Title(
+                        html.Span(["Mon ", html.Em("Netflix")]),
+                        order=1,
+                        className="home-hero-title",
+                        style={"fontSize": "56px"},
+                    ),
+                    dmc.Text("Timeline de tes visionnages, tes séries et films favoris.",
+                             className="home-hero-sub", c="dimmed"),
                 ]),
                 dcc.Store(id="netflix-sel-store", data=_DEFAULT_SEL),
                 dcc.Store(id="nf-modal-store", data=None),
@@ -807,17 +823,16 @@ def toggle_top50(n_clicks):
             ],
         ))
 
-    content = html.Div(
+    content = dmc.Card(
+        withBorder=True,
+        radius="md",
         style={
-            "background": "rgba(28,28,30,0.5)", "border": "1px solid rgba(255,255,255,0.06)",
-            "borderTop": f"2px solid {NETFLIX_RED}", "borderRadius": "14px",
-            "padding": "20px 24px", "marginTop": "12px",
+            "borderTop": f"2px solid {NETFLIX_RED}",
+            "marginTop": "12px",
         },
         children=[
-            html.H3("Top 50 — Films recommandés", style={
-                "fontFamily": "var(--font-serif)", "fontSize": "18px",
-                "color": "var(--text-primary)", "marginBottom": "16px",
-            }),
+            dmc.Title("Top 50 — Films recommandés", order=3,
+                      style={"fontFamily": "var(--font-serif)", "marginBottom": "16px"}),
             *rows,
         ],
     )

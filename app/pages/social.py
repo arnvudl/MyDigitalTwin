@@ -1,4 +1,5 @@
 ﻿import glob
+import hashlib
 import html as html_lib
 import json
 import os
@@ -8,7 +9,9 @@ from datetime import datetime
 from functools import lru_cache
 
 import pandas as pd
+import dash_mantine_components as dmc
 from dash import html, dash_table
+from dash_iconify import DashIconify
 from config import INSTAGRAM_INBOX, INSTAGRAM_SENDER_NAME, INSTAGRAM_USERNAME, SOCIAL_GRAPH_DIR
 
 # ─── PATHS ───────────────────────────────────────────────────────────────────
@@ -200,8 +203,17 @@ def layout():
                 stats_map[node_id] = s
 
     embed_path = os.path.join(ASSETS_DIR, "social_3d.html")
-    with open(embed_path, "w", encoding="utf-8") as fh:
-        fh.write(_build_3d_html(df, stats_map))
+    new_html = _build_3d_html(df, stats_map)
+    # N'écrire que si le contenu a changé — évite la boucle de rechargement
+    # déclenchée par Dash qui surveille assets/ en mode dev.
+    new_hash = hashlib.md5(new_html.encode()).hexdigest()
+    old_hash = ""
+    if os.path.exists(embed_path):
+        with open(embed_path, encoding="utf-8") as fh:
+            old_hash = hashlib.md5(fh.read().encode()).hexdigest()
+    if new_hash != old_hash:
+        with open(embed_path, "w", encoding="utf-8") as fh:
+            fh.write(new_html)
 
     n_close = int(df["in_close_friends"].sum()) if not df.empty and "in_close_friends" in df.columns else 0
     n_total = len(df)
@@ -248,50 +260,63 @@ def layout():
                     },
                 ),
 
-                html.Div(style={"marginTop": "8px"}, children=[
-                    html.P("Détail des interactions",
-                           className="section-label",
-                           style={"marginBottom": "20px"}),
-                    dash_table.DataTable(
-                        id="social-table",
-                        columns=[
-                            {"name": "Pseudo",   "id": "Pseudo",   "type": "text"},
-                            {"name": "Messages", "id": "Messages", "type": "numeric"},
-                        ],
-                        data=table_data,
-                        sort_action="native",
-                        filter_action="native",
-                        page_size=15,
-                        style_table={
-                            "borderRadius": "14px", "overflow": "hidden",
-                            "border": "1px solid rgba(255,255,255,0.05)",
-                        },
-                        style_header={
-                            "backgroundColor": "rgba(30,30,30,0.9)",
-                            "color": "var(--text-primary)",
-                            "fontWeight": "600",
-                            "border": "1px solid rgba(255,255,255,0.08)",
-                            "padding": "14px 16px",
-                            "fontSize": "12px",
-                            "letterSpacing": "0.5px",
-                            "textTransform": "uppercase",
-                        },
-                        style_cell={
-                            "backgroundColor": "rgba(20,20,20,0.6)",
-                            "color": "var(--text-secondary)",
-                            "border": "1px solid rgba(255,255,255,0.04)",
-                            "padding": "12px 16px",
-                            "textAlign": "left",
-                            "fontFamily": "var(--font-family)",
-                            "fontSize": "14px",
-                        },
-                        style_data_conditional=[{
-                            "if": {"state": "active"},
-                            "backgroundColor": "rgba(168,85,247,0.12)",
-                            "border": "1px solid rgba(168,85,247,0.3)",
-                        }],
-                    ),
-                ]),
+                html.Div(
+                    style={
+                        "background": "rgba(28,28,30,0.7)",
+                        "border": "1px solid rgba(255,255,255,0.08)",
+                        "borderRadius": "16px",
+                        "padding": "20px",
+                        "marginTop": "8px",
+                    },
+                    children=[
+                        dmc.Group(
+                            mb="md",
+                            children=[
+                                DashIconify(icon="tabler:network", width=20, color="rgba(255,255,255,0.6)"),
+                                dmc.Text("Détail des interactions", size="sm", fw=600, c="dimmed"),
+                            ],
+                        ),
+                        dash_table.DataTable(
+                            id="social-table",
+                            columns=[
+                                {"name": "Pseudo",   "id": "Pseudo",   "type": "text"},
+                                {"name": "Messages", "id": "Messages", "type": "numeric"},
+                            ],
+                            data=table_data,
+                            sort_action="native",
+                            filter_action="native",
+                            page_size=15,
+                            style_table={
+                                "borderRadius": "14px", "overflow": "hidden",
+                                "border": "1px solid rgba(255,255,255,0.05)",
+                            },
+                            style_header={
+                                "backgroundColor": "rgba(30,30,30,0.9)",
+                                "color": "var(--text-primary)",
+                                "fontWeight": "600",
+                                "border": "1px solid rgba(255,255,255,0.08)",
+                                "padding": "14px 16px",
+                                "fontSize": "12px",
+                                "letterSpacing": "0.5px",
+                                "textTransform": "uppercase",
+                            },
+                            style_cell={
+                                "backgroundColor": "rgba(20,20,20,0.6)",
+                                "color": "var(--text-secondary)",
+                                "border": "1px solid rgba(255,255,255,0.04)",
+                                "padding": "12px 16px",
+                                "textAlign": "left",
+                                "fontFamily": "var(--font-family)",
+                                "fontSize": "14px",
+                            },
+                            style_data_conditional=[{
+                                "if": {"state": "active"},
+                                "backgroundColor": "rgba(168,85,247,0.12)",
+                                "border": "1px solid rgba(168,85,247,0.3)",
+                            }],
+                        ),
+                    ],
+                ),
             ],
         ),
     ])
