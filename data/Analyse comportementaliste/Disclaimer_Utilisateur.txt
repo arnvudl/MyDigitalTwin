@@ -1,0 +1,8 @@
+Avertissement et Consentement :
+Cet outil est un agent d'analyse comportementale conçu pour explorer vos tendances de communication et proposer des hypothèses de réflexion à partir de vos données. Il ne remplace en aucun cas un professionnel de santé mentale, ne pose aucun diagnostic et ne constitue pas une psychanalyse clinique.En utilisant ce service, vous reconnaissez que :
+
+1. Les analyses produites sont des approximations algorithmiques et peuvent comporter des erreurs d'interprétation.
+2. L'IA n'a pas de responsabilité clinique et ne détecte pas les états de crise de manière fiable.
+3. Vos données sont utilisées exclusivement pour la personnalisation de votre "jumeau numérique" et leur confidentialité est traitée selon [lien vers politique de données].
+
+En cas de détresse ou de besoin de soins, veuillez consulter un psychologue ou un psychiatre agréé.
