@@ -1,0 +1,28 @@
+[tool.ruff]
+target-version = "py311"
+line-length = 120
+extend-exclude = [
+    ".claude",
+    ".git",
+    ".idea",
+    ".pytest_cache",
+    ".venv",
+    "__pycache__",
+    "app/assets",
+    "data",
+    "docs",
+    "spark-logs",
+    "warehouse",
+    "src/scripts/**/*.ipynb",
+    "src/scripts/**/output",
+]
+
+[tool.ruff.lint]
+# Keep CI focused on correctness errors for this notebook-heavy project.
+# Style cleanup can be tightened progressively once the existing codebase is clean.
+select = [
+    "E9",   # syntax/runtime parse errors
+    "F63",  # invalid comparisons in Pyflakes
+    "F7",   # invalid control-flow in Pyflakes
+    "F82",  # undefined names
+]
