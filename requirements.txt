@@ -1,63 +1,14 @@
-# ══════════════════════════════════════════════════════════════════════════════
-# requirements.txt — référence locale complète
-# pip install -r requirements.txt  (env local / Jupyter)
+# Local development dependencies only.
 #
-# Les Dockerfiles n'utilisent PAS ce fichier directement :
-#   Dockerfile     → installe ses deps en dur (Spark + ML)
-#   Dockerfile.app → installe ses deps en dur (Dash uniquement)
-# ══════════════════════════════════════════════════════════════════════════════
+# Docker is the source of truth for runtime dependencies:
+# - Dockerfile installs Spark, Delta, notebooks and ML tooling.
+# - Dockerfile.app installs the Dash dashboard runtime.
+#
+# Use this file only when you want a lightweight local environment for tests,
+# notebooks, schema checks or Copier onboarding.
 
-# ── Runtime Dash app ──────────────────────────────────────────────────────────
-dash==4.1.0
-dash-mantine-components==0.15.3
-dash-iconify==0.1.2
-Flask==3.1.3
-plotly==6.6.0
-pandas==3.0.2
-pyarrow==16.1.0
-requests==2.33.1
-python-dotenv==1.2.2
-pyyaml==6.0.2
-spotipy==2.26.0
-google-genai==1.73.1
-
-# ── PySpark + Delta Lake ──────────────────────────────────────────────────────
-# Java 11+ requis séparément
-pyspark==3.5.1
-delta-spark==3.2.0
-fastparquet==2026.3.0
-
-# ── ML (embeddings, transformers) ────────────────────────────────────────────
-# torch installé en CPU-only via Dockerfile pour éviter les ~2 Go GPU
-# pip install torch==2.11.0 --index-url https://download.pytorch.org/whl/cpu
-torch==2.11.0
-transformers==5.5.4
-sentence-transformers==5.4.0
-huggingface_hub==1.10.1
-safetensors==0.7.0
-tokenizers==0.22.2
-
-# ── Topology / TDA Mapper ─────────────────────────────────────────────────────
-umap-learn
-tda-mapper
-
-# ── Memory Album (clustering + vision) ───────────────────────────────────────
-hdbscan==0.8.38.post1
-open_clip_torch==2.26.1           # fallback OpenCLIP si pas de GPU
-Pillow==11.2.1                     # lecture JPEG/EXIF
-
-# ── Notebooks & dev ───────────────────────────────────────────────────────────
-ipykernel==7.2.0
-ipython==9.12.0
-jupyter_client==8.8.0
-jupyter_core==5.9.1
-matplotlib==3.10.8
-scikit-learn==1.8.0
-scipy==1.17.1
-
-# ── Test ─────────────────────────────────
+jupyter
+ipython
 pytest
 pandera
-
-# ── Templating projet (onboarding nouvel utilisateur) ─────────────────────────
 copier

@@ -1,208 +1,335 @@
 # MyDigitalTwin
 
-Analyse ML de donnees personnelles multi-plateformes pour construire un jumeau numerique interactif.
+MyDigitalTwin transforme des exports personnels bruts en un tableau de bord
+interactif : timeline, clusters comportementaux, graphe social, recommandations,
+exploration photo/CLIP, memory album et corpus de clone conversationnel.
 
-Dashboard actuel:
+Le but de ce repo est simple : quelqu'un doit pouvoir cloner le projet, déposer
+ses propres exports dans `data/inbox/`, lancer Docker, puis obtenir le même
+pipeline et les mêmes types de sorties avec ses données.
 
-- clustering comportemental
-- graphe social
-- recommandations Netflix / Spotify
-- clone conversationnel
-- exploration photo / CLIP
+![Dashboard home](docs/photos/page_home.png)
 
----
+## Quick Start
 
-## Stack
+Prérequis :
 
-| Composant | Outil |
-|---|---|
-| Traitement de donnees | PySpark 3.5.x + Delta Lake |
-| Machine Learning | Spark MLlib, CLIP |
-| Dashboard | Dash / Plotly |
-| Clone conversationnel | Corpus DM + Gemini |
-| Infra locale | Docker Compose |
+- Docker Desktop
+- Git
+- des exports personnels déjà téléchargés et dézippés
 
----
+```bash
+git clone <repo-url>
+cd MyDigitalTwin
+cp .env.example .env
+cp config.yaml.example config.yaml
+docker compose up --build
+```
 
-## Configuration du projet
+Ouvrir ensuite :
 
-Le projet se configure sans modifier le code Python.
+- Dashboard : [http://localhost:8050](http://localhost:8050)
+- Jupyter : [http://localhost:8889](http://localhost:8889)
+- Spark UI : [http://localhost:8080](http://localhost:8080)
+- Spark History : [http://localhost:18080](http://localhost:18080)
 
-### 1. Fichiers de config
+Pour lancer l'ingestion depuis le container Spark :
 
-- Copier `config.yaml.example` vers `config.yaml`
-- Copier `.env.example` vers `.env`
+```bash
+docker compose exec spark-master python3 -m src.ingestion.run_all
+```
 
-### 2. Que mettre dans chaque fichier
+En local sous Windows, si l'environnement Python est installé :
 
-`config.yaml`
+```bash
+.\.venv\Scripts\python.exe -m src.ingestion.run_all
+```
 
-- identite Instagram
-- `close_friends`
+## What Is MyDigitalTwin?
+
+MyDigitalTwin est un pipeline local pour explorer ses données personnelles issues
+de plateformes numériques. Les exports restent dans le dossier `data/` local et
+ne sont pas versionnés.
+
+Le projet produit notamment :
+
+- des tables analytiques dans `data/warehouse/`
+- des notebooks d'exploration et de modélisation dans `src/scripts/`
+- un dashboard Dash/Plotly dans `app/`
+- des visualisations de centres d'intérêt, graphe social, timeline, Spotify,
+  Netflix, photos et memory album
+- des artefacts LLM dans `data/LLM_DATA/`
+
+![Graphe social](docs/photos/page_graphe_social.png)
+![Spotify](docs/photos/page_spotify.png)
+
+## Data Setup
+
+Dépose les exports bruts, dézippés, dans :
+
+```text
+data/inbox/
+```
+
+Il n'y a pas de préprocessing manuel à faire. Les parsers détectent les dossiers
+supportés, déplacent les fichiers vers `data/processed/<SOURCE>/`, puis les
+notebooks et scripts écrivent les résultats dans `data/warehouse/`.
+
+Sources actuellement supportées par l'ingestion :
+
+| Source | Export à demander | Format attendu dans `data/inbox/` |
+|---|---|---|
+| Instagram | Toutes les informations, période au choix, format JSON, média moyen | dossier commençant par `instagram` |
+| Google Takeout | Chrome, Ads, Mon activité, Compte Google, YouTube | dossier commençant par `takeout` |
+| Spotify | Données de compte | dossier commençant par `spotify` |
+| TikTok | Export complet, tout sélectionner | dossier commençant par `tiktok` |
+| Twitter/X | DM uniquement si tu veux limiter l'usage au clone/social | dossier commençant par `twitter` |
+| Netflix | Historique de visionnage CSV | fichier `NetflixViewingHistory.csv` |
+
+Exemple :
+
+```text
+data/
+  inbox/
+    instagram-2026-05-01/
+    takeout-2026-05-01/
+    spotify-account-data/
+    tiktok-data-2026-05-01/
+    twitter-2026-05-01/
+    NetflixViewingHistory.csv
+```
+
+Les données personnelles sont ignorées par Git :
+
+- `data/inbox/`
+- `data/processed/`
+- `data/warehouse/`
+- `data/LLM_DATA/`
+- `data/models/`
+
+## Configuration
+
+Copier les fichiers d'exemple :
+
+```bash
+cp .env.example .env
+cp config.yaml.example config.yaml
+```
+
+`config.yaml` contient les paramètres personnels non secrets :
+
+- nom et username Instagram
+- close friends
 - artistes d'ancrage Spotify
-- conversations du clone
+- conversations utilisées pour le clone
+- labels CLIP et catégories comportementales
 
-`.env`
+`.env` contient les secrets et clés API :
 
 - `GEMINI_API_KEY`
 - `SPOTIFY_CLIENT_ID`
 - `SPOTIFY_CLIENT_SECRET`
 - `TMDB_API_KEY`
-- optionnel: `DASH_HOST`, `DASH_PORT`
+- optionnel : `DASH_HOST`, `DASH_PORT`
 
-### 3. Modele de configuration
+Docker est la source de vérité pour les dépendances runtime. `requirements.txt`
+sert uniquement au confort de développement local.
 
-- `config.py`: configuration runtime centrale, chemins derives, chargement des secrets
-- `config.yaml`: donnees personnelles non secretes
-- `.env`: secrets
+## Architecture
 
-Les chemins `WAREHOUSE`, `PROCESSED_DATA` et `LLM_DATA` se calculent automatiquement selon l'environnement local ou Docker.
-
----
-
-## Flux de donnees
-
-Le projet suit maintenant ce pipeline:
-
-1. `data/inbox/`
-   Depots bruts des exports GDPR decompresses
-2. `data/processed/`
-   Donnees re-rangees par source et jeux prepares manuellement
-3. `data/warehouse/`
-   Tables Parquet / Delta consommees par notebooks et dashboard
-
----
-
-## Installation
-
-### Prerequis
-
-- Python 3.11+
-- Java 11+
-- Docker Desktop optionnel
-
-### Dependencies
-
-```bash
-python -m venv .venv
-.venv\Scripts\activate
-pip install -r requirements.txt
+```text
+Inbox -> Parsers -> Processed data -> Notebooks/scripts -> Warehouse -> Dashboard
 ```
 
----
+Structure principale :
 
-## Demarrage rapide
-
-### 1. Deposer les exports
-
-Deposer les archives ou dossiers decompresses dans `data/inbox/`.
-
-Exemples attendus:
-
-- `instagram-*`
-- `takeout-*`
-- `spotify-*`
-- `tiktok-*`
-- `twitter-*`
-- `NetflixViewingHistory.csv`
-
-### 2. Lancer l'ingestion locale
-
-```bash
-python -m src.ingestion.run_all
+```text
+app/                 Dashboard Dash
+docs/photos/         Captures du dashboard
+docs/rapports/       Notes et rapports d'analyse
+src/ingestion/       Parsers des exports bruts
+src/scripts/         Notebooks et scripts analytiques
+data/inbox/          Exports bruts dézippés
+data/processed/      Exports rangés par source
+data/warehouse/      Tables Parquet/Delta et artefacts analytiques
 ```
 
-Cette etape deplace les donnees vers `data/processed/`.
+`config.py` centralise les chemins et détecte automatiquement l'environnement :
 
-### 3. Lancer les notebooks
+- local : `./data`
+- dashboard Docker : `/app/data`
+- Spark Docker : `/opt/spark/data`
 
-Ordre recommande:
+## Ingestion Workflow
+
+L'ingestion se lance avec :
+
+```bash
+docker compose exec spark-master python3 -m src.ingestion.run_all
+```
+
+Pour limiter à certaines sources :
+
+```bash
+docker compose exec spark-master python3 -m src.ingestion.run_all --sources instagram google spotify
+```
+
+Ce que fait `src/ingestion/run_all.py` :
+
+1. scanne `data/inbox/`
+2. détecte les exports par nom de dossier ou fichier
+3. lance les parsers dans `src/ingestion/parsers/`
+4. déplace les fichiers vers `data/processed/<SOURCE>/`
+5. écrit un audit dans `data/ingestion_log.json`
+
+Les parsers ne créent pas de session Spark. Spark intervient ensuite dans les
+notebooks et scripts de `src/scripts/`.
+
+## Incremental Ingestion
+
+Relancer l'ingestion ne signifie pas tout recalculer.
+
+Pour Instagram, Google et Spotify, `OVERWRITE=False` : les fichiers déjà présents
+dans `data/processed/` sont conservés, et seuls les nouveaux fichiers sont
+déplacés depuis `data/inbox/`.
+
+Pour TikTok, Twitter/X et Netflix, `OVERWRITE=True` : ces exports sont traités
+comme des exports complets et remplacent l'ancienne version traitée.
+
+L'audit `data/ingestion_log.json` permet de voir la dernière exécution et le
+nombre de fichiers déplacés par source.
+
+## Outputs
+
+Après ingestion, l'ordre de travail recommandé est :
 
 ```text
 src/scripts/01_exploration/
 src/scripts/02_clusters/
-src/scripts/03_als/
+src/scripts/03_memory_album/
+src/scripts/04_clone/
 src/scripts/05_CLIP/
 src/scripts/06_social/
 src/scripts/07_psy/
 ```
 
-Lancer Jupyter:
+Les sorties principales sont :
+
+- `data/warehouse/` : tables analytiques, embeddings, clusters, graphes
+- `data/LLM_DATA/` : corpus et prompts générés pour le clone
+- `app/assets/` : assets consommés par le dashboard
+- `docs/rapports/` : rapports de compréhension et d'analyse
+
+Le dashboard lit ces artefacts et expose les pages :
+
+- accueil et centres d'intérêt
+- clusters
+- timeline
+- Spotify
+- Netflix
+- social graph
+- photos / CLIP
+- memory album
+- miroir psy
+- inventaire des données
+
+## Customization
+
+Copier sert à générer une nouvelle instance personnalisée du projet :
 
 ```bash
-jupyter notebook
+pip install copier
+copier copy . ../mon-digital-twin
 ```
 
-### 4. Lancer le dashboard
+Copier génère les fichiers de configuration depuis `template/`. C'est utile pour
+onboarder quelqu'un ou créer une version propre avec ses propres paramètres.
+
+Docker suffit pour le flux standard. Il n'y a pas besoin de Makefile pour
+reproduire le projet.
+
+## Troubleshooting
+
+### Docker ne démarre pas
+
+Vérifier que Docker Desktop tourne, puis reconstruire :
 
 ```bash
-python -m app.app
+docker compose up --build
 ```
 
-Par defaut:
+Sous Windows, garder `entrypoint.sh` en fins de ligne LF.
 
-- Dashboard: [http://localhost:8050](http://localhost:8050)
+### Jupyter demande un token
 
----
-
-## Docker
+Lire la sortie du service Spark :
 
 ```bash
-make up
-make dev
-make down
+docker compose logs spark-master
 ```
 
-Services par defaut:
+### Mes données ne sont pas détectées
 
-- Spark Master UI: [http://localhost:8080](http://localhost:8080)
-- History Server: [http://localhost:18080](http://localhost:18080)
-- Jupyter: [http://localhost:8889](http://localhost:8889)
-- Dashboard: [http://localhost:8050](http://localhost:8050)
+Vérifier les noms dans `data/inbox/`. Les parsers détectent les préfixes :
 
-> Sous Windows, garder `entrypoint.sh` en fins de ligne LF.
+- `instagram`
+- `takeout`
+- `spotify`
+- `tiktok`
+- `twitter`
 
----
+Netflix est l'exception : le fichier doit s'appeler exactement
+`NetflixViewingHistory.csv`.
 
-## Photos / CLIP
+### Un dossier `instaloader/` ou `warehouse/` apparaît
 
-Le flux photo Instagram attendu est:
+Aucune référence à Instaloader n'est présente dans le code, les Dockerfiles ou le
+compose actuel. Si un dossier `instaloader/` apparaît au lancement, il vient
+probablement d'un outil externe, d'un ancien script, d'un volume local ou d'une
+commande lancée manuellement.
 
-1. ingestion Instagram vers `data/processed/INSTAGRAM/...`
-2. collecte des photos pour tri manuel
-3. tri manuel dans `data/processed/INSTAGRAM/CLIP_SORTING/`
-4. embeddings CLIP puis clustering
+Important : `.dockerignore` ne supprime rien. Il sert seulement à éviter
+d'envoyer certains dossiers locaux au contexte de build Docker. Il ne doit pas
+ignorer `data/`, car Spark et le dashboard s'appuient sur ce dossier. Les
+dossiers créés dans les volumes bindés, comme `./data`, restent sur le disque
+entre deux rebuilds.
 
-Script de collecte:
+Pour nettoyer les résidus locaux non voulus sous PowerShell :
+
+```powershell
+Remove-Item -Recurse -Force -LiteralPath .\data\instaloader, .\instaloader, .\warehouse -ErrorAction SilentlyContinue
+```
+
+Ici, `.\warehouse` désigne le dossier `warehouse/` à la racine du repo. Ne
+supprime pas `data/warehouse/` si tu veux conserver les sorties analytiques :
+c'est le dossier normal des résultats du pipeline.
+
+Pour debugger la source :
 
 ```bash
-python src/scripts/05_CLIP/00_collect_photos.py
+docker compose logs
+docker compose exec spark-master find /opt/spark -maxdepth 3 -iname '*instaloader*'
 ```
 
----
+### Parser un export mal formaté
 
-## Structure du projet
+Commencer par relancer une seule source :
 
-```text
-config.py
-config.yaml
-.env
-app/
-src/
-  ingestion/
-  scripts/
-data/
-  inbox/
-  processed/
-  warehouse/
-docs/
-infra/
+```bash
+docker compose exec spark-master python3 -m src.ingestion.run_all --sources instagram
 ```
 
----
+Puis vérifier :
+
+- le nom du dossier dans `data/inbox/`
+- que l'archive est bien dézippée
+- que le format demandé à la plateforme correspond au tableau Data Setup
 
 ## Documentation
 
-- `docs/ROADMAP_PHASE2.md`
-- `docs/CONFIG_AUDIT_PHASE2.md`
-- `docs/rapport/`
+- [Setup détaillé](docs/SETUP.md)
+- [Rapports](docs/rapports/)
+
+## License
+
+MIT. Voir [LICENSE](LICENSE).

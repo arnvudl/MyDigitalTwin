@@ -175,6 +175,8 @@ data/spotify_meta_cache.json
 data/LLM_DATA
 data/models
 .spotify_cache
+instaloader/
+**/instaloader/
 
 # Cache
 .DS_Store
