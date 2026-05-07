@@ -130,19 +130,17 @@ def test_netflix_parser_returns_zero_when_no_file(mock_data_dirs):
 
 @pytest.mark.unit
 def test_netflix_parser_run_prints_skip_message(mock_data_dirs):
-    """Mock print pour vérifier le message de skip quand le CSV est absent."""
+    """Vérifie que le parser passe en mode skip quand le CSV est absent."""
     inbox, processed = mock_data_dirs
 
     parser = NetflixParser()
     parser.inbox = inbox
     parser.dest = os.path.join(processed, "NETFLIX")
 
-    with patch("builtins.print") as mock_print:
-        result = parser.run()
+    result = parser.run()
 
     assert result == 0
-    all_output = " ".join(str(c) for c in mock_print.call_args_list).lower()
-    assert "skip" in all_output or "aucun" in all_output
+    assert parser._skipped is True
 
 
 @pytest.mark.unit

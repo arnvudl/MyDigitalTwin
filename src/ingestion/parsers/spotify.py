@@ -28,13 +28,13 @@ from src.ingestion.base import ParserBase, move_files
 
 class SpotifyParser(ParserBase):
 
-    SOURCE_NAME = "SPOTIFY"
-    OVERWRITE   = False
+    SOURCE_NAME          = "SPOTIFY"
+    OVERWRITE            = False
+    EXPECTED_EXTENSIONS  = {".json"}
 
-    # Mapping : fragment du nom de dossier inbox → sous-dossier dans processed/SPOTIFY/
     _FOLDER_MAP = {
-        "account data":           "account",
-        "extended streaming":     "extended",
+        "account data":       "account",
+        "extended streaming": "extended",
     }
 
     def move(self) -> int:
@@ -43,15 +43,14 @@ class SpotifyParser(ParserBase):
         total = 0
         for folder in sorted(folders):
             name_lower = os.path.basename(folder).lower()
-            # Détecter le sous-dossier cible
             sub = next(
                 (dst for key, dst in self._FOLDER_MAP.items() if key in name_lower),
-                "account"   # fallback
+                "account",
             )
-            dst = os.path.join(self.dest, sub)
+            dst   = os.path.join(self.dest, sub)
             moved = move_files(folder, dst, overwrite=self.OVERWRITE)
             total += moved
-            print(f"[SPOTIFY] {os.path.basename(folder)} → {sub}/ ({moved} fichiers)")
+            self._logger.debug(f"[SPOTIFY] {os.path.basename(folder)} → {sub}/ ({moved} fichier(s))")
         return total
 
 

@@ -26,6 +26,7 @@ from pathlib import Path
 import sys
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..")))
 from config import INBOX_ROOT, PROCESSED_DATA
+from src.ingestion.logger import get_logger
 
 INBOX_PATTERNS = [
     (re.compile(r"^instagram",         re.IGNORECASE), "INSTAGRAM"),
@@ -34,6 +35,11 @@ INBOX_PATTERNS = [
     (re.compile(r"^twitter",           re.IGNORECASE), "X"),
     (re.compile(r"^spotify",           re.IGNORECASE), "SPOTIFY"),
 ]
+
+
+class IngestionValidationError(Exception):
+    """Erreur levée quand la structure du dossier inbox est invalide."""
+    pass
 
 
 def detect_source(folder_name: str) -> str | None:
@@ -73,26 +79,65 @@ def move_files(src_dir: str, dst_dir: str, overwrite: bool = False) -> int:
 
 
 class ParserBase:
-    SOURCE_NAME: str  = ""
-    OVERWRITE:   bool = False
+    SOURCE_NAME:         str      = ""
+    OVERWRITE:           bool     = False
+    EXPECTED_EXTENSIONS: set[str] = {".json"}
 
     def __init__(self):
         self.inbox          = INBOX_ROOT
         self.processed_root = PROCESSED_DATA
         self.dest           = os.path.join(PROCESSED_DATA, self.SOURCE_NAME)
+        self._skipped       = False
+        self._logger        = get_logger(f"ingestion.{self.SOURCE_NAME.lower()}")
 
     def _inbox_folders(self) -> list[str]:
         return scan_inbox(self.inbox).get(self.SOURCE_NAME, [])
+
+    def validate(self, folders: list[str]) -> list[str]:
+        """
+        Vérifie la structure des dossiers inbox avant le déplacement.
+        Retourne une liste de warnings (chaînes). Liste vide = OK.
+        Lève IngestionValidationError si le dossier est présent mais vide.
+        """
+        warnings = []
+        for folder in folders:
+            actual_files = [f for f in Path(folder).rglob("*") if Path(f).is_file()]
+            if not actual_files:
+                raise IngestionValidationError(f"Dossier inbox vide : {folder}")
+            exts = {Path(f).suffix.lower() for f in actual_files}
+            if not (exts & self.EXPECTED_EXTENSIONS):
+                warnings.append(
+                    f"{os.path.basename(folder)} : aucun fichier {self.EXPECTED_EXTENSIONS} "
+                    f"(extensions trouvées : {exts})"
+                )
+        return warnings
 
     def move(self) -> int:
         raise NotImplementedError
 
     def run(self) -> int:
-        print(f"\n[{self.SOURCE_NAME}] Déplacement inbox → processed/")
+        self._skipped = False
+        log = self._logger
+        log.info(f"[{self.SOURCE_NAME}] Déplacement inbox → processed/")
+
         folders = self._inbox_folders()
         if not folders:
-            print(f"[{self.SOURCE_NAME}] Aucun dossier inbox détecté — skip")
+            log.info(f"[{self.SOURCE_NAME}] Aucun dossier inbox détecté — skip")
+            self._skipped = True
             return 0
+
+        log.debug(f"[{self.SOURCE_NAME}] {len(folders)} dossier(s) trouvé(s) : "
+                  f"{[os.path.basename(f) for f in folders]}")
+
+        try:
+            warnings = self.validate(folders)
+        except IngestionValidationError as e:
+            log.error(f"[{self.SOURCE_NAME}] Validation échouée — {e}")
+            raise
+
+        for w in warnings:
+            log.warning(f"[{self.SOURCE_NAME}] Validation : {w}")
+
         total = self.move()
-        print(f"[{self.SOURCE_NAME}] {total} fichiers déplacés vers processed/{self.SOURCE_NAME}/")
+        log.info(f"[{self.SOURCE_NAME}] {total} fichier(s) déplacé(s) vers processed/{self.SOURCE_NAME}/")
         return total

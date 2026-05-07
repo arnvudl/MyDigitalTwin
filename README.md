@@ -1,5 +1,12 @@
 # MyDigitalTwin
 
+![Python](https://img.shields.io/badge/Python-3.11-3776AB?logo=python&logoColor=white)
+![Spark](https://img.shields.io/badge/Apache%20Spark-3.5-E25A1C?logo=apachespark&logoColor=white)
+![Delta Lake](https://img.shields.io/badge/Delta%20Lake-3.x-00ADD8)
+![Docker](https://img.shields.io/badge/Docker-Compose-2496ED?logo=docker&logoColor=white)
+![Dash](https://img.shields.io/badge/Dash-Plotly-119DFF?logo=plotly&logoColor=white)
+![License](https://img.shields.io/badge/License-MIT-22c55e)
+
 MyDigitalTwin transforme des exports personnels bruts en un tableau de bord
 interactif : timeline, clusters comportementaux, graphe social, recommandations,
 exploration photo/CLIP, memory album et corpus de clone conversationnel.
@@ -189,15 +196,33 @@ notebooks et scripts de `src/scripts/`.
 
 Relancer l'ingestion ne signifie pas tout recalculer.
 
-Pour Instagram, Google et Spotify, `OVERWRITE=False` : les fichiers déjà présents
-dans `data/processed/` sont conservés, et seuls les nouveaux fichiers sont
-déplacés depuis `data/inbox/`.
+**Couche inbox → processed** — comportement par source :
 
-Pour TikTok, Twitter/X et Netflix, `OVERWRITE=True` : ces exports sont traités
-comme des exports complets et remplacent l'ancienne version traitée.
+| Source | Mode | Comportement |
+|---|---|---|
+| Instagram, Google, Spotify | `OVERWRITE=False` | Les fichiers déjà présents dans `processed/` sont conservés. Seuls les nouveaux fichiers sont déplacés. |
+| TikTok, Twitter/X, Netflix | `OVERWRITE=True` | L'export entier remplace la version précédente (exports monolithiques). |
 
-L'audit `data/ingestion_log.json` permet de voir la dernière exécution et le
-nombre de fichiers déplacés par source.
+**Couche processed → warehouse** — tous les notebooks utilisent un `MERGE INTO`
+Delta Lake : seules les lignes absentes sont insérées. Aucun doublon, quel que
+soit le nombre de relances.
+
+**Conseil** : garde une copie de tes exports originaux sur ton disque local, en
+dehors du repo. Les parsers déplacent (et non copient) les fichiers depuis
+`inbox/`. Si l'ingestion est interrompue entre le déplacement et l'écriture
+warehouse, tes fichiers sources ont disparu de `inbox/` mais le warehouse n'a pas
+été mis à jour. La copie locale te permet de simplement redéposer dans `inbox/`
+et de relancer.
+
+**Observabilité** :
+
+- `data/ingestion_log.json` — statut, nombre de fichiers déplacés et durée par
+  source à chaque exécution
+- `data/logs/ingestion_YYYY-MM-DD.log` — log structuré complet (DEBUG+)
+- `data/alerts.json` — historique des erreurs d'ingestion (créé uniquement si
+  une source échoue)
+
+Pour le détail complet du fonctionnement : [docs/ingestion.md](docs/ingestion.md).
 
 ## Outputs
 
@@ -267,6 +292,15 @@ Lire la sortie du service Spark :
 ```bash
 docker compose logs spark-master
 ```
+
+Ou générer le token manuellement en entrant dans le container et en lançant PySpark :
+
+```bash
+docker exec -it spark-master bash
+pyspark
+```
+
+Le token s'affiche dans la sortie console. Le copier-coller dans l'interface Jupyter.
 
 ### Mes données ne sont pas détectées
 
