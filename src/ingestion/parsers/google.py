@@ -29,8 +29,9 @@ from src.ingestion.base import ParserBase
 
 class GoogleParser(ParserBase):
 
-    SOURCE_NAME = "GOOGLE"
-    OVERWRITE   = False
+    SOURCE_NAME          = "GOOGLE"
+    OVERWRITE            = False
+    EXPECTED_EXTENSIONS  = {".html", ".json"}
 
     def move(self) -> int:
         folders = self._inbox_folders()
@@ -39,7 +40,7 @@ class GoogleParser(ParserBase):
         for folder in sorted(folders):
             moved = self._move_archive(folder)
             total += moved
-            print(f"[GOOGLE] {os.path.basename(folder)} → {moved} fichiers déplacés")
+            self._logger.debug(f"[GOOGLE] {os.path.basename(folder)} → {moved} fichier(s) déplacé(s)")
         return total
 
     def _move_archive(self, archive_dir: str) -> int:

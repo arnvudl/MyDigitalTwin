@@ -27,8 +27,9 @@ from src.ingestion.base import ParserBase, move_files
 
 class InstagramParser(ParserBase):
 
-    SOURCE_NAME = "INSTAGRAM"
-    OVERWRITE   = False
+    SOURCE_NAME          = "INSTAGRAM"
+    OVERWRITE            = False
+    EXPECTED_EXTENSIONS  = {".json"}
 
     def move(self) -> int:
         folders = self._inbox_folders()
@@ -37,7 +38,7 @@ class InstagramParser(ParserBase):
         for folder in folders:
             moved = move_files(folder, self.dest, overwrite=self.OVERWRITE)
             total += moved
-            print(f"[INSTAGRAM] {os.path.basename(folder)} → {moved} fichiers déplacés")
+            self._logger.debug(f"[INSTAGRAM] {os.path.basename(folder)} → {moved} fichier(s) déplacé(s)")
         return total
 
 

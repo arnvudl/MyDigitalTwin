@@ -169,6 +169,8 @@ cython_debug/
 data/inbox/
 data/processed/
 data/warehouse/
+data/logs/
+data/alerts.json
 data/topology_checkpoint/
 data/tmdb_poster_cache.json
 data/spotify_meta_cache.json

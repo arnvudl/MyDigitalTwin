@@ -20,8 +20,9 @@ from src.ingestion.base import ParserBase, move_files
 
 class TikTokParser(ParserBase):
 
-    SOURCE_NAME = "TIKTOK"
-    OVERWRITE   = True
+    SOURCE_NAME          = "TIKTOK"
+    OVERWRITE            = True
+    EXPECTED_EXTENSIONS  = {".json"}
 
     def move(self) -> int:
         folders = self._inbox_folders()
@@ -30,7 +31,7 @@ class TikTokParser(ParserBase):
         for folder in sorted(folders):
             moved = move_files(folder, self.dest, overwrite=self.OVERWRITE)
             total += moved
-            print(f"[TIKTOK] {os.path.basename(folder)} → {moved} fichiers déplacés")
+            self._logger.debug(f"[TIKTOK] {os.path.basename(folder)} → {moved} fichier(s) déplacé(s)")
         return total
 
 

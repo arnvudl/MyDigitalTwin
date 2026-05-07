@@ -26,8 +26,9 @@ from src.ingestion.base import ParserBase, move_files
 
 class TwitterParser(ParserBase):
 
-    SOURCE_NAME = "X"
-    OVERWRITE   = True
+    SOURCE_NAME          = "X"
+    OVERWRITE            = True
+    EXPECTED_EXTENSIONS  = {".js", ".html"}
 
     def move(self) -> int:
         folders = self._inbox_folders()
@@ -36,7 +37,7 @@ class TwitterParser(ParserBase):
         for folder in sorted(folders):
             moved = move_files(folder, self.dest, overwrite=self.OVERWRITE)
             total += moved
-            print(f"[X] {os.path.basename(folder)} → {moved} fichiers déplacés")
+            self._logger.debug(f"[X] {os.path.basename(folder)} → {moved} fichier(s) déplacé(s)")
         return total
 
 
