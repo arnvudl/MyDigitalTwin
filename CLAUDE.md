@@ -86,3 +86,13 @@ copier copy . ../my-digital-twin
 - Pandera for data quality schemas
 - Ruff for linting
 - pytest for unit tests
+
+<!-- SPECKIT START -->
+**Current Implementation Plan**: `specs/001-fix-delta-merge/plan.md`
+
+For additional context about technologies, project structure, and implementation phases,
+read the current plan. Includes design artifacts:
+- `research.md` — Merge pattern analysis for 4 notebooks
+- `data-model.md` — Entity definitions and merge keys
+- `quickstart.md` — Copy-paste MERGE templates
+<!-- SPECKIT END -->
