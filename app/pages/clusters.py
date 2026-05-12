@@ -78,11 +78,35 @@ def _read_delta(table_name: str, cols: list) -> pd.DataFrame:
     table_path = os.path.join(DELTA_BASE, table_name)
     if not os.path.exists(table_path):
         return pd.DataFrame(columns=cols)
-    files = [
-        os.path.join(table_path, f)
-        for f in os.listdir(table_path)
-        if f.endswith(".parquet") and not f.startswith(".")
-    ]
+
+    # Respecter le log Delta : seuls les fichiers référencés par add/remove sont valides.
+    log_dir = os.path.join(table_path, "_delta_log")
+    if os.path.isdir(log_dir):
+        import json as _json
+        active, removed = set(), set()
+        for fname in sorted(os.listdir(log_dir)):
+            if not fname.endswith(".json"):
+                continue
+            with open(os.path.join(log_dir, fname)) as fh:
+                for line in fh:
+                    try:
+                        entry = _json.loads(line)
+                    except _json.JSONDecodeError:
+                        continue
+                    if "add" in entry and entry["add"]:
+                        active.add(entry["add"]["path"])
+                    if "remove" in entry and entry["remove"]:
+                        removed.add(entry["remove"]["path"])
+        active -= removed
+        files = [os.path.join(table_path, p) for p in active]
+    else:
+        # Pas encore de Delta log — fallback Parquet brut (bootstrap)
+        files = [
+            os.path.join(table_path, f)
+            for f in os.listdir(table_path)
+            if f.endswith(".parquet") and not f.startswith(".")
+        ]
+
     if not files:
         return pd.DataFrame(columns=cols)
     dfs = []
