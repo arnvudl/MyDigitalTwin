@@ -88,11 +88,9 @@ copier copy . ../my-digital-twin
 - pytest for unit tests
 
 <!-- SPECKIT START -->
-**Current Implementation Plan**: `specs/001-fix-delta-merge/plan.md`
+**Current Implementation Plan**: `specs/002-dashboard-integration-tests/plan.md`
 
 For additional context about technologies, project structure, and implementation phases,
 read the current plan. Includes design artifacts:
-- `research.md` — Merge pattern analysis for 4 notebooks
-- `data-model.md` — Entity definitions and merge keys
-- `quickstart.md` — Copy-paste MERGE templates
+- `research.md` — Testing strategy decisions (Flask client vs dash_duo, mocking approach)
 <!-- SPECKIT END -->

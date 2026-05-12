@@ -1,0 +1,99 @@
+Voici les commandes exactes pour documenter l'intégralité des recommandations architecturales sous forme d'issues GitHub.
+
+Exécute **un bloc à la fois** dans l'agent. Attends que la commande `taskstoissues` soit complètement terminée avant de coller le bloc suivant.
+
+### 🔴 Priorité 1 (Critique)
+
+**1. Tests d'intégration Dashboard**
+
+```text
+/speckit.specify Rédige la spécification pour ajouter des tests d'intégration au Dashboard (dossier app/) avec dash[testing] et le fixture dash_duo.
+/speckit.plan
+/speckit.tasks
+/speckit.taskstoissues
+
+```
+
+**2. Schémas API avec Pandera**
+
+```text
+/speckit.specify Rédige la spécification pour documenter et valider les schémas d'ingestion des API (tests/schemas/) en utilisant pandera.DataFrameSchema.
+/speckit.plan
+/speckit.tasks
+/speckit.taskstoissues
+
+```
+
+**3. Architecture Decision Records (ADRs)**
+
+```text
+/speckit.specify Rédige la spécification pour initialiser le dossier docs/adr/ avec un template MADR et créer le premier enregistrement documentant l'architecture de MyDigitalTwin.
+/speckit.plan
+/speckit.tasks
+/speckit.taskstoissues
+
+```
+
+### 🟠 Priorité 2 (Important)
+
+**1. Règles de style Ruff**
+
+```text
+/speckit.specify Rédige la spécification pour étendre la configuration de Ruff (pyproject.toml) afin d'imposer des règles de style strictes sur l'ensemble du code.
+/speckit.plan
+/speckit.tasks
+/speckit.taskstoissues
+
+```
+
+**2. Type Hints (Core modules)**
+
+```text
+/speckit.specify Rédige la spécification pour appliquer un typage statique rigoureux (type hints) aux modules principaux, notamment ParserBase et l'orchestrateur.
+/speckit.plan
+/speckit.tasks
+/speckit.taskstoissues
+
+```
+
+**3. Centralized Logging (ELK)**
+
+```text
+/speckit.specify Rédige la spécification pour structurer les logs de l'application (format JSON) afin qu'ils soient compatibles avec une stack centralisée ELK.
+/speckit.plan
+/speckit.tasks
+/speckit.taskstoissues
+
+```
+
+### 🟡 Priorité 3 (Nice-to-Have)
+
+**1. Métriques Prometheus**
+
+```text
+/speckit.specify Rédige la spécification pour exposer les métriques de performance via Prometheus pour les pipelines d'ingestion, Spark et le Dashboard.
+/speckit.plan
+/speckit.tasks
+/speckit.taskstoissues
+
+```
+
+**2. Spark High Availability**
+
+```text
+/speckit.specify Rédige la spécification d'infrastructure pour migrer l'environnement Spark actuel vers un cluster à haute disponibilité (3-master cluster).
+/speckit.plan
+/speckit.tasks
+/speckit.taskstoissues
+
+```
+
+**3. Secret Manager**
+
+```text
+/speckit.specify Rédige la spécification pour supprimer la dépendance aux fichiers .env locaux et migrer la gestion des identifiants vers un Secret Manager (ex: Vault ou AWS Secrets).
+/speckit.plan
+/speckit.tasks
+/speckit.taskstoissues
+
+```
