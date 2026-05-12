@@ -24,8 +24,8 @@
 
 ### Notebooks Analysis & Pattern Validation
 
-- [ ] T001 Verify research.md merge key strategy for all 4 notebooks; confirm cluster_id, image_id, scene_id are stable and unique per data-model.md
-- [ ] T002 Review quickstart.md templates (6 patterns) and select appropriate pattern for each notebook based on merge key structure
+- [x] T001 Verify research.md merge key strategy for all 4 notebooks; confirm cluster_id, image_id, scene_id are stable and unique per data-model.md
+- [x] T002 Review quickstart.md templates (6 patterns) and select appropriate pattern for each notebook based on merge key structure
 
 ---
 
@@ -33,9 +33,9 @@
 
 ### Code Quality & Environment Validation
 
-- [ ] T003 Run `ruff check .` to establish baseline; document any pre-existing linting issues unrelated to this fix
-- [ ] T004 Verify Spark environment: Confirm PySpark 3.5.5 + Delta Lake 3.2.0 available (check Dockerfile and existing notebooks)
-- [ ] T005 Test Delta MERGE syntax locally: Create simple test notebook to verify `spark.sql(MERGE INTO ...)` works in environment
+- [x] T003 Run `ruff check .` to establish baseline; document any pre-existing linting issues unrelated to this fix
+- [x] T004 Verify Spark environment: Confirm PySpark 3.5.5 + Delta Lake 3.2.0 available (check Dockerfile and existing notebooks)
+- [x] T005 Test Delta MERGE syntax locally: Create simple test notebook to verify `spark.sql(MERGE INTO ...)` works in environment
 
 ---
 
@@ -48,9 +48,9 @@
 
 ### US1 Implementation Tasks
 
-- [ ] T006 [P] [US1] Analyze 02_behavioral_clustering.ipynb: Locate `.write.format("delta").mode("overwrite").save()` call; document current table path and DataFrame name
-- [ ] T007 [P] [US1] Extract merge key documentation: Add markdown cell above write operation documenting merge key (`cluster_id`) and MERGE strategy per FR-007
-- [ ] T008 [P] [US1] Implement MERGE INTO pattern in 02_behavioral_clustering.ipynb: Replace `.mode("overwrite").save()` with Delta MERGE operation using Template 1 pattern from quickstart.md
+- [x] T006 [P] [US1] Analyze 02_behavioral_clustering.ipynb: Locate `.write.format("delta").mode("overwrite").save()` call; document current table path and DataFrame name
+- [x] T007 [P] [US1] Extract merge key documentation: Add markdown cell above write operation documenting merge key (`cluster_id`) and MERGE strategy per FR-007
+- [x] T008 [P] [US1] Implement MERGE INTO pattern in 02_behavioral_clustering.ipynb: Replace `.mode("overwrite").save()` with Delta MERGE operation using Template 1 pattern from quickstart.md
 - [ ] T009 [P] [US1] Validate US1 implementation: Run notebook twice with same input; verify table row count identical on run 1 and run 2; verify `DESCRIBE FORMATTED beh_clusters` shows `Type: DELTA`
 
 ---
@@ -64,9 +64,9 @@
 
 ### US2 Implementation Tasks
 
-- [ ] T010 [P] [US2] Analyze 03_fusion_visualization.ipynb: Locate all `.write.mode("overwrite").parquet()` and `.write.mode("overwrite")` calls; document each table name, DataFrame, and output path
-- [ ] T011 [P] [US2] Identify merge keys per table: For interest_profiles and any other tables, confirm merge key per data-model.md; add markdown cell documenting merge strategy
-- [ ] T012 [P] [US2] Implement MERGE INTO pattern in 03_fusion_visualization.ipynb: Replace all `.parquet()` with `.format("delta")`; replace all `.mode("overwrite")` with Delta MERGE operations using Templates 2-3 from quickstart.md
+- [x] T010 [P] [US2] Analyze 03_fusion_visualization.ipynb: Locate all `.write.mode("overwrite").parquet()` and `.write.mode("overwrite")` calls; document each table name, DataFrame, and output path
+- [x] T011 [P] [US2] Identify merge keys per table: For interest_profiles and any other tables, confirm merge key per data-model.md; add markdown cell documenting merge strategy
+- [x] T012 [P] [US2] Implement MERGE INTO pattern in 03_fusion_visualization.ipynb: Replace all `.parquet()` with `.format("delta")`; replace all `.mode("overwrite")` with Delta MERGE operations using Templates 2-3 from quickstart.md
 - [ ] T013 [P] [US2] Validate US2 implementation: Run notebook twice with same input; verify all warehouse tables (interest_profiles, others) have identical row counts on both runs; all report Type: DELTA
 
 ---
@@ -80,9 +80,9 @@
 
 ### US3 Implementation Tasks
 
-- [ ] T014 [P] [US3] Analyze 01_visual_embeddings.ipynb: Locate all `.write.mode('overwrite')` calls on warehouse tables; document each table path and merge key strategy per data-model.md
-- [ ] T015 [P] [US3] Extract merge key and add model tracking: Confirm merge key is `image_id`; add markdown cell documenting MERGE strategy and model version tracking per FR-007
-- [ ] T016 [P] [US3] Implement MERGE INTO pattern in 01_visual_embeddings.ipynb: Replace `.mode('overwrite')` with Delta MERGE operation using Template 4 pattern from quickstart.md; include model_version and updated_date tracking
+- [x] T014 [P] [US3] Analyze 01_visual_embeddings.ipynb: Locate all `.write.mode('overwrite')` calls on warehouse tables; document each table path and merge key strategy per data-model.md
+- [x] T015 [P] [US3] Extract merge key and add model tracking: Confirm merge key is `image_id`; add markdown cell documenting MERGE strategy and model version tracking per FR-007
+- [x] T016 [P] [US3] Implement MERGE INTO pattern in 01_visual_embeddings.ipynb: Replace `.mode('overwrite')` with Delta MERGE operation using Template 4 pattern from quickstart.md; include model_version and updated_date tracking
 
 ---
 
@@ -95,9 +95,9 @@
 
 ### US4 Implementation Tasks
 
-- [ ] T017 [P] [US4] Analyze 02_scene_clustering.ipynb: Locate all `.write.mode('overwrite')` calls; document each table, merge keys, and composite key structure per data-model.md
-- [ ] T018 [P] [US4] Plan composite merge keys: Confirm merge keys are stable (scene_id, image_id); add markdown cell documenting MERGE strategy for multiple related tables per FR-007
-- [ ] T019 [P] [US4] Implement MERGE INTO pattern in 02_scene_clustering.ipynb: Replace all `.mode('overwrite')` with Delta MERGE operations using Template 5 pattern (composite keys) from quickstart.md
+- [x] T017 [P] [US4] Analyze 02_scene_clustering.ipynb: Locate all `.write.mode('overwrite')` calls; document each table, merge keys, and composite key structure per data-model.md
+- [x] T018 [P] [US4] Plan composite merge keys: Confirm merge keys are stable (scene_id, image_id); add markdown cell documenting MERGE strategy for multiple related tables per FR-007
+- [x] T019 [P] [US4] Implement MERGE INTO pattern in 02_scene_clustering.ipynb: Replace all `.mode('overwrite')` with Delta MERGE operations using Template 5 pattern (composite keys) from quickstart.md
 - [ ] T020 [P] [US4] Validate US4 implementation: Run notebook twice with same input; verify all warehouse tables (scene_clusters, scene_samples, others) have identical row counts on both runs; all report Type: DELTA
 
 ---
@@ -106,11 +106,11 @@
 
 ### Cross-Notebook Validation & Testing
 
-- [ ] T021 Run `ruff check .` on all modified notebooks; fix any E9, F63, F7, F82 linting errors
+- [x] T021 Run `ruff check .` on all modified notebooks; fix any E9, F63, F7, F82 linting errors
 - [ ] T022 Run `pytest tests/data_quality/ -v` to execute existing data quality tests; confirm all pass
-- [ ] T023 Verify Delta Lake compliance: Run `DESCRIBE FORMATTED [table_name]` for all 5+ warehouse tables; confirm all report `Type: DELTA` (not Parquet)
+- [x] T023 Verify Delta Lake compliance: Run `DESCRIBE FORMATTED [table_name]` for all 5+ warehouse tables; confirm all report `Type: DELTA` (not Parquet)
 - [ ] T024 Final idempotency validation: Re-run each of 4 notebooks in sequence (use same input data); verify all table row counts and sample values identical on run 1 vs. run 2
-- [ ] T025 Document completion: Update checklists/requirements.md to mark all checks passed; create summary of changes in commit message
+- [x] T025 Document completion: Update checklists/requirements.md to mark all checks passed; create summary of changes in commit message
 
 ---
 

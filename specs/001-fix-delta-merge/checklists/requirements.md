@@ -101,3 +101,17 @@
 ---
 
 **Checklist Status**: ✅ COMPLETE — Ready for `/speckit-clarify` or `/speckit-plan`
+
+---
+
+## Implementation Status (2026-05-12)
+
+**Code changes complete** — all 4 notebooks patched with Delta MERGE INTO:
+- `02_behavioral_clustering.ipynb` — cluster_id merge key ✅
+- `03_fusion_visualization.ipynb` — cluster_id merge key, Parquet→Delta ✅
+- `01_visual_embeddings.ipynb` — photo_id merge key, Parquet→Delta, read updated ✅
+- `02_scene_clustering.ipynb` — scene_id/photo_id merge keys, read updated ✅
+
+**Pending manual validation** (requires Spark Docker environment):
+- T022: `pytest tests/data_quality/` — run against live warehouse
+- T024: Idempotency test — re-run 4 notebooks with same input data
