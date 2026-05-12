@@ -14,7 +14,7 @@
   <img alt="Delta Lake" src="https://img.shields.io/badge/Delta%20Lake-3.x-00ADD8?style=flat-square" />
   <img alt="Docker" src="https://img.shields.io/badge/Docker-Compose-2496ED?style=flat-square&logo=docker&logoColor=white" />
   <img alt="Dash" src="https://img.shields.io/badge/Dash-Plotly-119DFF?style=flat-square&logo=plotly&logoColor=white" />
-  <img alt="License" src="https://img.shields.io/badge/License-Apache%202.0-green?style=flat-square" />
+  <img alt="License" src="https://img.shields.io/badge/License-MIT-22c55e?style=flat-square" />
 </p>
 
 <p align="center">
@@ -208,4 +208,4 @@ Pages du dashboard :
 
 ## Licence
 
-Apache 2.0 — voir [LICENSE](LICENSE).
+MIT — voir [LICENSE](LICENSE).

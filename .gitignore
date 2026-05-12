@@ -28,6 +28,7 @@ MANIFEST
 spark-logs
 
 .claude
+.specify
 
 # PyInstaller
 #  Usually these files are written by a python script from a template
