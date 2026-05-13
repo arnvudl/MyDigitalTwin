@@ -18,6 +18,8 @@ services:
       - ./config.py:/opt/spark/config.py
       - ./config.yaml:/opt/spark/config.yaml
       - ./app/assets:/opt/spark/app/assets  # topology_data.json écrit par 02_graph.ipynb
+      - ./run_pipeline.py:/opt/spark/run_pipeline.py
+      - ./validate_outputs.py:/opt/spark/validate_outputs.py
     env_file:
       - .env.spark
     ports:
