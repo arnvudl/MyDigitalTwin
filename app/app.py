@@ -152,4 +152,4 @@ def on_tag_click(n_clicks_list, ids):
 # ─── RUN ──────────────────────────────────────────────────────────────────────
 if __name__ == "__main__":
     # app.run(debug=True)
-    app.run(host=DASH_HOST, port=DASH_PORT, debug=True)
+    app.run(host=DASH_HOST, port=DASH_PORT, debug=False)

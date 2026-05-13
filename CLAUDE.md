@@ -88,7 +88,7 @@ copier copy . ../my-digital-twin
 - pytest for unit tests
 
 <!-- SPECKIT START -->
-**Current Implementation Plan**: `specs/002-dashboard-integration-tests/plan.md`
+**Current Implementation Plan**: `specs/011-convert-notebooks-python/plan.md`
 
 For additional context about technologies, project structure, and implementation phases,
 read the current plan. Includes design artifacts:
