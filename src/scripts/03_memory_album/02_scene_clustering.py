@@ -9,66 +9,73 @@ while not os.path.exists(os.path.join(_d, "config.py")):
     _d = _p
 sys.path.insert(0, _d)
 
-from config import build_spark_session, WAREHOUSE  # noqa: E402
-from pyspark.sql import functions as F  # noqa: E402
-from pyspark.sql.types import (  # noqa: E402
-    StructType,
-    StructField,
-    StringType,
-    IntegerType,
-    LongType,
-    ArrayType,
-    FloatType,
-)
-from delta.tables import DeltaTable  # noqa: E402
-import numpy as np  # noqa: E402
-import pandas as pd  # noqa: E402
 import yaml  # noqa: E402
 import re  # noqa: E402
-from datetime import datetime, timedelta  # noqa: E402
+import numpy as np  # noqa: E402
+import pandas as pd  # noqa: E402
+from pyspark.sql import functions as F  # noqa: E402
+from delta.tables import DeltaTable  # noqa: E402
+from config import build_spark_session, MEMORY_ALBUM_DIR  # noqa: E402
 
 
-def _load_config() -> dict:
-    config_path = os.path.join(_d, "config.yaml")
-    if os.path.exists(config_path):
-        with open(config_path, encoding="utf-8") as f:
-            cfg = yaml.safe_load(f)
-        return cfg.get("memory_album", {})
-    return {}
+EMBEDDINGS_DIR = os.path.join(MEMORY_ALBUM_DIR, "photo_embeddings")
+SCENES_DIR     = os.path.join(MEMORY_ALBUM_DIR, "scenes")
+CENTROIDS_DIR  = os.path.join(MEMORY_ALBUM_DIR, "scene_centroids")
+
+MONTH_FR = ["jan", "fév", "mar", "avr", "mai", "juin",
+            "juil", "août", "sep", "oct", "nov", "déc"]
+
+_DATE_PATTERNS = [
+    (r"(\d{8})_(\d{6})",        "compact8_6"),
+    (r"(\d{4})-(\d{2})-(\d{2})", "iso"),
+    (r"(?<!\d)(\d{8})(?!\d)",   "compact8"),
+]
+
+
+def time_slot(dt) -> str:
+    h = dt.hour
+    if   6  <= h < 12: return "Matin"
+    elif 12 <= h < 18: return "Après-midi"
+    elif 18 <= h < 23: return "Soirée"
+    else:              return "Nuit"
+
+
+def group_label(dt) -> str:
+    return f"{time_slot(dt)} · {dt.day} {MONTH_FR[dt.month-1]} {dt.year}"
 
 
 def _date_from_filename(filename: str):
-    """Extract date from common photo filename patterns."""
-    patterns = [
-        r"(\d{4})[-_](\d{2})[-_](\d{2})",
-        r"(\d{4})(\d{2})(\d{2})",
-        r"IMG[-_](\d{4})(\d{2})(\d{2})",
-    ]
-    for pat in patterns:
-        m = re.search(pat, filename)
-        if m:
-            try:
-                return datetime(int(m.group(1)), int(m.group(2)), int(m.group(3)))
-            except Exception:
-                continue
+    base = os.path.basename(filename)
+    for pat, kind in _DATE_PATTERNS:
+        m = re.search(pat, base)
+        if not m:
+            continue
+        try:
+            g = m.groups()
+            if kind == "compact8_6":
+                raw = g[0]
+                y, mo, d = int(raw[:4]), int(raw[4:6]), int(raw[6:8])
+            elif kind == "iso":
+                y, mo, d = int(g[0]), int(g[1]), int(g[2])
+            else:
+                raw = g[0]
+                y, mo, d = int(raw[:4]), int(raw[4:6]), int(raw[6:8])
+            if 2000 <= y <= 2030 and 1 <= mo <= 12 and 1 <= d <= 31:
+                return pd.Timestamp(y, mo, d, 12, 0, 0)
+        except Exception:
+            continue
     return None
 
 
-def time_slot(dt: datetime, gap_hours: float) -> str:
-    """Round datetime down to the nearest gap_hours bucket."""
-    epoch = datetime(2000, 1, 1)
-    slots = int((dt - epoch).total_seconds() / (gap_hours * 3600))
-    slot_start = epoch + timedelta(hours=slots * gap_hours)
-    return slot_start.strftime("%Y-%m-%d_%H")
-
-
-def group_label(scene_id: int, dt) -> str:
-    if dt is not None:
-        return dt.strftime(f"Scene {scene_id:04d} — %Y-%m-%d")
-    return f"Scene {scene_id:04d}"
-
-
 def main():
+    cfg_path = os.path.join(_d, "config.yaml")
+    with open(cfg_path, encoding="utf-8") as f:
+        cfg = yaml.safe_load(f)
+    ma = cfg.get("memory_album", {})
+    gap_hours = float(ma.get("scene_gap_hours", 6.0))
+    gap_sec   = gap_hours * 3600
+    print(f"Seuil gap temporel : {gap_hours}h")
+
     spark = build_spark_session(
         "MyDigitalTwin-MemoryAlbum-Clustering",
         driver_memory="4g",
@@ -76,127 +83,198 @@ def main():
     )
     spark.sparkContext.setLogLevel("WARN")
     try:
-        ma_config = _load_config()
-        gap_hours = float(ma_config.get("scene_gap_hours", 6.0))
-
-        emb_path = os.path.join(WAREHOUSE, "memory_album", "photo_embeddings")
-        if not os.path.isdir(emb_path):
-            print("  ⚠ photo_embeddings introuvable — run 01_visual_embeddings.py first")
-            return
-
-        df = spark.read.format("delta").load(emb_path)
-
-        # Collect to pandas for temporal/cosine grouping
-        pdf = df.select("photo_id", "photo_path", "photo_date", "embedding").toPandas()
-
-        # Parse dates
-        pdf["_dt"] = pdf["photo_date"].apply(
-            lambda d: datetime.fromisoformat(d) if d else None
-        )
-        pdf["_dt_from_fn"] = pdf["photo_path"].apply(
-            lambda p: _date_from_filename(os.path.basename(p))
-        )
-        pdf["_resolved_dt"] = pdf.apply(
-            lambda r: r["_dt"] if r["_dt"] is not None else r["_dt_from_fn"], axis=1
-        )
-
-        # Temporal clustering: photos with dates → group by time slot
-        dated = pdf[pdf["_resolved_dt"].notna()].copy()
-        undated = pdf[pdf["_resolved_dt"].isna()].copy()
-
-        scene_id = 0
-        scene_rows = []
-        centroid_rows = []
-
-        if not dated.empty:
-            dated["_slot"] = dated["_resolved_dt"].apply(lambda dt: time_slot(dt, gap_hours))
-            for slot, group in dated.groupby("_slot"):
-                scene_id += 1
-                rep_dt = group["_resolved_dt"].iloc[0]
-                for _, row in group.iterrows():
-                    scene_rows.append({
-                        "photo_id": row["photo_id"],
-                        "scene_id": scene_id,
-                        "scene_label": group_label(scene_id, rep_dt),
-                        "assignment_method": "temporal",
-                    })
-                # Centroid: mean of embeddings
-                embs = [e for e in group["embedding"].tolist() if e]
-                if embs:
-                    centroid = np.mean(embs, axis=0).tolist()
-                else:
-                    centroid = []
-                centroid_rows.append({
-                    "scene_id": scene_id,
-                    "scene_label": group_label(scene_id, rep_dt),
-                    "centroid": centroid,
-                    "photo_count": len(group),
-                })
-
-        # Undated photos: cosine similarity to nearest centroid, or new scene
-        if not undated.empty and centroid_rows:
-            centroids_arr = np.array([c["centroid"] for c in centroid_rows if c["centroid"]])
-            for _, row in undated.iterrows():
-                emb = row["embedding"]
-                if emb and centroids_arr.shape[0] > 0:
-                    emb_arr = np.array(emb)
-                    norms = np.linalg.norm(centroids_arr, axis=1) * np.linalg.norm(emb_arr)
-                    sims = np.dot(centroids_arr, emb_arr) / (norms + 1e-8)
-                    best_idx = int(np.argmax(sims))
-                    best_scene = centroid_rows[best_idx]["scene_id"]
-                    best_label = centroid_rows[best_idx]["scene_label"]
-                else:
-                    scene_id += 1
-                    best_scene = scene_id
-                    best_label = f"Scene {scene_id:04d}"
-                scene_rows.append({
-                    "photo_id": row["photo_id"],
-                    "scene_id": best_scene,
-                    "scene_label": best_label,
-                    "assignment_method": "cosine",
-                })
-        elif not undated.empty:
-            for _, row in undated.iterrows():
-                scene_id += 1
-                scene_rows.append({
-                    "photo_id": row["photo_id"],
-                    "scene_id": scene_id,
-                    "scene_label": f"Scene {scene_id:04d}",
-                    "assignment_method": "fallback",
-                })
-
-        scenes_schema = StructType([
-            StructField("photo_id", StringType()),
-            StructField("scene_id", IntegerType()),
-            StructField("scene_label", StringType()),
-            StructField("assignment_method", StringType()),
-        ])
-        df_scenes = spark.createDataFrame(scene_rows, schema=scenes_schema)
-
-        centroids_schema = StructType([
-            StructField("scene_id", IntegerType()),
-            StructField("scene_label", StringType()),
-            StructField("centroid", ArrayType(FloatType())),
-            StructField("photo_count", IntegerType()),
-        ])
-        df_centroids = spark.createDataFrame(centroid_rows, schema=centroids_schema)
-
-        # Computed tables → delete + append
-        scenes_path = os.path.join(WAREHOUSE, "memory_album", "scenes")
-        if DeltaTable.isDeltaTable(spark, scenes_path):
-            DeltaTable.forPath(spark, scenes_path).delete()
-            df_scenes.write.format("delta").mode("append").save(scenes_path)
+        # ── 3. Load embeddings ────────────────────────────────────────────────
+        if DeltaTable.isDeltaTable(spark, EMBEDDINGS_DIR):
+            df = spark.read.format("delta").load(EMBEDDINGS_DIR)
         else:
-            df_scenes.write.format("delta").mode("overwrite").save(scenes_path)
-        print(f"  ✓ memory_album/scenes — {df_scenes.count():,} lignes")
+            df = spark.read.parquet(EMBEDDINGS_DIR)
 
-        centroids_path = os.path.join(WAREHOUSE, "memory_album", "scene_centroids")
-        if DeltaTable.isDeltaTable(spark, centroids_path):
-            DeltaTable.forPath(spark, centroids_path).delete()
-            df_centroids.write.format("delta").mode("append").save(centroids_path)
+        print(f"{df.count()} photos chargées")
+
+        rows = df.select(
+            "photo_id", "path", "filename", "exif_date",
+            "lat", "lon", "caption", "embedding", "has_gps"
+        ).toPandas()
+
+        rows["exif_date"] = pd.to_datetime(rows["exif_date"], errors="coerce")
+        rows["caption"]   = rows["caption"].fillna("")
+
+        n_dated   = rows["exif_date"].notna().sum()
+        n_undated = rows["exif_date"].isna().sum()
+        print(f"Avec date EXIF : {n_dated} | Sans date : {n_undated}")
+
+        # ── 4. Temporal grouping ──────────────────────────────────────────────
+        dated   = rows[rows["exif_date"].notna()].sort_values("exif_date").copy()
+        undated = rows[rows["exif_date"].isna()].copy()
+
+        groups = []
+        current = []
+
+        for idx, row in dated.iterrows():
+            if not current:
+                current.append(idx)
+            else:
+                prev_dt = rows.loc[current[-1], "exif_date"]
+                gap = (row["exif_date"] - prev_dt).total_seconds()
+                if gap > gap_sec:
+                    groups.append(current)
+                    current = [idx]
+                else:
+                    current.append(idx)
+        if current:
+            groups.append(current)
+
+        rows["scene_id"]   = -1
+        rows["scene_name"] = ""
+
+        for gid, grp_indices in enumerate(groups):
+            first_dt = rows.loc[grp_indices[0], "exif_date"]
+            name = group_label(first_dt)
+            rows.loc[grp_indices, "scene_id"]   = gid
+            rows.loc[grp_indices, "scene_name"] = name
+
+        print(f"{len(groups)} groupes temporels créés")
+
+        # ── 5. Undated photo attachment ───────────────────────────────────────
+        if len(undated) == 0:
+            print("Toutes les photos ont une date EXIF — rien à rattacher")
+        elif len(groups) == 0:
+            rows.loc[undated.index, "scene_id"]   = 0
+            rows.loc[undated.index, "scene_name"] = "Moment sans date"
         else:
-            df_centroids.write.format("delta").mode("overwrite").save(centroids_path)
-        print(f"  ✓ memory_album/scene_centroids — {df_centroids.count():,} lignes")
+            group_centroids = {}
+            for gid, grp_indices in enumerate(groups):
+                embs = np.stack([
+                    np.array(rows.loc[i, "embedding"], dtype=np.float32)
+                    for i in grp_indices
+                ])
+                c = embs.mean(axis=0)
+                group_centroids[gid] = c / (np.linalg.norm(c) + 1e-8)
+
+            centroids_matrix = np.stack(
+                [group_centroids[i] for i in range(len(groups))]
+            )
+
+            group_mids = []
+            for gid, grp_indices in enumerate(groups):
+                t0 = rows.loc[grp_indices[0],  "exif_date"]
+                t1 = rows.loc[grp_indices[-1], "exif_date"]
+                group_mids.append(t0 + (t1 - t0) / 2)
+
+            VISUAL_THRESHOLD = 0.60
+            by_filename = by_visual = to_undated = 0
+
+            for idx in undated.index:
+                path_val = str(rows.loc[idx, "path"] or "")
+                fn_val   = str(rows.loc[idx, "filename"] or path_val)
+                assigned = False
+
+                fn_date = _date_from_filename(fn_val) or _date_from_filename(path_val)
+                if fn_date is not None:
+                    deltas = [abs((fn_date - mid).total_seconds()) for mid in group_mids]
+                    nearest_gid = int(np.argmin(deltas))
+                    rows.loc[idx, "scene_id"]   = nearest_gid
+                    rows.loc[idx, "scene_name"] = rows.loc[groups[nearest_gid][0], "scene_name"]
+                    by_filename += 1
+                    assigned = True
+
+                if not assigned:
+                    emb   = np.array(rows.loc[idx, "embedding"], dtype=np.float32)
+                    emb_n = emb / (np.linalg.norm(emb) + 1e-8)
+                    sims  = centroids_matrix @ emb_n
+                    best  = int(np.argmax(sims))
+                    best_sim = float(sims[best])
+
+                    if best_sim >= VISUAL_THRESHOLD:
+                        rows.loc[idx, "scene_id"]   = best
+                        rows.loc[idx, "scene_name"] = rows.loc[groups[best][0], "scene_name"]
+                        by_visual += 1
+                        assigned = True
+
+                if not assigned:
+                    rows.loc[idx, "scene_id"]   = -2
+                    rows.loc[idx, "scene_name"] = "Moment sans date"
+                    to_undated += 1
+
+            if (rows["scene_id"] == -2).any():
+                undated_sid = int(rows[rows["scene_id"] >= 0]["scene_id"].max()) + 1
+                rows.loc[rows["scene_id"] == -2, "scene_id"] = undated_sid
+                print(f"Nouveau groupe [scene_id={undated_sid}] créé pour les photos sans date")
+
+            print(f"\n{len(undated)} photos sans date rattachées :")
+            print(f"  {by_filename:2d}  par date dans le nom de fichier")
+            print(f"  {by_visual:2d}  par similarité visuelle (seuil {VISUAL_THRESHOLD})")
+            print(f"  {to_undated:2d}  → groupe 'Moment sans date'")
+
+        # ── 6. Final recap ────────────────────────────────────────────────────
+        rows["scene_id"] = rows["scene_id"].astype(int)
+        rows["is_noise"] = False
+
+        # ── 7. Write scenes (Delta MERGE) ─────────────────────────────────────
+        df_scenes = spark.createDataFrame(
+            rows[["photo_id", "path", "filename", "exif_date",
+                  "lat", "lon", "caption", "scene_id", "scene_name", "is_noise"]]
+            .astype({"scene_id": int})
+            .where(rows["path"].notna())
+        )
+
+        if DeltaTable.isDeltaTable(spark, SCENES_DIR):
+            (
+                DeltaTable.forPath(spark, SCENES_DIR).alias("target")
+                .merge(df_scenes.alias("source"), "target.photo_id = source.photo_id")
+                .whenMatchedUpdateAll()
+                .whenNotMatchedInsertAll()
+                .execute()
+            )
+        else:
+            df_scenes.write.format("delta").mode("overwrite").save(SCENES_DIR)
+
+        print(f"Table scenes --> {SCENES_DIR}")
+
+        # ── 8. Write centroids (Delta MERGE) ──────────────────────────────────
+        centroids_rows = []
+        for sid in sorted(rows["scene_id"].unique()):
+            mask   = rows["scene_id"] == sid
+            subset = rows[mask]
+
+            embs     = np.stack(subset["embedding"].apply(
+                lambda e: np.array(e, dtype=np.float32)
+            ).values)
+            centroid = embs.mean(axis=0)
+
+            norms   = np.linalg.norm(embs - centroid, axis=1)
+            rep_idx = subset.index[np.argmin(norms)]
+
+            dates  = subset["exif_date"].dropna()
+            ts_min = dates.min() if len(dates) else None
+            ts_max = dates.max() if len(dates) else None
+
+            centroids_rows.append({
+                "scene_id":               int(sid),
+                "scene_name":             subset["scene_name"].iloc[0],
+                "photo_count":            int(mask.sum()),
+                "centroid_embedding":     centroid.tolist(),
+                "representative_caption": rows.loc[rep_idx, "caption"],
+                "representative_photo":   rows.loc[rep_idx, "path"],
+                "timestamp_start":        ts_min,
+                "timestamp_end":          ts_max,
+                "photo_ids":              subset["photo_id"].tolist(),
+            })
+
+        df_centroids = spark.createDataFrame(pd.DataFrame(centroids_rows))
+
+        if DeltaTable.isDeltaTable(spark, CENTROIDS_DIR):
+            (
+                DeltaTable.forPath(spark, CENTROIDS_DIR).alias("target")
+                .merge(df_centroids.alias("source"), "target.scene_id = source.scene_id")
+                .whenMatchedUpdateAll()
+                .whenNotMatchedInsertAll()
+                .execute()
+            )
+        else:
+            df_centroids.write.format("delta").mode("overwrite").save(CENTROIDS_DIR)
+
+        print(f"Table centroids --> {CENTROIDS_DIR}")
 
     finally:
         spark.stop()

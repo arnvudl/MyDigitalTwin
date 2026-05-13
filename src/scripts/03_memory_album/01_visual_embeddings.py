@@ -93,7 +93,7 @@ def _load_model(model_name: str, models_cache: str):
         import open_clip
         print(f"  Loading OpenCLIP ({model_name}) on {device}...", flush=True)
         hf_name = f"hf-hub:{model_name}" if "/" in model_name else model_name
-        model, _, preprocess = open_clip.create_model_from_pretrained(
+        model, _, preprocess = open_clip.create_model_and_transforms(
             hf_name, cache_dir=models_cache
         )
         model = model.to(device)
@@ -120,11 +120,13 @@ def run_inference(photo_files: list, model_name: str, batch_size: int, models_ca
             exif = extract_exif(path)
             base = {
                 "photo_id": photo_id,
-                "photo_path": path,
+                "path": path,
+                "filename": os.path.basename(path),
                 "caption": "",
-                "gps_lat": exif["gps_lat"],
-                "gps_lon": exif["gps_lon"],
-                "photo_date": exif["photo_date"],
+                "lat": exif["gps_lat"],
+                "lon": exif["gps_lon"],
+                "exif_date": exif["photo_date"],
+                "has_gps": exif["gps_lat"] is not None,
             }
             try:
                 img = Image.open(path).convert("RGB")
@@ -136,10 +138,10 @@ def run_inference(photo_files: list, model_name: str, batch_size: int, models_ca
                     img_tensor = processor_or_preprocess(img).unsqueeze(0).to(device)
                     with torch.no_grad():
                         emb = model.encode_image(img_tensor).cpu().numpy()[0]
-                rows.append({**base, "embedding": emb.tolist(), "embedding_dim": len(emb)})
+                rows.append({**base, "embedding": emb.tolist()})
             except Exception as e:
                 print(f"  ⚠ erreur: {e}", flush=True)
-                rows.append({**base, "embedding": [], "embedding_dim": 0})
+                rows.append({**base, "embedding": []})
 
     return rows
 
@@ -175,13 +177,14 @@ def main():
 
         schema = StructType([
             StructField("photo_id", StringType()),
-            StructField("photo_path", StringType()),
-            StructField("embedding", ArrayType(FloatType())),
+            StructField("path", StringType()),
+            StructField("filename", StringType()),
             StructField("caption", StringType()),
-            StructField("embedding_dim", LongType()),
-            StructField("gps_lat", DoubleType()),
-            StructField("gps_lon", DoubleType()),
-            StructField("photo_date", StringType()),
+            StructField("lat", DoubleType()),
+            StructField("lon", DoubleType()),
+            StructField("exif_date", StringType()),
+            StructField("has_gps", StringType()),
+            StructField("embedding", ArrayType(FloatType())),
         ])
 
         df = spark.createDataFrame(rows, schema=schema)

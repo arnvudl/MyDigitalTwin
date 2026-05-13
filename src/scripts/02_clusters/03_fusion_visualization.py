@@ -11,78 +11,60 @@ sys.path.insert(0, _d)
 
 from config import build_spark_session, WAREHOUSE  # noqa: E402
 from pyspark.sql import functions as F  # noqa: E402
-from pyspark.sql.types import StructType, StructField, StringType, IntegerType, ArrayType  # noqa: E402
+from pyspark.sql.types import (  # noqa: E402
+    StructType, StructField, StringType, IntegerType,
+    ArrayType, LongType, DoubleType,
+)
 from pyspark.ml.feature import Tokenizer, StopWordsRemover, NGram  # noqa: E402
 from delta.tables import DeltaTable  # noqa: E402
 
 
-_DF_CACHE: dict = {}
+STOPWORDS_EXTRA = [
+    "les","des","une","sur","avec","dans","qui","que","par","plus",
+    "tout","bien","comme","mais","mon","ton","son","nos","mes",
+    "faire","comment","aussi","encore","très",
+    "the","and","for","with","you","your","this","that","from",
+    "are","was","not","its","but","all","new","best","how",
+    "https","http","www","com","org","net","html","utm","amp",
+    "watch","video","clip","official","officiel","youtube","shorts",
+    "16x9","inh","vid","1920x1080","15s","officiel)","(clip",
+    "(official","video)","(ft","music","choisissez","chrome",
+    "google","gmail","recherche","online","redirect","editor",
+    "lil","trio","los","del","les","von",
+]
 
+NOISE_RE = (
+    r'(?i)'
+    r'\b\d{1,4}x\d{1,4}\b|\bINH\b'
+    r'|Choisissez Chrome|Kies Chrome|Choose Chrome'
+    r'|^Redirect(?:ion)?[\.\s…]*$|Ad Blocker|VID\s+\d'
+    r'|_[A-Z]{2}\b|\bBoost_\d|LinkedAccounts|FreeBankAccount'
+    r'|\b\d+\s*sec\b|casino|^Shortened[:\s]'
+    r'|[一-鿿぀-ヿ]'
+    r'|\blening\b|\bkrediet\b|CI/CD|TeamCity|JetBrains'
+    r'|On the jobsite|leaders aren|\bvolvo\b|\bDEWALT\b'
+    r'|reconditionné.*Back\s*Mark|Enjoy a better|^Loading[.\s]*$'
+    r'|lust\s+god|Recherche\s+Google|(\w+)\s+\1\.(com|net|org|be|fr|io)'
+)
 
-def _safe_read(spark, table_name: str):
-    if table_name in _DF_CACHE:
-        return _DF_CACHE[table_name]
-    path = os.path.join(WAREHOUSE, table_name)
-    if not os.path.isdir(path):
-        return None
-    try:
-        df = spark.read.format("delta").load(path)
-        _DF_CACHE[table_name] = df
-        return df
-    except Exception:
-        return None
-
-
-def extract_top_words(spark, cluster_id: int, text_sources: list) -> list[str]:
-    all_tokens = None
-    for df, text_col in text_sources:
-        if df is None:
-            continue
-        df_cluster = df.filter(F.col("cluster_id") == cluster_id) if "cluster_id" in df.columns else df
-        tok = Tokenizer(inputCol=text_col, outputCol="_tok_raw").transform(
-            df_cluster.filter(F.col(text_col).isNotNull())
-        )
-        rem = StopWordsRemover(inputCol="_tok_raw", outputCol="_tok", locale="fr").transform(tok)
-        words = rem.select(F.explode("_tok").alias("word")).filter(F.length("word") > 2)
-        all_tokens = words if all_tokens is None else all_tokens.union(words)
-
-    if all_tokens is None:
-        return []
-    top = all_tokens.groupBy("word").count().orderBy(F.desc("count")).limit(20)
-    return [r["word"] for r in top.collect()]
-
-
-def extract_bigrams(spark, cluster_id: int, text_sources: list) -> list[str]:
-    all_bigrams = None
-    for df, text_col in text_sources:
-        if df is None:
-            continue
-        df_cluster = df.filter(F.col("cluster_id") == cluster_id) if "cluster_id" in df.columns else df
-        tok = Tokenizer(inputCol=text_col, outputCol="_tok_raw").transform(
-            df_cluster.filter(F.col(text_col).isNotNull())
-        )
-        rem = StopWordsRemover(inputCol="_tok_raw", outputCol="_tok", locale="fr").transform(tok)
-        ngram = NGram(n=2, inputCol="_tok", outputCol="_bigrams").transform(rem)
-        bi = ngram.select(F.explode("_bigrams").alias("bigram"))
-        all_bigrams = bi if all_bigrams is None else all_bigrams.union(bi)
-
-    if all_bigrams is None:
-        return []
-    top = all_bigrams.groupBy("bigram").count().orderBy(F.desc("count")).limit(10)
-    return [r["bigram"] for r in top.collect()]
-
-
-def extract_samples(df, text_col: str, cluster_id: int, n: int = 5) -> list[str]:
-    if df is None or text_col not in df.columns:
-        return []
-    rows = (
-        df.filter(F.col("cluster_id") == cluster_id if "cluster_id" in df.columns else F.lit(True))
-          .filter(F.col(text_col).isNotNull())
-          .select(text_col)
-          .limit(n)
-          .collect()
-    )
-    return [r[text_col] for r in rows]
+PLATFORM_SOURCE = {
+    "youtube":           ("youtube_watch",      "title"),
+    "google":            ("google_searches",    "query"),
+    "chrome":            ("google_chrome",      "title"),
+    "spotify":           ("spotify_streams",    "artistName"),
+    "netflix":           ("netflix_views",      "show_title"),
+    "tiktok":            ("tiktok_searches",    "query"),
+    "tiktok_likes":      ("tiktok_searches",    "query"),
+    "tiktok_search":     ("tiktok_searches",    "query"),
+    "instagram":         ("instagram_searches", "query"),
+    "instagram_saved":   ("instagram_searches", "query"),
+    "ig_search":         ("instagram_searches", "query"),
+    "ig_posts":          ("instagram_searches", "query"),
+    "ig_videos":         ("instagram_searches", "query"),
+    "ig_stories":        ("instagram_searches", "query"),
+    "instagram_comment": ("instagram_searches", "query"),
+    "twitter":           ("twitter_tweets",     "full_text"),
+}
 
 
 def main():
@@ -93,59 +75,168 @@ def main():
     )
     spark.sparkContext.setLogLevel("WARN")
     try:
-        beh_clusters = _safe_read(spark, "behavioral_clusters")
-        if beh_clusters is None:
-            print("  ⚠ behavioral_clusters introuvable — run 02_behavioral_clustering.py first")
-            return
+        def read_table(name):
+            return spark.read.format("delta").load(os.path.join(WAREHOUSE, name))
 
-        cluster_ids = [r["cluster_id"] for r in beh_clusters.select("cluster_id").distinct().collect()]
+        beh_clusters = read_table("behavioral_clusters")
+        print("Profils comportementaux :")
+        beh_clusters.show(truncate=60)
 
-        text_sources = [
-            (_safe_read(spark, "instagram_comments"), "text"),
-            (_safe_read(spark, "twitter_tweets"), "text"),
-            (_safe_read(spark, "google_searches"), "query"),
-            (_safe_read(spark, "youtube_searches"), "query"),
-            (_safe_read(spark, "tiktok_searches"), "query"),
-            (_safe_read(spark, "spotify_streams"), "track_name"),
-        ]
+        beh_info = {row["cluster_id"]: row.asDict() for row in beh_clusters.collect()}
+        print(f"\n{len(beh_info)} clusters chargés.")
 
-        profiles_rows = []
-        for cluster_id in cluster_ids:
-            cluster_info = beh_clusters.filter(F.col("cluster_id") == cluster_id).first()
-            label = cluster_info["cluster_label"] if cluster_info else f"Cluster {cluster_id}"
+        stop_all = (StopWordsRemover.loadDefaultStopWords("english")
+                  + StopWordsRemover.loadDefaultStopWords("french")
+                  + STOPWORDS_EXTRA)
 
-            top_words = extract_top_words(spark, cluster_id, text_sources)
-            bigrams = extract_bigrams(spark, cluster_id, text_sources)
-            samples = extract_samples(
-                _safe_read(spark, "instagram_comments"), "text", cluster_id
+        def extract_top_words(df, text_col, n=15):
+            clean = (
+                df.filter(F.col(text_col).isNotNull() & (F.length(F.col(text_col)) > 2))
+                .withColumnRenamed(text_col, "_text")
+                .filter(~F.col("_text").rlike(r'@|^https?://|%[0-9a-fA-F]{2}'))
+            )
+            tok = Tokenizer(inputCol="_text", outputCol="_words").transform(clean)
+            flt = StopWordsRemover(inputCol="_words", outputCol="_tokens",
+                                   stopWords=stop_all).transform(tok)
+            return (flt.select(F.explode("_tokens").alias("w"))
+                       .filter(F.length("w") > 2)
+                       .filter(~F.col("w").rlike(r'^\d'))
+                       .filter(~F.col("w").rlike(r'[@%#\(\)]'))
+                       .groupBy("w").count()
+                       .orderBy(F.desc("count")).limit(n)
+                       .select("w").rdd.flatMap(lambda x: x).collect())
+
+        def extract_bigrams(df, text_col, n=5):
+            clean = (
+                df.filter(F.col(text_col).isNotNull() & (F.length(F.col(text_col)) > 2))
+                .withColumnRenamed(text_col, "_text")
+                .filter(~F.col("_text").rlike(r'@|^https?://|%[0-9a-fA-F]{2}'))
+            )
+            tok = Tokenizer(inputCol="_text", outputCol="_words").transform(clean)
+            flt = StopWordsRemover(inputCol="_words", outputCol="_tokens",
+                                   stopWords=stop_all).transform(tok)
+            bg = NGram(n=2, inputCol="_tokens", outputCol="_ng").transform(flt)
+            return (bg.select(F.explode("_ng").alias("b"))
+                      .filter(F.length("b") > 5)
+                      .filter(~F.col("b").rlike(r'[@%#\(\)\d]'))
+                      .groupBy("b").count()
+                      .orderBy(F.desc("count")).limit(n)
+                      .select("b").rdd.flatMap(lambda x: x).collect())
+
+        def extract_samples(df, text_col, n=30):
+            return (
+                df.filter(F.col(text_col).isNotNull() & (F.length(F.col(text_col)) > 1))
+                .filter(~F.col(text_col).rlike(r'@|^https?://|%[0-9a-fA-F]{2}'))
+                .filter(~F.col(text_col).rlike(NOISE_RE))
+                .filter(~F.col(text_col).rlike(r'^\s*[A-Z0-9_]{5,}\s'))
+                .groupBy(text_col).count()
+                .orderBy(F.desc("count")).limit(n)
+                .select(text_col).rdd.flatMap(lambda x: x).collect()
             )
 
-            profiles_rows.append({
-                "cluster_id": cluster_id,
-                "cluster_label": label,
-                "top_words": top_words,
-                "top_bigrams": bigrams,
-                "sample_texts": samples,
-            })
+        def merge_kw(*lists):
+            seen, result = set(), []
+            for lst in lists:
+                for w in lst:
+                    if w not in seen:
+                        seen.add(w); result.append(w)
+            return result
 
-        schema = StructType([
-            StructField("cluster_id", IntegerType()),
-            StructField("cluster_label", StringType()),
-            StructField("top_words", ArrayType(StringType())),
-            StructField("top_bigrams", ArrayType(StringType())),
-            StructField("sample_texts", ArrayType(StringType())),
+        _df_cache = {}
+
+        def get_df(table_name):
+            if table_name not in _df_cache:
+                try:
+                    _df_cache[table_name] = read_table(table_name).cache()
+                except Exception:
+                    _df_cache[table_name] = None
+            return _df_cache[table_name]
+
+        # ── C2. Dynamic keyword extraction per cluster ─────────────────────────
+        cluster_keywords = {}
+        cluster_samples = {}
+
+        for cid, info in sorted(beh_info.items()):
+            platforms = list(info.get("top_platforms") or [])
+            seen_tables, kw_parts, sample_parts = set(), [], []
+
+            for p in platforms:
+                mapping = PLATFORM_SOURCE.get(p)
+                if not mapping:
+                    continue
+                table_name, text_col = mapping
+                if table_name in seen_tables:
+                    continue
+                df = get_df(table_name)
+                if df is None:
+                    continue
+                seen_tables.add(table_name)
+                kw_parts.append(extract_bigrams(df, text_col, n=4))
+                kw_parts.append(extract_top_words(df, text_col, n=12))
+                sample_parts.append(extract_samples(df, text_col, n=20))
+                if len(seen_tables) >= 3:
+                    break
+
+            cluster_keywords[cid] = merge_kw(*kw_parts)
+
+            all_s, seen_s = [], set()
+            for lst in sample_parts:
+                for s in lst:
+                    if s not in seen_s:
+                        seen_s.add(s); all_s.append(s)
+            cluster_samples[cid] = all_s[:30]
+
+            label = info["label"]
+            print(f"  [{cid}] {label}")
+            print(f"       sources : {sorted(seen_tables)}")
+            print(f"       keywords: {cluster_keywords[cid][:8]}")
+            print()
+
+        # ── C3. Write interest_profiles ───────────────────────────────────────
+        schema_ip = StructType([
+            StructField("cluster_id",    IntegerType(), False),
+            StructField("label",         StringType(),  False),
+            StructField("emoji",         StringType(),  True),
+            StructField("keywords",      ArrayType(StringType()), True),
+            StructField("top_platforms", ArrayType(StringType()), True),
+            StructField("avg_hour",      DoubleType(),  True),
+            StructField("time_period",   StringType(),  True),
+            StructField("day_type",      StringType(),  True),
+            StructField("item_count",    LongType(),    True),
+            StructField("sample_items",  ArrayType(StringType()), True),
         ])
-        result = spark.createDataFrame(profiles_rows, schema=schema)
 
-        # Computed table → delete + append
-        table_path = os.path.join(WAREHOUSE, "interest_profiles")
-        if DeltaTable.isDeltaTable(spark, table_path):
-            DeltaTable.forPath(spark, table_path).delete()
-            result.write.format("delta").mode("append").save(table_path)
+        interest_rows = [
+            (
+                cid,
+                info["label"],
+                info["emoji"],
+                cluster_keywords.get(cid, []),
+                list(info.get("top_platforms") or []),
+                float(info["avg_hour"]),
+                info["time_period"],
+                info["day_type"],
+                info["item_count"],
+                cluster_samples.get(cid, []),
+            )
+            for cid, info in sorted(beh_info.items())
+        ]
+
+        interest_profiles_df = spark.createDataFrame(interest_rows, schema_ip)
+        out_path = os.path.join(WAREHOUSE, "interest_profiles")
+
+        if DeltaTable.isDeltaTable(spark, out_path):
+            (
+                DeltaTable.forPath(spark, out_path).alias("target")
+                .merge(interest_profiles_df.alias("source"), "target.cluster_id = source.cluster_id")
+                .whenMatchedUpdateAll()
+                .whenNotMatchedInsertAll()
+                .execute()
+            )
         else:
-            result.write.format("delta").mode("overwrite").save(table_path)
+            interest_profiles_df.write.format("delta").mode("overwrite").save(out_path)
 
-        count = spark.read.format("delta").load(table_path).count()
+        count = spark.read.format("delta").load(out_path).count()
         print(f"  ✓ interest_profiles — {count:,} lignes")
 
     finally:

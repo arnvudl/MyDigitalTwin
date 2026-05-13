@@ -1,5 +1,5 @@
-import sys
 import os
+import sys
 
 _d = os.path.abspath(__file__)
 while not os.path.exists(os.path.join(_d, "config.py")):
@@ -11,83 +11,88 @@ sys.path.insert(0, _d)
 
 from config import build_spark_session, PROCESSED_DATA, WAREHOUSE  # noqa: E402
 from pyspark.sql import functions as F  # noqa: E402
-from pyspark.sql.types import (  # noqa: E402
-    StructType,
-    StructField,
-    StringType,
-    IntegerType,
-)
 from delta.tables import DeltaTable  # noqa: E402
-import glob  # noqa: E402
 
-
-NETFLIX_DIR = os.path.join(PROCESSED_DATA, "NETFLIX")
-
-
-def _merge_table(spark, df, table_name: str, merge_condition: str):
-    table_path = os.path.join(WAREHOUSE, table_name)
-    if DeltaTable.isDeltaTable(spark, table_path):
-        DeltaTable.forPath(spark, table_path).alias("t").merge(
-            df.alias("s"), merge_condition
-        ).whenNotMatchedInsertAll().execute()
-    else:
-        df.write.format("delta").mode("overwrite").save(table_path)
-    count = spark.read.format("delta").load(table_path).count()
-    print(f"  ✓ {table_name} — {count:,} lignes")
+RAW_PATH = os.path.join(PROCESSED_DATA, "NETFLIX", "NetflixViewingHistory.csv")
+PARQUET_OUT = os.path.join(WAREHOUSE, "netflix_views")
 
 
 def main():
     spark = build_spark_session("MyDigitalTwin - Netflix", driver_memory="4g", shuffle_partitions=8)
     spark.sparkContext.setLogLevel("WARN")
     try:
-        csv_files = (
-            glob.glob(os.path.join(NETFLIX_DIR, "**", "NetflixViewingHistory.csv"), recursive=True)
-            or glob.glob(os.path.join(NETFLIX_DIR, "**", "ViewingActivity.csv"), recursive=True)
-        )
-        if not csv_files:
-            print("  ⚠ NetflixViewingHistory.csv introuvable — skip netflix")
+        if not os.path.exists(RAW_PATH):
+            print(f"  ⚠ NetflixViewingHistory.csv introuvable — skip netflix")
             return
 
-        schema = StructType([
-            StructField("Title", StringType()),
-            StructField("Date", StringType()),
-        ])
+        df = spark.read.option("header", "true").option("encoding", "UTF-8").csv(RAW_PATH)
 
-        df = spark.read.option("header", "true").schema(schema).csv(csv_files[0])
+        # Date Netflix format M/D/YY
+        df = df.withColumn("watch_date", F.to_date(F.col("Date"), "M/d/yy"))
 
-        # Parse date from "M/d/yy" format
-        df = df.withColumn("event_date", F.to_date(F.col("Date"), "M/d/yy"))
+        # Champs temporels
+        df = df \
+            .withColumn("watch_year", F.year("watch_date")) \
+            .withColumn("watch_month", F.date_format("watch_date", "yyyy-MM")) \
+            .withColumn("watch_weekday", F.dayofweek("watch_date")) \
+            .withColumn("watch_week", F.weekofyear("watch_date"))
 
-        # Series vs movie: series have ":" in title (Season/Episode separator)
-        df = df.withColumn("content_type", F.when(F.col("Title").contains(":"), F.lit("series")).otherwise(F.lit("movie")))
-
-        # For series, extract show_title, season, episode_title
-        df = (
-            df.withColumn("parts", F.split(F.col("Title"), ": "))
-              .withColumn("show_title", F.when(F.col("content_type") == "series", F.col("parts").getItem(0)).otherwise(F.col("Title")))
-              .withColumn("season_episode", F.when(F.col("content_type") == "series", F.col("parts").getItem(1)).otherwise(F.lit(None)))
-              .withColumn("episode_title", F.when(F.col("content_type") == "series", F.col("parts").getItem(2)).otherwise(F.lit(None)))
-              .withColumn("season", F.when(
-                  F.col("season_episode").isNotNull(),
-                  F.regexp_extract(F.col("season_episode"), r"(?:Season|Saison)\s*(\d+)", 1).cast(IntegerType())
-              ).otherwise(F.lit(None).cast(IntegerType())))
-              .drop("parts", "season_episode")
+        # Série vs film
+        df = df.withColumn(
+            "content_type",
+            F.when(F.col("Title").contains(":"), F.lit("series")).otherwise(F.lit("movie"))
         )
 
-        df = (
-            df.withColumn("title", F.col("Title"))
-              .withColumn("platform", F.lit("netflix"))
-              .withColumn("event_year", F.year("event_date"))
-              .withColumn("event_month", F.month("event_date"))
-              .withColumn("event_weekday", F.dayofweek("event_date"))
-              .select(
-                  "title", "show_title", "season", "episode_title",
-                  "content_type", "event_date", "event_year", "event_month", "event_weekday",
-                  "platform"
-              )
+        # Titre de la série (avant le premier ':')
+        df = df.withColumn(
+            "show_title",
+            F.when(
+                F.col("content_type") == "series",
+                F.trim(F.split(F.col("Title"), ":")[0])
+            ).otherwise(F.col("Title"))
         )
 
-        _merge_table(spark, df, "netflix_views", "t.title = s.title AND t.event_date = s.event_date")
+        # Saison — regex français
+        df = df.withColumn(
+            "season",
+            F.when(
+                F.col("content_type") == "series",
+                F.regexp_extract(F.col("Title"), r"Saison.(\d+)", 1)
+            ).otherwise(F.lit(""))
+        ).withColumn(
+            "season",
+            F.when(F.col("season") == "", F.lit(None).cast("int"))
+            .otherwise(F.col("season").cast("int"))
+        )
+
+        # Titre de l'épisode (dernière partie après le dernier ':')
+        df = df.withColumn(
+            "episode_title",
+            F.when(
+                F.col("content_type") == "series",
+                F.trim(F.element_at(F.split(F.col("Title"), ":"), -1))
+            ).otherwise(F.lit(None))
+        )
+
+        # Renommer Title à la fin (après tous les withColumn qui l'utilisent)
+        df = df.drop("Date").withColumnRenamed("Title", "raw_title")
+
+        df_final = df.select(
+            "raw_title", "show_title", "season", "episode_title",
+            "content_type", "watch_date", "watch_year", "watch_month",
+            "watch_weekday", "watch_week",
+        )
+
+        if DeltaTable.isDeltaTable(spark, PARQUET_OUT):
+            DeltaTable.forPath(spark, PARQUET_OUT).alias("t").merge(
+                df_final.alias("s"),
+                "t.raw_title = s.raw_title AND t.watch_date = s.watch_date"
+            ).whenNotMatchedInsertAll().execute()
+        else:
+            df_final.write.format("delta").save(PARQUET_OUT)
+
+        count = spark.read.format("delta").load(PARQUET_OUT).count()
+        print(f"  ✓ netflix_views — {count:,} lignes")
 
     finally:
         spark.stop()

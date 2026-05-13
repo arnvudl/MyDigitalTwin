@@ -1,4 +1,5 @@
 import os
+import json
 from functools import lru_cache
 from urllib.parse import quote
 
@@ -23,15 +24,40 @@ def _spark_to_local(spark_path: str) -> str:
     return os.path.normpath(spark_path) if spark_path else spark_path
 
 
+def _active_parquet_files(directory: str) -> list:
+    log_dir = os.path.join(directory, "_delta_log")
+    if not os.path.exists(log_dir):
+        return [
+            os.path.join(directory, f)
+            for f in os.listdir(directory)
+            if f.endswith(".parquet") and not f.startswith(".")
+        ]
+    active: set = set()
+    for lf in sorted(f for f in os.listdir(log_dir) if f.endswith(".json")):
+        try:
+            with open(os.path.join(log_dir, lf), encoding="utf-8") as fh:
+                for line in fh:
+                    line = line.strip()
+                    if not line:
+                        continue
+                    act = json.loads(line)
+                    if "add" in act and act["add"]:
+                        active.add(act["add"]["path"])
+                    if "remove" in act and act["remove"]:
+                        active.discard(act["remove"]["path"])
+        except Exception:
+            continue
+    return [
+        os.path.join(directory, p) for p in active
+        if os.path.exists(os.path.join(directory, p))
+    ]
+
+
 @lru_cache(maxsize=1)
 def _read_clusters() -> pd.DataFrame:
     if not os.path.exists(CLUSTERS_DIR):
         return pd.DataFrame()
-    files = [
-        os.path.join(CLUSTERS_DIR, f)
-        for f in os.listdir(CLUSTERS_DIR)
-        if f.endswith(".parquet") and not f.startswith(".")
-    ]
+    files = _active_parquet_files(CLUSTERS_DIR)
     if not files:
         return pd.DataFrame()
     df = pd.concat([pd.read_parquet(f) for f in files], ignore_index=True)

@@ -1,5 +1,5 @@
-import sys
 import os
+import sys
 
 _d = os.path.abspath(__file__)
 while not os.path.exists(os.path.join(_d, "config.py")):
@@ -12,219 +12,360 @@ sys.path.insert(0, _d)
 from config import build_spark_session, PROCESSED_DATA, WAREHOUSE  # noqa: E402
 from pyspark.sql import functions as F  # noqa: E402
 from pyspark.sql.types import (  # noqa: E402
-    StructType,
-    StructField,
-    StringType,
-    LongType,
-    IntegerType,
+    StructType, StructField, StringType, LongType, IntegerType, BooleanType,
 )
 from delta.tables import DeltaTable  # noqa: E402
 import json  # noqa: E402
 import glob  # noqa: E402
+import hashlib  # noqa: E402
+
+IG_ROOT = os.path.join(PROCESSED_DATA, "INSTAGRAM", "your_instagram_activity")
 
 
-INSTAGRAM_DIR = os.path.join(PROCESSED_DATA, "INSTAGRAM")
+def _find_ig_file(patterns: list) -> str | None:
+    for p in patterns:
+        matches = glob.glob(p)
+        if matches:
+            return matches[0]
+    return None
 
 
-def _find_ig_file(pattern: str) -> str | None:
-    matches = glob.glob(os.path.join(INSTAGRAM_DIR, "**", pattern), recursive=True)
-    return matches[0] if matches else None
+def anonymize(val: str, salt: str = "mydigitaltwin") -> str:
+    return hashlib.sha256(f"{salt}{val}".encode()).hexdigest()[:10]
 
 
-def _label_value(label_values: list, label: str, field: str = "href") -> str:
-    """Extract a field from a label_values list by label name."""
-    for lv in label_values:
-        if lv.get("label") == label:
-            return lv.get(field) or lv.get("value") or lv.get("href") or ""
-    return ""
-
+# ── 1. Commentaires ───────────────────────────────────────────────────────────
 
 def parse_comments(spark):
-    path = _find_ig_file("post_comments_1.json")
-    if not path:
-        print("  ⚠ post_comments_1.json introuvable — skip comments")
+    comments_files = glob.glob(f"{IG_ROOT}/comments/post_comments_*.json")
+    if not comments_files:
+        print("  ⚠ post_comments_*.json introuvable — skip comments")
         return None
-    with open(path, encoding="utf-8") as f:
-        raw = json.load(f)
     rows = []
-    for entry in raw:
-        smd = entry.get("string_map_data", {})
-        rows.append({
-            "text": smd.get("Comment", {}).get("value", ""),
-            "media_owner": smd.get("Media Owner", {}).get("value", ""),
-            "timestamp": smd.get("Time", {}).get("timestamp", 0),
-        })
+    for path in comments_files:
+        with open(path, encoding="utf-8", errors="replace") as f:
+            data = json.load(f)
+        for item in data:
+            smd = item.get("string_map_data", {})
+            comment = smd.get("Comment", {}).get("value", "")
+            owner = smd.get("Media Owner", {}).get("value", "")
+            ts = smd.get("Time", {}).get("timestamp", 0)
+            if comment:
+                rows.append({"text": comment, "media_owner": owner, "timestamp": ts})
     if not rows:
         return None
     schema = StructType([
-        StructField("text", StringType()),
-        StructField("media_owner", StringType()),
-        StructField("timestamp", LongType()),
+        StructField("text", StringType(), True),
+        StructField("media_owner", StringType(), True),
+        StructField("timestamp", LongType(), True),
     ])
     df = spark.createDataFrame(rows, schema=schema)
     df = (
-        df.withColumn("event_date", F.to_date(F.from_unixtime("timestamp")))
-          .withColumn("event_year", F.year("event_date"))
-          .withColumn("event_month", F.month("event_date"))
-          .withColumn("event_hour", F.hour(F.from_unixtime("timestamp")))
-          .withColumn("event_weekday", F.dayofweek("event_date"))
-          .withColumn("char_count", F.length("text"))
-          .withColumn("word_count", F.size(F.split(F.trim("text"), r"\s+")))
-          .withColumn("platform", F.lit("instagram"))
-          .withColumn("content_type", F.lit("comment"))
+        df.withColumn("event_date", F.to_timestamp(F.col("timestamp")))
+        .withColumn("event_year", F.year("event_date"))
+        .withColumn("event_month", F.date_format("event_date", "yyyy-MM"))
+        .withColumn("event_hour", F.hour("event_date"))
+        .withColumn("event_weekday", F.dayofweek("event_date"))
+        .withColumn("char_count", F.length("text"))
+        .withColumn("word_count", F.size(F.split(F.trim("text"), r"\s+")))
+        .withColumn("emoji_count", F.size(F.array_remove(
+            F.split(F.regexp_replace("text", r"[\w\s.,!?;:'\"\-()]", " "), " "), ""
+        )))
+        .withColumn("platform", F.lit("instagram"))
+        .withColumn("content_type", F.lit("comment"))
     )
     return df
 
+
+# ── 2. Likes ──────────────────────────────────────────────────────────────────
 
 def parse_likes(spark):
-    # liked_posts.json is a plain list: [{timestamp, label_values: [{label, value, href}]}]
-    path = _find_ig_file("liked_posts.json")
-    if not path:
+    likes_path = f"{IG_ROOT}/likes/liked_posts.json"
+    if not os.path.exists(likes_path):
         print("  ⚠ liked_posts.json introuvable — skip likes")
         return None
-    with open(path, encoding="utf-8") as f:
-        raw = json.load(f)
+    with open(likes_path, encoding="utf-8", errors="replace") as f:
+        data = json.load(f)
     rows = []
-    for entry in raw:
-        url = _label_value(entry.get("label_values", []), "URL", "href")
-        rows.append({
-            "timestamp": entry.get("timestamp", 0),
-            "post_url": url,
-        })
+    for item in data:
+        ts = item.get("timestamp", 0)
+        url = ""
+        for lv in item.get("label_values", []):
+            if lv.get("label") == "URL":
+                url = lv.get("value", lv.get("href", ""))
+                break
+        rows.append({"timestamp": ts, "post_url": url})
     if not rows:
         return None
     schema = StructType([
-        StructField("timestamp", LongType()),
-        StructField("post_url", StringType()),
+        StructField("timestamp", LongType(), True),
+        StructField("post_url", StringType(), True),
     ])
     df = spark.createDataFrame(rows, schema=schema)
     df = (
-        df.withColumn("event_date", F.to_date(F.from_unixtime("timestamp")))
-          .withColumn("event_year", F.year("event_date"))
-          .withColumn("event_month", F.month("event_date"))
-          .withColumn("event_hour", F.hour(F.from_unixtime("timestamp")))
-          .withColumn("event_weekday", F.dayofweek("event_date"))
-          .withColumn("platform", F.lit("instagram"))
-          .withColumn("action_type", F.lit("like"))
+        df.withColumn("event_date", F.to_timestamp(F.col("timestamp")))
+        .withColumn("event_year", F.year("event_date"))
+        .withColumn("event_month", F.date_format("event_date", "yyyy-MM"))
+        .withColumn("event_hour", F.hour("event_date"))
+        .withColumn("event_weekday", F.dayofweek("event_date"))
+        .withColumn("platform", F.lit("instagram"))
+        .withColumn("action_type", F.lit("like"))
     )
     return df
 
 
-def parse_messages(spark, my_name: str = "A R N A U D"):
-    msg_dir = os.path.join(INSTAGRAM_DIR, "messages", "inbox")
-    if not os.path.isdir(msg_dir):
+# ── 3. Messages (métadonnées) ─────────────────────────────────────────────────
+
+def parse_messages(spark, my_name: str = "arnvudl"):
+    inbox_root = f"{IG_ROOT}/messages/inbox"
+    msg_files = glob.glob(f"{inbox_root}/*/message_*.json")
+    if not msg_files:
         print("  ⚠ messages/inbox introuvable — skip messages")
         return None
     rows = []
-    for convo_dir in os.listdir(msg_dir):
-        convo_path = os.path.join(msg_dir, convo_dir)
-        if not os.path.isdir(convo_path):
-            continue
-        for fname in glob.glob(os.path.join(convo_path, "message_*.json")):
-            with open(fname, encoding="utf-8") as f:
-                data = json.load(f)
-            participants = [p["name"] for p in data.get("participants", [])]
-            is_group = len(participants) > 2
-            conv_id = data.get("thread_path", convo_dir)
-            for msg in data.get("messages", []):
-                sender = msg.get("sender_name", "")
-                sender_anon = "me" if sender == my_name else "other"
-                rows.append({
-                    "conv_id": conv_id,
-                    "is_group": is_group,
-                    "participants": ",".join(participants),
-                    "sender_anon": sender_anon,
-                    "timestamp_ms": msg.get("timestamp_ms", 0),
-                    "msg_type": msg.get("type", "Generic"),
-                    "char_count": len(msg.get("content", "")),
-                })
+    for path in msg_files:
+        conv_folder = os.path.basename(os.path.dirname(path))
+        conv_id = anonymize(conv_folder)
+        with open(path, encoding="utf-8", errors="replace") as f:
+            data = json.load(f)
+        is_group = len(data.get("participants", [])) > 2
+        participants = len(data.get("participants", []))
+        for msg in data.get("messages", []):
+            sender_name = msg.get("sender_name", "")
+            ts = msg.get("timestamp_ms", 0)
+            content = msg.get("content", "")
+            is_unsent = msg.get("is_unsent", False)
+            if is_unsent:
+                msg_type = "unsent"
+            elif msg.get("photos"):
+                msg_type = "photo"
+            elif msg.get("videos"):
+                msg_type = "video"
+            elif msg.get("audio_files"):
+                msg_type = "audio"
+            elif msg.get("share"):
+                msg_type = "share"
+            elif content:
+                msg_type = "text"
+            else:
+                msg_type = "other"
+            rows.append({
+                "conv_id": conv_id,
+                "is_group": is_group,
+                "participants": participants,
+                "sender_anon": anonymize(sender_name),
+                "timestamp_ms": ts,
+                "msg_type": msg_type,
+                "char_count": len(content) if content else 0,
+            })
     if not rows:
         return None
     schema = StructType([
-        StructField("conv_id", StringType()),
-        StructField("is_group", StringType()),
-        StructField("participants", StringType()),
-        StructField("sender_anon", StringType()),
-        StructField("timestamp_ms", LongType()),
-        StructField("msg_type", StringType()),
-        StructField("char_count", IntegerType()),
+        StructField("conv_id", StringType(), True),
+        StructField("is_group", BooleanType(), True),
+        StructField("participants", IntegerType(), True),
+        StructField("sender_anon", StringType(), True),
+        StructField("timestamp_ms", LongType(), True),
+        StructField("msg_type", StringType(), True),
+        StructField("char_count", IntegerType(), True),
     ])
     df = spark.createDataFrame(rows, schema=schema)
     df = (
-        df.withColumn("event_date", F.to_date(F.from_unixtime(F.col("timestamp_ms") / 1000)))
-          .withColumn("event_year", F.year("event_date"))
-          .withColumn("event_month", F.month("event_date"))
-          .withColumn("event_hour", F.hour(F.from_unixtime(F.col("timestamp_ms") / 1000)))
-          .withColumn("event_weekday", F.dayofweek("event_date"))
-          .withColumn("platform", F.lit("instagram"))
+        df.withColumn("event_date", F.to_timestamp(F.col("timestamp_ms") / 1000))
+        .withColumn("event_year", F.year("event_date"))
+        .withColumn("event_month", F.date_format("event_date", "yyyy-MM"))
+        .withColumn("event_hour", F.hour("event_date"))
+        .withColumn("event_weekday", F.dayofweek("event_date"))
+        .withColumn("platform", F.lit("instagram"))
     )
     return df
 
 
+# ── 4. Saved posts ────────────────────────────────────────────────────────────
+
 def parse_saved(spark):
-    path = _find_ig_file("saved_posts.json")
-    if not path:
+    saved_path = f"{IG_ROOT}/saved/saved_posts.json"
+    if not os.path.exists(saved_path):
         print("  ⚠ saved_posts.json introuvable — skip saved")
         return None
-    with open(path, encoding="utf-8") as f:
-        raw = json.load(f)
+    with open(saved_path, encoding="utf-8", errors="replace") as f:
+        data = json.load(f)
     rows = []
-    for entry in raw.get("saved_saved_media", []):
-        smd = entry.get("string_map_data", {})
-        saved_on = smd.get("Saved on", {})
+    for item in data.get("saved_saved_media", []):
+        title = item.get("title", "")
+        saved_on = item.get("string_map_data", {}).get("Saved on", {})
         rows.append({
+            "account": title,
             "post_href": saved_on.get("href", ""),
             "timestamp": saved_on.get("timestamp", 0),
         })
     if not rows:
         return None
     schema = StructType([
-        StructField("post_href", StringType()),
-        StructField("timestamp", LongType()),
+        StructField("account", StringType(), True),
+        StructField("post_href", StringType(), True),
+        StructField("timestamp", LongType(), True),
     ])
-    return spark.createDataFrame(rows, schema=schema)
+    df = spark.createDataFrame(rows, schema=schema)
+    df = (
+        df.withColumn("event_date", F.to_timestamp(F.col("timestamp")))
+        .withColumn("event_year", F.year("event_date"))
+        .withColumn("event_month", F.date_format("event_date", "yyyy-MM"))
+        .withColumn("event_hour", F.hour("event_date"))
+        .withColumn("event_weekday", F.dayofweek("event_date"))
+        .withColumn("platform", F.lit("instagram"))
+        .withColumn("action_type", F.lit("saved"))
+    )
+    return df
 
 
-def parse_timestamp_list(spark, filename: str) -> object:
-    """Parse files that are plain lists: [{timestamp, label_values, ...}]"""
-    path = _find_ig_file(filename)
+# ── 5. Posts vus ──────────────────────────────────────────────────────────────
+
+def parse_posts_viewed(spark):
+    ig_ads = os.path.join(os.path.dirname(IG_ROOT), "ads_information", "ads_and_topics")
+    path = _find_ig_file([
+        f"{IG_ROOT}/ads_and_topics/posts_viewed.json",
+        f"{IG_ROOT}/impressions/posts_viewed.json",
+        os.path.join(ig_ads, "posts_viewed.json"),
+    ])
     if not path:
-        print(f"  ⚠ {filename} introuvable — skip")
+        print("  ⚠ posts_viewed.json introuvable — skip")
         return None
-    with open(path, encoding="utf-8") as f:
-        raw = json.load(f)
-    rows = []
-    if isinstance(raw, list):
-        for entry in raw:
-            rows.append({"timestamp": entry.get("timestamp", 0)})
-    if not rows:
-        return None
-    schema = StructType([StructField("timestamp", LongType())])
-    return spark.createDataFrame(rows, schema=schema)
-
-
-def parse_ig_searches(spark):
-    path = _find_ig_file("profile_searches.json")
-    if not path:
-        print("  ⚠ profile_searches.json introuvable — skip searches")
-        return None
-    with open(path, encoding="utf-8") as f:
-        raw = json.load(f)
-    rows = []
-    for entry in raw.get("searches_user", []):
-        for val in entry.get("string_list_data", []):
-            rows.append({
-                "query": entry.get("title", ""),
-                "timestamp": val.get("timestamp", 0),
-            })
+    with open(path, encoding="utf-8", errors="replace") as f:
+        data = json.load(f)
+    items = data if isinstance(data, list) else (data.get("impressions_history_posts_seen") or [])
+    rows = [{"author": "", "timestamp": int(item["timestamp"])} for item in items if item.get("timestamp")]
     if not rows:
         return None
     schema = StructType([
-        StructField("query", StringType()),
-        StructField("timestamp", LongType()),
+        StructField("author", StringType(), True),
+        StructField("timestamp", LongType(), True),
     ])
-    return spark.createDataFrame(rows, schema=schema)
+    df = spark.createDataFrame(rows, schema=schema)
+    return (
+        df.withColumn("event_date", F.to_timestamp(F.col("timestamp")))
+        .withColumn("event_year", F.year("event_date"))
+        .withColumn("event_month", F.date_format("event_date", "yyyy-MM"))
+        .withColumn("event_hour", F.hour("event_date"))
+        .withColumn("event_weekday", F.dayofweek("event_date"))
+        .withColumn("platform", F.lit("instagram"))
+        .withColumn("action_type", F.lit("post_viewed"))
+    )
 
+
+# ── 6. Vidéos regardées ───────────────────────────────────────────────────────
+
+def parse_videos_watched(spark):
+    ig_ads = os.path.join(os.path.dirname(IG_ROOT), "ads_information", "ads_and_topics")
+    path = _find_ig_file([
+        f"{IG_ROOT}/ads_and_topics/videos_watched.json",
+        f"{IG_ROOT}/impressions/videos_watched.json",
+        os.path.join(ig_ads, "videos_watched.json"),
+    ])
+    if not path:
+        print("  ⚠ videos_watched.json introuvable — skip")
+        return None
+    with open(path, encoding="utf-8", errors="replace") as f:
+        data = json.load(f)
+    items = data if isinstance(data, list) else (data.get("impressions_history_videos_watched") or [])
+    rows = [{"author": "", "timestamp": int(item["timestamp"])} for item in items if item.get("timestamp")]
+    if not rows:
+        return None
+    schema = StructType([
+        StructField("author", StringType(), True),
+        StructField("timestamp", LongType(), True),
+    ])
+    df = spark.createDataFrame(rows, schema=schema)
+    return (
+        df.withColumn("event_date", F.to_timestamp(F.col("timestamp")))
+        .withColumn("event_year", F.year("event_date"))
+        .withColumn("event_month", F.date_format("event_date", "yyyy-MM"))
+        .withColumn("event_hour", F.hour("event_date"))
+        .withColumn("event_weekday", F.dayofweek("event_date"))
+        .withColumn("platform", F.lit("instagram"))
+        .withColumn("action_type", F.lit("video_watched"))
+    )
+
+
+# ── 7. Story likes ────────────────────────────────────────────────────────────
+
+def parse_story_likes(spark):
+    path = _find_ig_file([
+        f"{IG_ROOT}/story_activities/story_likes.json",
+        f"{IG_ROOT}/story_interactions/story_likes.json",
+        f"{IG_ROOT}/likes/story_likes.json",
+        f"{IG_ROOT}/story_likes.json",
+    ])
+    if not path:
+        print("  ⚠ story_likes.json introuvable — skip")
+        return None
+    with open(path, encoding="utf-8", errors="replace") as f:
+        data = json.load(f)
+    items = data if isinstance(data, list) else (
+            data.get("story_activities_story_likes") or data.get("story_likes") or []
+    )
+    rows = [{"author": "", "timestamp": int(item["timestamp"])} for item in items if item.get("timestamp")]
+    if not rows:
+        return None
+    schema = StructType([
+        StructField("author", StringType(), True),
+        StructField("timestamp", LongType(), True),
+    ])
+    df = spark.createDataFrame(rows, schema=schema)
+    return (
+        df.withColumn("event_date", F.to_timestamp(F.col("timestamp")))
+        .withColumn("event_year", F.year("event_date"))
+        .withColumn("event_month", F.date_format("event_date", "yyyy-MM"))
+        .withColumn("event_hour", F.hour("event_date"))
+        .withColumn("event_weekday", F.dayofweek("event_date"))
+        .withColumn("platform", F.lit("instagram"))
+        .withColumn("action_type", F.lit("story_like"))
+    )
+
+
+# ── 8. Recherches ─────────────────────────────────────────────────────────────
+
+def parse_ig_searches(spark):
+    ig_logged = os.path.join(os.path.dirname(IG_ROOT), "logged_information", "recent_searches")
+    path = _find_ig_file([
+        f"{IG_ROOT}/searches/word_or_phrase_searches.json",
+        f"{IG_ROOT}/word_or_phrase_searches.json",
+        os.path.join(ig_logged, "word_or_phrase_searches.json"),
+    ])
+    if not path:
+        print("  ⚠ word_or_phrase_searches.json introuvable — skip searches")
+        return None
+    with open(path, encoding="utf-8", errors="replace") as f:
+        data = json.load(f)
+    items = data.get("searches_keyword") or data.get("keyword_searches") or (data if isinstance(data, list) else [])
+    rows = []
+    for item in items:
+        smd = item.get("string_map_data", {})
+        query = (smd.get("Recherche", {}) or smd.get("Search", {})).get("value", "") or item.get("title", "")
+        ts = (smd.get("Heure", {}) or smd.get("Time", {})).get("timestamp", 0)
+        if ts and query:
+            rows.append({"query": query, "timestamp": int(ts)})
+    if not rows:
+        return None
+    schema = StructType([
+        StructField("query", StringType(), True),
+        StructField("timestamp", LongType(), True),
+    ])
+    df = spark.createDataFrame(rows, schema=schema)
+    return (
+        df.withColumn("event_date", F.to_timestamp(F.col("timestamp")))
+        .withColumn("event_year", F.year("event_date"))
+        .withColumn("event_month", F.date_format("event_date", "yyyy-MM"))
+        .withColumn("event_hour", F.hour("event_date"))
+        .withColumn("event_weekday", F.dayofweek("event_date"))
+        .withColumn("platform", F.lit("instagram"))
+        .withColumn("action_type", F.lit("search"))
+        .withColumn("char_count", F.length("query"))
+        .withColumn("word_count", F.size(F.split(F.trim("query"), r"\s+")))
+    )
+
+
+# ── Write helper ──────────────────────────────────────────────────────────────
 
 def _merge_table(spark, df, table_name: str, merge_condition: str):
     table_path = os.path.join(WAREHOUSE, table_name)
@@ -237,6 +378,8 @@ def _merge_table(spark, df, table_name: str, merge_condition: str):
     count = spark.read.format("delta").load(table_path).count()
     print(f"  ✓ {table_name} — {count:,} lignes")
 
+
+# ── Main ──────────────────────────────────────────────────────────────────────
 
 def main():
     spark = build_spark_session("MyDigitalTwin - Instagram", driver_memory="4g", shuffle_partitions=8)
@@ -259,15 +402,15 @@ def main():
         if df is not None:
             _merge_table(spark, df, "instagram_saved", "t.post_href = s.post_href AND t.timestamp = s.timestamp")
 
-        df = parse_timestamp_list(spark, "posts_viewed.json")
+        df = parse_posts_viewed(spark)
         if df is not None:
             _merge_table(spark, df, "instagram_posts_viewed", "t.timestamp = s.timestamp")
 
-        df = parse_timestamp_list(spark, "videos_watched.json")
+        df = parse_videos_watched(spark)
         if df is not None:
             _merge_table(spark, df, "instagram_videos_watched", "t.timestamp = s.timestamp")
 
-        df = parse_timestamp_list(spark, "story_likes.json")
+        df = parse_story_likes(spark)
         if df is not None:
             _merge_table(spark, df, "instagram_story_likes", "t.timestamp = s.timestamp")
 

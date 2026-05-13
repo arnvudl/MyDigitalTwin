@@ -90,11 +90,11 @@ def main():
     try:
         sources = [
             ("instagram_comments", "text", "Instagram Comments"),
-            ("instagram_searches", "query", "Instagram Searches"),
+            ("instagram_searches", "search_text", "Instagram Searches"),
             ("google_searches", "query", "Google Searches"),
             ("youtube_watch", "title", "YouTube Watch"),
-            ("youtube_searches", "query", "YouTube Searches"),
-            ("spotify_streams", "track_name", "Spotify Tracks"),
+            ("youtube_searches", "title", "YouTube Searches"),
+            ("spotify_streams", "trackName", "Spotify Tracks"),
             ("tiktok_searches", "query", "TikTok Searches"),
             ("twitter_tweets", "text", "Twitter Tweets"),
         ]

@@ -1,5 +1,5 @@
-import sys
 import os
+import sys
 
 _d = os.path.abspath(__file__)
 while not os.path.exists(os.path.join(_d, "config.py")):
@@ -11,193 +11,177 @@ sys.path.insert(0, _d)
 
 from config import build_spark_session, PROCESSED_DATA, WAREHOUSE  # noqa: E402
 from pyspark.sql import functions as F  # noqa: E402
-from pyspark.sql import Window  # noqa: E402
-from pyspark.sql.types import (  # noqa: E402
-    StructType,
-    StructField,
-    StringType,
-    LongType,
-    IntegerType,
-)
+from pyspark.sql.window import Window  # noqa: E402
+from pyspark.sql.types import StringType, LongType, BooleanType  # noqa: E402
 from delta.tables import DeltaTable  # noqa: E402
 import glob  # noqa: E402
-import json  # noqa: E402
+
+SPOTIFY_ACCOUNT = os.path.join(PROCESSED_DATA, "SPOTIFY", "account")
+SPOTIFY_EXTENDED = os.path.join(PROCESSED_DATA, "SPOTIFY", "extended")
+
+LIBRARY_PATH = os.path.join(SPOTIFY_ACCOUNT, "YourLibrary.json")
+PLAYLIST_PATH = os.path.join(SPOTIFY_ACCOUNT, "Playlist1.json")
+SEARCH_PATH = os.path.join(SPOTIFY_ACCOUNT, "SearchQueries.json")
+
+OUT_STREAMS = os.path.join(WAREHOUSE, "spotify_streams")
+OUT_LIKED_SONGS = os.path.join(WAREHOUSE, "spotify_liked_songs")
+OUT_PLAYLISTS = os.path.join(WAREHOUSE, "spotify_playlists")
+OUT_SEARCHES = os.path.join(WAREHOUSE, "spotify_searches")
 
 
-SPOTIFY_DIR = os.path.join(PROCESSED_DATA, "SPOTIFY")
-
-
-def _merge_table(spark, df, table_name: str, merge_condition: str):
-    table_path = os.path.join(WAREHOUSE, table_name)
-    if DeltaTable.isDeltaTable(spark, table_path):
-        DeltaTable.forPath(spark, table_path).alias("t").merge(
-            df.alias("s"), merge_condition
+def _merge_or_create(spark, df, path: str, condition: str):
+    if DeltaTable.isDeltaTable(spark, path):
+        DeltaTable.forPath(spark, path).alias("t").merge(
+            df.alias("s"), condition
         ).whenNotMatchedInsertAll().execute()
     else:
-        df.write.format("delta").mode("overwrite").save(table_path)
-    count = spark.read.format("delta").load(table_path).count()
-    print(f"  ✓ {table_name} — {count:,} lignes")
-
-
-def parse_streams(spark):
-    # Extended history (MyData) + Account data (endsong*.json)
-    extended_files = glob.glob(os.path.join(SPOTIFY_DIR, "**", "Streaming_History_Audio_*.json"), recursive=True)
-    account_files = glob.glob(os.path.join(SPOTIFY_DIR, "**", "StreamingHistory_music_*.json"), recursive=True)
-
-    all_rows = []
-    for path in extended_files + account_files:
-        with open(path, encoding="utf-8") as f:
-            data = json.load(f)
-        source = "extended" if path in extended_files else "account"
-        for entry in data:
-            ts = entry.get("ts") or entry.get("endTime", "")
-            ms = entry.get("ms_played") or entry.get("msPlayed", 0)
-            if (ms or 0) < 30000:
-                continue
-            all_rows.append({
-                "ts": ts,
-                "ms_played": int(ms or 0),
-                "track_name": entry.get("master_metadata_track_name") or entry.get("trackName", ""),
-                "artist_name": entry.get("master_metadata_album_artist_name") or entry.get("artistName", ""),
-                "album_name": entry.get("master_metadata_album_album_name", ""),
-                "platform": entry.get("platform", ""),
-                "source": source,
-            })
-
-    if not all_rows:
-        return None
-
-    schema = StructType([
-        StructField("ts", StringType()),
-        StructField("ms_played", LongType()),
-        StructField("track_name", StringType()),
-        StructField("artist_name", StringType()),
-        StructField("album_name", StringType()),
-        StructField("platform", StringType()),
-        StructField("source", StringType()),
-    ])
-    df = spark.createDataFrame(all_rows, schema=schema)
-
-    # Priority dedup: prefer "extended" source, keep min ms_played row per (track+artist+ts)
-    w_priority = Window.partitionBy("track_name", "artist_name", "ts").orderBy(
-        F.when(F.col("source") == "extended", 0).otherwise(1),
-        F.col("ms_played")
-    )
-    df = (
-        df.withColumn("_priority", F.row_number().over(w_priority))
-          .filter(F.col("_priority") == 1)
-          .drop("_priority", "source")
-    )
-    df = (
-        df.withColumn("timestamp", F.to_timestamp("ts"))
-          .withColumn("event_date", F.to_date("timestamp"))
-          .withColumn("event_year", F.year("event_date"))
-          .withColumn("event_month", F.month("event_date"))
-          .withColumn("event_hour", F.hour("timestamp"))
-          .withColumn("event_weekday", F.dayofweek("event_date"))
-          .withColumn("data_platform", F.lit("spotify"))
-    )
-    return df
-
-
-def parse_liked_songs(spark):
-    path = os.path.join(SPOTIFY_DIR, "account", "YourLibrary.json")
-    if not os.path.exists(path):
-        print("  ⚠ YourLibrary.json introuvable — skip liked songs")
-        return None
-    with open(path, encoding="utf-8") as f:
-        data = json.load(f)
-    rows = [
-        {
-            "track_name": t.get("track", ""),
-            "artist_name": t.get("artist", ""),
-            "album_name": t.get("album", ""),
-            "uri": t.get("uri", ""),
-        }
-        for t in data.get("tracks", [])
-    ]
-    schema = StructType([
-        StructField("track_name", StringType()),
-        StructField("artist_name", StringType()),
-        StructField("album_name", StringType()),
-        StructField("uri", StringType()),
-    ])
-    return spark.createDataFrame(rows, schema=schema)
-
-
-def parse_playlists(spark):
-    path = os.path.join(SPOTIFY_DIR, "account", "Playlist1.json")
-    if not os.path.exists(path):
-        print("  ⚠ Playlist1.json introuvable — skip playlists")
-        return None
-    with open(path, encoding="utf-8") as f:
-        data = json.load(f)
-    rows = []
-    for pl in data.get("playlists", []):
-        pl_name = pl.get("name", "")
-        for item in pl.get("items", []):
-            track = item.get("track", {})
-            rows.append({
-                "playlist_name": pl_name,
-                "track_name": track.get("trackName", ""),
-                "artist_name": track.get("artistName", ""),
-                "album_name": track.get("albumName", ""),
-            })
-    schema = StructType([
-        StructField("playlist_name", StringType()),
-        StructField("track_name", StringType()),
-        StructField("artist_name", StringType()),
-        StructField("album_name", StringType()),
-    ])
-    return spark.createDataFrame(rows, schema=schema)
-
-
-def parse_searches(spark):
-    path = os.path.join(SPOTIFY_DIR, "account", "SearchQueries.json")
-    if not os.path.exists(path):
-        print("  ⚠ SearchQueries.json introuvable — skip searches")
-        return None
-    with open(path, encoding="utf-8") as f:
-        data = json.load(f)
-    rows = [
-        {
-            "query": entry.get("searchQuery", ""),
-            "platform": entry.get("platform", ""),
-            "ts": entry.get("searchTime", ""),
-        }
-        for entry in data
-        if entry.get("searchQuery")
-    ]
-    schema = StructType([
-        StructField("query", StringType()),
-        StructField("platform", StringType()),
-        StructField("ts", StringType()),
-    ])
-    df = spark.createDataFrame(rows, schema=schema)
-    return df.withColumn("timestamp", F.to_timestamp("ts")).drop("ts")
+        df.write.format("delta").save(path)
+    count = spark.read.format("delta").load(path).count()
+    print(f"  ✓ {os.path.basename(path)} — {count:,} lignes")
 
 
 def main():
     spark = build_spark_session("MyDigitalTwin - Spotify", driver_memory="4g", shuffle_partitions=8)
     spark.sparkContext.setLogLevel("WARN")
     try:
-        df = parse_streams(spark)
-        if df is not None:
-            _merge_table(spark, df, "spotify_streams",
-                         "t.track_name = s.track_name AND t.artist_name = s.artist_name AND t.ts = s.ts")
+        extended_files = sorted(glob.glob(os.path.join(SPOTIFY_EXTENDED, "Streaming_History_Audio_*.json")))
+        account_files = sorted(glob.glob(os.path.join(SPOTIFY_ACCOUNT, "StreamingHistory_music_*.json")))
+        print(f"  Extended: {len(extended_files)} fichiers, Account: {len(account_files)} fichiers")
 
-        df = parse_liked_songs(spark)
-        if df is not None:
-            _merge_table(spark, df, "spotify_liked_songs", "t.uri = s.uri")
+        # ── Extended History ──────────────────────────────────────────────────
+        df_ext = (
+            spark.read.option("multiLine", "true").json(extended_files)
+            .filter(F.col("master_metadata_track_name").isNotNull())
+            .select(
+                F.to_timestamp(F.col("ts"), "yyyy-MM-dd'T'HH:mm:ss'Z'").alias("listen_ts"),
+                F.col("master_metadata_album_artist_name").alias("artistName"),
+                F.col("master_metadata_track_name").alias("trackName"),
+                F.col("ms_played").cast(LongType()).alias("msPlayed"),
+                F.col("spotify_track_uri").alias("trackUri"),
+                F.col("skipped").cast(BooleanType()).alias("skipped"),
+                F.col("shuffle").cast(BooleanType()).alias("shuffle"),
+                F.lit("extended").alias("_source"),
+            )
+            .filter(F.col("listen_ts").isNotNull())
+        )
 
-        df = parse_playlists(spark)
-        if df is not None:
-            _merge_table(spark, df, "spotify_playlists",
-                         "t.playlist_name = s.playlist_name AND t.track_name = s.track_name AND t.artist_name = s.artist_name")
+        # ── Account Data ──────────────────────────────────────────────────────
+        df_acc = (
+            spark.read.option("multiLine", "true").json(account_files)
+            .filter(F.col("trackName").isNotNull())
+            .select(
+                F.to_timestamp(F.col("endTime"), "yyyy-MM-dd HH:mm").alias("listen_ts"),
+                F.col("artistName"),
+                F.col("trackName"),
+                F.col("msPlayed").cast(LongType()),
+                F.lit(None).cast(StringType()).alias("trackUri"),
+                F.lit(None).cast(BooleanType()).alias("skipped"),
+                F.lit(None).cast(BooleanType()).alias("shuffle"),
+                F.lit("account").alias("_source"),
+            )
+            .filter(F.col("listen_ts").isNotNull())
+        )
 
-        df = parse_searches(spark)
-        if df is not None:
-            _merge_table(spark, df, "spotify_searches", "t.query = s.query")
+        # ── Fusion & Déduplication ────────────────────────────────────────────
+        df_all = df_ext.union(df_acc)
+        df_all = df_all \
+            .withColumn("_dedup_min", F.date_format(F.date_trunc("minute", F.col("listen_ts")), "yyyy-MM-dd HH:mm")) \
+            .withColumn("_priority", F.when(F.col("_source") == "extended", 0).otherwise(1))
+
+        w = Window.partitionBy("artistName", "trackName", "_dedup_min").orderBy("_priority")
+        df_merged = df_all \
+            .withColumn("_rn", F.row_number().over(w)) \
+            .filter(F.col("_rn") == 1) \
+            .drop("_rn", "_source", "_dedup_min", "_priority")
+
+        # ── Nettoyage & Features ──────────────────────────────────────────────
+        df_streams = df_merged.filter(F.col("msPlayed") >= 30000)
+        df_streams = df_streams \
+            .withColumn("listen_year", F.year("listen_ts")) \
+            .withColumn("listen_month", F.date_format("listen_ts", "yyyy-MM")) \
+            .withColumn("listen_hour", F.hour("listen_ts")) \
+            .withColumn("listen_weekday", F.dayofweek("listen_ts")) \
+            .withColumn("listen_week", F.weekofyear("listen_ts")) \
+            .withColumn("minutes_played", F.round(F.col("msPlayed") / 60000.0, 2)) \
+            .withColumn("is_night", F.when(
+            (F.col("listen_hour") >= 22) | (F.col("listen_hour") <= 5), True
+        ).otherwise(False))
+
+        df_streams_final = df_streams.select(
+            "artistName", "trackName", "msPlayed", "minutes_played",
+            "trackUri", "skipped", "shuffle", "listen_ts",
+            "listen_year", "listen_month", "listen_hour",
+            "listen_weekday", "listen_week", "is_night",
+        )
+
+        _merge_or_create(spark, df_streams_final, OUT_STREAMS,
+                         "t.artistName = s.artistName AND t.trackName = s.trackName "
+                         "AND date_trunc('minute', t.listen_ts) = date_trunc('minute', s.listen_ts)")
+
+        # ── YourLibrary — titres likés ────────────────────────────────────────
+        if os.path.exists(LIBRARY_PATH):
+            df_liked = (
+                spark.read.option("multiLine", "true").json(LIBRARY_PATH)
+                .select(F.explode("tracks").alias("t"))
+                .select(
+                    F.col("t.artist").alias("artistName"),
+                    F.col("t.album").alias("albumName"),
+                    F.col("t.track").alias("trackName"),
+                    F.col("t.uri").alias("trackUri"),
+                )
+                .filter(F.col("trackName").isNotNull())
+            )
+            _merge_or_create(spark, df_liked, OUT_LIKED_SONGS, "t.trackUri = s.trackUri")
+        else:
+            print("  ⚠ YourLibrary.json introuvable — skip")
+
+        # ── Playlists ─────────────────────────────────────────────────────────
+        if os.path.exists(PLAYLIST_PATH):
+            df_playlists = (
+                spark.read.option("multiLine", "true").json(PLAYLIST_PATH)
+                .select(F.explode("playlists").alias("pl"))
+                .select(
+                    F.col("pl.name").alias("playlistName"),
+                    F.col("pl.lastModifiedDate").alias("lastModifiedDate"),
+                    F.explode("pl.items").alias("item"),
+                )
+                .select(
+                    F.col("playlistName"),
+                    F.col("lastModifiedDate"),
+                    F.col("item.track.trackName").alias("trackName"),
+                    F.col("item.track.artistName").alias("artistName"),
+                    F.col("item.track.albumName").alias("albumName"),
+                    F.col("item.track.trackUri").alias("trackUri"),
+                    F.to_date(F.col("item.addedDate"), "yyyy-MM-dd").alias("addedDate"),
+                )
+                .filter(F.col("trackName").isNotNull())
+            )
+            _merge_or_create(spark, df_playlists, OUT_PLAYLISTS,
+                             "t.playlistName = s.playlistName AND t.trackUri = s.trackUri AND t.addedDate = s.addedDate")
+        else:
+            print("  ⚠ Playlist1.json introuvable — skip")
+
+        # ── Recherches ────────────────────────────────────────────────────────
+        if os.path.exists(SEARCH_PATH):
+            df_searches = (
+                spark.read.option("multiLine", "true").json(SEARCH_PATH)
+                .filter(F.col("searchQuery").isNotNull() & (F.length(F.col("searchQuery")) > 0))
+                .select(
+                    F.to_timestamp(
+                        F.regexp_replace(F.col("searchTime"), r"\[UTC\]$", ""),
+                        "yyyy-MM-dd'T'HH:mm:ss.SSSX"
+                    ).alias("search_ts"),
+                    F.trim(F.col("searchQuery")).alias("query"),
+                    F.col("platform"),
+                )
+                .filter(F.col("search_ts").isNotNull())
+                .withColumn("event_hour", F.hour("search_ts"))
+                .withColumn("event_weekday", F.dayofweek("search_ts"))
+            )
+            _merge_or_create(spark, df_searches, OUT_SEARCHES,
+                             "t.query = s.query AND t.search_ts = s.search_ts")
+        else:
+            print("  ⚠ SearchQueries.json introuvable — skip")
 
     finally:
         spark.stop()

@@ -1,5 +1,6 @@
 import sys
 import os
+from pathlib import Path
 
 _d = os.path.abspath(__file__)
 while not os.path.exists(os.path.join(_d, "config.py")):
@@ -9,31 +10,25 @@ while not os.path.exists(os.path.join(_d, "config.py")):
     _d = _p
 sys.path.insert(0, _d)
 
-from config import build_spark_session, WAREHOUSE  # noqa: E402
-from pyspark.sql import functions as F  # noqa: E402
+import numpy as np  # noqa: E402
 from pyspark.sql.types import (  # noqa: E402
-    StructType,
-    StructField,
-    StringType,
-    IntegerType,
-    ArrayType,
-    FloatType,
+    StructType, StructField, StringType, IntegerType, FloatType,
 )
 from delta.tables import DeltaTable  # noqa: E402
-import numpy as np  # noqa: E402
+from config import build_spark_session, WAREHOUSE, CLIP_CANDIDATE_LABELS  # noqa: E402
 
 
-# Hardcoded cluster labels from notebook source
+EMBEDDINGS_DIR = Path(WAREHOUSE) / "photo_embeddings"
+CLUSTERS_DIR   = Path(WAREHOUSE) / "photo_clusters"
+
 cluster_labels = {
-    0: "Nature & Outdoors",
-    1: "Urban & Architecture",
-    2: "People & Portraits",
-    3: "Food & Dining",
-    4: "Travel & Landmarks",
-    5: "Sports & Activities",
-    6: "Events & Celebrations",
-    7: "Animals & Pets",
-    -1: "Uncategorized",
+    -1: "Souvenir en tout genre",
+     0: "photos d'enfance",
+     1: "Memes et Humour",
+     2: "MDR ya que des meufs",
+     3: "Voyage Rhéto",
+     4: "Fourre-Tout",
+     5: "Soirées"
 }
 
 
@@ -46,68 +41,97 @@ def main():
     )
     spark.sparkContext.setLogLevel("WARN")
     try:
-        emb_path = os.path.join(WAREHOUSE, "photo_embeddings")
-        if not os.path.isdir(emb_path):
-            print("  ⚠ photo_embeddings introuvable — run 01_clip_embeddings.py first")
-            return
+        embeddings_path = str(EMBEDDINGS_DIR)
+        if DeltaTable.isDeltaTable(spark, embeddings_path):
+            df = spark.read.format("delta").load(embeddings_path).cache()
+        else:
+            df = spark.read.parquet(embeddings_path).cache()
 
-        df = spark.read.format("delta").load(emb_path)
+        print(f"Photos chargées : {df.count()}")
 
-        # .cache() is legitimate here: embeddings reused multiple times in UMAP+HDBSCAN
-        df = df.cache()
+        rows = df.select("photo_path", "filename", "embedding").collect()
+        paths     = [r["photo_path"] for r in rows]
+        filenames = [r["filename"]   for r in rows]
+        X = np.array([r["embedding"] for r in rows], dtype=np.float32)
 
-        # Collect embeddings — small dataset (~2420 photos)
-        rows = df.select("filename", "embedding").collect()
-        filenames = [r["filename"] for r in rows]
-        embs = np.array([r["embedding"] for r in rows], dtype=np.float32)
+        print(f"Shape embeddings : {X.shape}")
 
-        if len(embs) == 0:
-            print("  ⚠ No embeddings found")
-            return
-
-        # UMAP: 768D → 50D for HDBSCAN, 2D for visualization reference
+        # ── UMAP 768D → 50D (clustering) + 2D (visualization) ────────────────
         import umap
-        reducer_50 = umap.UMAP(n_components=50, metric="cosine", random_state=42)
-        embs_50 = reducer_50.fit_transform(embs)
 
-        # HDBSCAN clustering
+        print("1/2 - UMAP 768D -> 50D (clustering)...")
+        reducer_50 = umap.UMAP(
+            n_components=50,
+            n_neighbors=15,
+            min_dist=0.1,
+            metric="cosine",
+            random_state=42,
+            verbose=True,
+        )
+        X_50 = reducer_50.fit_transform(X)
+        print(f"Shape après UMAP 50D : {X_50.shape}")
+
+        print("2/2 - UMAP 768D -> 2D (visualisation dashboard)...")
+        reducer_2d = umap.UMAP(
+            n_components=2,
+            n_neighbors=15,
+            min_dist=0.1,
+            metric="cosine",
+            random_state=42,
+        )
+        X_2d = reducer_2d.fit_transform(X)
+        print(f"Shape UMAP 2D : {X_2d.shape}")
+
+        # ── HDBSCAN ───────────────────────────────────────────────────────────
         import hdbscan
-        clusterer = hdbscan.HDBSCAN(min_cluster_size=50, min_samples=5, metric="euclidean")
-        cluster_ids = clusterer.fit_predict(embs_50).tolist()
 
-        # 2D UMAP for coordinate reference (stored for dashboard)
-        reducer_2 = umap.UMAP(n_components=2, metric="cosine", random_state=42)
-        embs_2 = reducer_2.fit_transform(embs)
+        print("HDBSCAN...")
+        clustering = hdbscan.HDBSCAN(
+            min_cluster_size=60,
+            min_samples=5,
+            metric="euclidean",
+            cluster_selection_method="eom",
+        )
+        labels = clustering.fit_predict(X_50)
 
-        result_rows = []
-        for fname, cid, coord in zip(filenames, cluster_ids, embs_2):
-            label = cluster_labels.get(int(cid), f"Cluster {cid}")
-            result_rows.append({
-                "filename": fname,
-                "cluster_id": int(cid),
-                "cluster_label": label,
-                "umap_x": float(coord[0]),
-                "umap_y": float(coord[1]),
-            })
+        n_clusters = len(set(labels)) - (1 if -1 in labels else 0)
+        n_noise    = (labels == -1).sum()
+        print(f"Clusters trouvés : {n_clusters}")
+        print(f"Outliers (bruit) : {n_noise} photos ({n_noise/len(labels)*100:.1f}%)")
+
+        # ── Write Delta ───────────────────────────────────────────────────────
+        rows_out = [
+            (
+                paths[i],
+                filenames[i],
+                int(labels[i]),
+                cluster_labels.get(int(labels[i]), f"Cluster {labels[i]}"),
+                float(X_2d[i, 0]),
+                float(X_2d[i, 1]),
+            )
+            for i in range(len(paths))
+        ]
 
         schema = StructType([
-            StructField("filename", StringType()),
-            StructField("cluster_id", IntegerType()),
-            StructField("cluster_label", StringType()),
-            StructField("umap_x", FloatType()),
-            StructField("umap_y", FloatType()),
+            StructField("path",          StringType(),  nullable=False),
+            StructField("filename",      StringType(),  nullable=False),
+            StructField("cluster",       IntegerType(), nullable=False),
+            StructField("cluster_label", StringType(),  nullable=False),
+            StructField("umap_x",        FloatType(),   nullable=False),
+            StructField("umap_y",        FloatType(),   nullable=False),
         ])
-        df_clusters = spark.createDataFrame(result_rows, schema=schema)
 
-        # Computed table → delete + append
-        table_path = os.path.join(WAREHOUSE, "photo_clusters")
-        if DeltaTable.isDeltaTable(spark, table_path):
-            DeltaTable.forPath(spark, table_path).delete()
-            df_clusters.write.format("delta").mode("append").save(table_path)
+        df_out = spark.createDataFrame(rows_out, schema=schema)
+
+        clusters_path = str(CLUSTERS_DIR)
+        CLUSTERS_DIR.mkdir(parents=True, exist_ok=True)
+        if DeltaTable.isDeltaTable(spark, clusters_path):
+            DeltaTable.forPath(spark, clusters_path).delete()
+            df_out.write.format("delta").mode("append").save(clusters_path)
         else:
-            df_clusters.write.format("delta").mode("overwrite").save(table_path)
+            df_out.write.format("delta").mode("overwrite").save(clusters_path)
 
-        count = spark.read.format("delta").load(table_path).count()
+        count = spark.read.format("delta").load(clusters_path).count()
         print(f"  ✓ photo_clusters — {count:,} lignes")
 
         df.unpersist()

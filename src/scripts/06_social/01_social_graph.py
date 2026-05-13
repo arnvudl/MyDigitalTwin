@@ -9,6 +9,9 @@ while not os.path.exists(os.path.join(_d, "config.py")):
     _d = _p
 sys.path.insert(0, _d)
 
+import json  # noqa: E402
+import re  # noqa: E402
+import pandas as pd  # noqa: E402
 from config import (  # noqa: E402
     WAREHOUSE,
     INSTAGRAM_INBOX,
@@ -16,103 +19,85 @@ from config import (  # noqa: E402
     CLOSE_FRIENDS_MULTIPLIER,
     MIN_MESSAGES,
 )
-import json  # noqa: E402
-import glob  # noqa: E402
-import pandas as pd  # noqa: E402
 
 
-def _parse_conversation(convo_dir: str) -> dict | None:
-    """Parse a single Instagram DM conversation directory.
-
-    Returns None if it's a group chat or has fewer than MIN_MESSAGES messages.
-    """
-    json_files = glob.glob(os.path.join(convo_dir, "message_*.json"))
-    if not json_files:
+def _parse_conversation(conv_dir: str, folder: str) -> dict | None:
+    msg_files = sorted(
+        [f for f in os.listdir(conv_dir) if f.startswith("message_") and f.endswith(".json")],
+        key=lambda f: int(re.search(r"(\d+)", f).group(1)),
+        reverse=True,
+    )
+    if not msg_files:
         return None
 
-    all_messages = []
-    participants = []
-    for path in json_files:
-        with open(path, encoding="utf-8") as f:
-            data = json.load(f)
-        if not participants:
-            participants = [p["name"] for p in data.get("participants", [])]
-        all_messages.extend(data.get("messages", []))
+    with open(os.path.join(conv_dir, msg_files[0]), encoding="utf-8") as f:
+        data = json.load(f)
 
-    # Only 1-on-1 conversations
-    if len(participants) != 2:
+    if len(data.get("participants", [])) != 2:
         return None
 
-    other = [p for p in participants if p != "arnvudl"]
-    if not other:
-        return None
-    contact = other[0]
+    msg_count = 0
+    for fname in msg_files:
+        with open(os.path.join(conv_dir, fname), encoding="utf-8") as f:
+            msg_count += len(json.load(f).get("messages", []))
 
-    msg_count = len(all_messages)
     if msg_count < MIN_MESSAGES:
         return None
 
-    weight = msg_count * CLOSE_FRIENDS_MULTIPLIER if contact in CLOSE_FRIENDS else msg_count
+    label    = re.split(r"_\d{10,}", folder)[0].lower()
+    node_id  = folder.lower()
+    is_close = (label in CLOSE_FRIENDS) or (node_id in CLOSE_FRIENDS)
 
     return {
-        "contact": contact,
-        "msg_count": msg_count,
-        "weight": weight,
-        "is_close_friend": contact in CLOSE_FRIENDS,
+        "node_id":          node_id,
+        "label":            label,
+        "message_count":    msg_count,
+        "in_close_friends": is_close,
     }
 
 
 def main():
-    inbox_dir = INSTAGRAM_INBOX
-    if not os.path.isdir(inbox_dir):
-        print(f"  ⚠ Instagram inbox not found: {inbox_dir}")
+    inbox = INSTAGRAM_INBOX
+    os.makedirs(WAREHOUSE, exist_ok=True)
+
+    if not os.path.exists(inbox):
+        print(f"  ⚠ Instagram inbox introuvable : {inbox}")
         return
 
-    nodes = []
-    edges = []
+    print(f"Inbox conversations : {len(os.listdir(inbox))}")
+    print(f"Close friends configurés : {len(CLOSE_FRIENDS)}")
+    print(f"Multiplicateur           : x{CLOSE_FRIENDS_MULTIPLIER}")
+    print(f"Seuil minimum messages   : {MIN_MESSAGES}")
 
-    # Central node
-    nodes.append({"id": "arnvudl", "type": "self", "msg_count": 0, "weight": 0})
-
-    for convo_dir in os.listdir(inbox_dir):
-        full_path = os.path.join(inbox_dir, convo_dir)
-        if not os.path.isdir(full_path):
+    records = []
+    for folder in os.listdir(inbox):
+        conv_dir = os.path.join(inbox, folder)
+        if not os.path.isdir(conv_dir):
             continue
-        result = _parse_conversation(full_path)
-        if result is None:
-            continue
+        result = _parse_conversation(conv_dir, folder)
+        if result:
+            records.append(result)
 
-        contact = result["contact"]
-        nodes.append({
-            "id": contact,
-            "type": "close_friend" if result["is_close_friend"] else "contact",
-            "msg_count": result["msg_count"],
-            "weight": result["weight"],
-        })
-        edges.append({
-            "source": "arnvudl",
-            "target": contact,
-            "weight": result["weight"],
-            "msg_count": result["msg_count"],
-        })
+    df = pd.DataFrame(records)
+    df["weight"] = df.apply(
+        lambda row: row["message_count"] * CLOSE_FRIENDS_MULTIPLIER
+                    if row["in_close_friends"] else float(row["message_count"]),
+        axis=1,
+    )
+    df = df.sort_values("weight", ascending=False).reset_index(drop=True)
 
-    graph = {"nodes": nodes, "edges": edges}
+    print(f"\nConversations retenues (>= {MIN_MESSAGES} msgs) : {len(df)}")
+    print(f"Close friends : {df['in_close_friends'].sum()}")
 
-    output_dir = os.path.join(WAREHOUSE, "social_graph")
-    os.makedirs(output_dir, exist_ok=True)
+    out_dir = os.path.join(WAREHOUSE, "social_graph")
+    os.makedirs(out_dir, exist_ok=True)
+    df.to_parquet(os.path.join(out_dir, "part-0.parquet"), index=False)
 
-    graph_path = os.path.join(output_dir, "graph.json")
-    with open(graph_path, "w", encoding="utf-8") as f:
-        json.dump(graph, f, ensure_ascii=False, indent=2)
-    print(f"  ✓ social_graph/graph.json — {len(nodes)} nœuds, {len(edges)} arêtes")
+    print(f"\nSauvegarde : {out_dir}")
+    print(f"  {len(df)} nœuds, {df['message_count'].sum():,} messages total")
 
-    # Also write as parquet via pandas for warehouse consistency
-    df_nodes = pd.DataFrame(nodes)
-    df_edges = pd.DataFrame(edges)
-    df_nodes.to_parquet(os.path.join(output_dir, "nodes.parquet"), index=False)
-    df_edges.to_parquet(os.path.join(output_dir, "edges.parquet"), index=False)
-    print(f"  ✓ social_graph/nodes.parquet — {len(df_nodes)} lignes")
-    print(f"  ✓ social_graph/edges.parquet — {len(df_edges)} lignes")
+    check = pd.read_parquet(out_dir)
+    print(f"  Vérification lecture dossier : {len(check)} lignes OK")
 
 
 if __name__ == "__main__":
